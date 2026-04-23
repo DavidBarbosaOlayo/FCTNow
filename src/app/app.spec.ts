@@ -16,10 +16,11 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render title', () => {
+  it('should render the FCTNow preview heading', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, FCTManager');
+    expect(compiled.querySelector('h1')?.textContent).toContain('Una portada con cara y ojos');
+    expect(compiled.textContent).toContain('FCTNow');
   });
 });

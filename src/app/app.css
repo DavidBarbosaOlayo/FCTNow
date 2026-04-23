@@ -1,0 +1,51 @@
+:host {
+  --canvas: #f2ede3;
+  --surface: rgba(255, 251, 245, 0.82);
+  --surface-strong: #fffaf2;
+  --surface-deep: #123b3d;
+  --ink: #19242f;
+  --muted: #5d6772;
+  --line: rgba(25, 36, 47, 0.12);
+  --accent: #0f766e;
+  --accent-soft: #dcefe8;
+  --accent-warm: #c7653b;
+  --shadow-soft: 0 16px 48px rgba(33, 49, 66, 0.1);
+  --shadow-deep: 0 30px 90px rgba(16, 30, 39, 0.18);
+  display: block;
+  min-height: 100dvh;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 12% 18%, rgba(199, 101, 59, 0.18), transparent 24%),
+    radial-gradient(circle at 88% 16%, rgba(15, 118, 110, 0.16), transparent 26%),
+    linear-gradient(180deg, #f4ecdf 0%, #f7f7f2 46%, #eef4f1 100%);
+  overflow: clip;
+}
+
+:host::before,
+:host::after {
+  content: '';
+  position: fixed;
+  inset: auto;
+  pointer-events: none;
+  z-index: 0;
+}
+
+:host::before {
+  top: 2rem;
+  right: -4rem;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.08);
+  filter: blur(12px);
+}
+
+:host::after {
+  left: -5rem;
+  bottom: 8rem;
+  width: 22rem;
+  height: 22rem;
+  border-radius: 999px;
+  background: rgba(199, 101, 59, 0.08);
+  filter: blur(18px);
+}
