@@ -1,0 +1,6 @@
+spring:
+  datasource:
+    url: ${FCTNOW_DB_URL:jdbc:postgresql://localhost:${FCTNOW_DB_PORT:15432}/fctnow}
+    username: ${FCTNOW_DB_USERNAME:fctnow}
+    password: ${FCTNOW_DB_PASSWORD:fctnow}
+    driver-class-name: org.postgresql.Driver

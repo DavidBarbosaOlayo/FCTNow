@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: fctnow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fctnow
+      POSTGRES_USER: fctnow
+      POSTGRES_PASSWORD: fctnow
+    ports:
+      - "${FCTNOW_DB_PORT:-15432}:5432"
+    volumes:
+      - fctnow-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fctnow -d fctnow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  fctnow-postgres-data:
