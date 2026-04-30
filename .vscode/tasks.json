@@ -3,8 +3,10 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "frontend: start",
       "type": "npm",
       "script": "start",
+      "path": "frontend",
       "isBackground": true,
       "problemMatcher": {
         "owner": "typescript",
@@ -21,8 +23,10 @@
       }
     },
     {
+      "label": "frontend: test",
       "type": "npm",
       "script": "test",
+      "path": "frontend",
       "isBackground": true,
       "problemMatcher": {
         "owner": "typescript",
