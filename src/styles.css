@@ -359,6 +359,75 @@ app-root .actor-card {
     var(--surface);
 }
 
+app-root .route-page {
+  min-height: 100dvh;
+  display: grid;
+  align-content: center;
+  gap: 1rem;
+}
+
+app-root .route-hero,
+app-root .route-panel,
+app-root .route-actions {
+  max-width: 56rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(14px);
+}
+
+app-root .route-hero,
+app-root .route-panel {
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+}
+
+app-root .route-hero h1 {
+  max-width: 14ch;
+  margin-top: 0.85rem;
+  font-size: clamp(2.8rem, 6vw, 5rem);
+}
+
+app-root .route-hero p:not(.eyebrow),
+app-root .route-panel p,
+app-root .route-list {
+  margin: 1rem 0 0;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+app-root .route-panel h2 {
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+}
+
+app-root .route-list {
+  padding-left: 1.1rem;
+}
+
+app-root .route-list li + li {
+  margin-top: 0.45rem;
+}
+
+app-root .route-actions {
+  width: fit-content;
+  padding: 0.8rem;
+  border-radius: 999px;
+}
+
+app-root .route-actions a {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+  border-radius: 999px;
+  color: #f7fbf8;
+  background: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
@@ -413,7 +482,9 @@ app-root .actor-card {
   app-root .hero-board,
   app-root .journey-step,
   app-root .module-card,
-  app-root .actor-card {
+  app-root .actor-card,
+  app-root .route-hero,
+  app-root .route-panel {
     padding: 1.2rem;
     border-radius: 1.3rem;
   }
@@ -429,5 +500,9 @@ app-root .actor-card {
 
   app-root h2 {
     font-size: clamp(1.8rem, 8vw, 2.4rem);
+  }
+
+  app-root .route-hero h1 {
+    font-size: clamp(2.35rem, 12vw, 3.5rem);
   }
 }
