@@ -77,6 +77,8 @@ mvn test
 Endpoints base:
 
 - Healthcheck: `GET http://localhost:8080/api/health`
+- Login: `POST http://localhost:8080/api/auth/login`
+- Usuario autenticado: `GET http://localhost:8080/api/auth/me`
 - OpenAPI JSON: `http://localhost:8080/api/openapi`
 - Swagger UI: `http://localhost:8080/api/swagger-ui.html`
 
@@ -96,6 +98,7 @@ Se puede sobrescribir con variables de entorno:
 FCTNOW_DB_URL=jdbc:postgresql://localhost:15432/fctnow
 FCTNOW_DB_USERNAME=fctnow
 FCTNOW_DB_PASSWORD=fctnow
+FCTNOW_JWT_SECRET=change-this-local-secret-with-at-least-32-bytes
 ```
 
 Flyway aplica las migraciones de `backend/src/main/resources/db/migration` al arrancar el
@@ -105,8 +108,9 @@ migraciones sin introducir todavia entidades de dominio FCT.
 ## Alcance actual
 
 El backend incluido aqui es una base tecnica: arranque, conexion PostgreSQL, Flyway,
-healthcheck y OpenAPI. No incluye aun autenticacion JWT, roles, entidades FCT, CRUDs de
-negocio ni integracion real con Angular.
+healthcheck, OpenAPI y autenticacion JWT stateless con roles base de FCTNow. No incluye
+aun registro publico, CRUD completo de usuarios, entidades FCT de negocio ni integracion
+real con Angular.
 
 ## Validacion minima del monorepo
 
