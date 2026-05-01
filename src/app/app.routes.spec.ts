@@ -4,6 +4,10 @@ describe('routes', () => {
   it('should expose the base FCTNow frontend routes', () => {
     expect(routes.map((route) => route.path)).toEqual([
       '',
+      'practicas',
+      'mensajes',
+      'notificaciones',
+      'perfil',
       'login',
       'alumno',
       'empresa',

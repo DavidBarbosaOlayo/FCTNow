@@ -7,6 +7,27 @@ export const routes: Routes = [
     loadComponent: () => import('./home/home').then((m) => m.Home),
   },
   {
+    path: 'practicas',
+    title: 'Prácticas | FCTNow',
+    loadComponent: () => import('./practicas/practicas').then((m) => m.PracticasPage),
+  },
+  {
+    path: 'mensajes',
+    title: 'Mensajes | FCTNow',
+    loadComponent: () => import('./mensajes/mensajes').then((m) => m.MensajesPage),
+  },
+  {
+    path: 'notificaciones',
+    title: 'Notificaciones | FCTNow',
+    loadComponent: () =>
+      import('./notificaciones/notificaciones').then((m) => m.NotificacionesPage),
+  },
+  {
+    path: 'perfil',
+    title: 'Perfil | FCTNow',
+    loadComponent: () => import('./perfil/perfil').then((m) => m.PerfilPage),
+  },
+  {
     path: 'login',
     title: 'Acceso | FCTNow',
     loadComponent: () => import('./auth/login').then((m) => m.LoginPage),
