@@ -2,12 +2,17 @@
 
 # Compiled output
 /dist
+/frontend/dist
 /tmp
 /out-tsc
+/frontend/out-tsc
 /bazel-out
+target/
+*.class
 
 # Node
 /node_modules
+/frontend/node_modules
 npm-debug.log
 yarn-error.log
 
@@ -30,12 +35,15 @@ yarn-error.log
 
 # Miscellaneous
 /.angular/cache
+/frontend/.angular/cache
 .sass-cache/
 /connect.lock
 /coverage
+/frontend/coverage
 /libpeerconnection.log
 testem.log
 /typings
+/frontend/typings
 __screenshots__/
 .codex/
 AGENTS.md
