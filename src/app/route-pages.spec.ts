@@ -7,7 +7,11 @@ import { LoginPage } from './auth/login';
 import { EmpresaPage } from './empresas/empresa';
 import { CoordinadorPage } from './fct/coordinador';
 import { TutorPage } from './fct/tutor';
+import { MensajesPage } from './mensajes/mensajes';
+import { NotificacionesPage } from './notificaciones/notificaciones';
 import { NotFoundPage } from './not-found/not-found';
+import { PerfilPage } from './perfil/perfil';
+import { PracticasPage } from './practicas/practicas';
 
 type RoutePageCase = {
   component: Type<unknown>;
@@ -17,6 +21,10 @@ type RoutePageCase = {
 describe('route placeholder pages', () => {
   const pageCases: RoutePageCase[] = [
     { component: LoginPage, expectedText: 'Entrada a FCTNow' },
+    { component: PracticasPage, expectedText: 'Búsqueda de prácticas' },
+    { component: MensajesPage, expectedText: 'Mensajería de FCTNow' },
+    { component: NotificacionesPage, expectedText: 'Centro de notificaciones' },
+    { component: PerfilPage, expectedText: 'Perfil de usuario' },
     { component: AlumnoPage, expectedText: 'Panel inicial del alumno' },
     { component: EmpresaPage, expectedText: 'Panel inicial de empresa' },
     { component: TutorPage, expectedText: 'Panel inicial del tutor' },
