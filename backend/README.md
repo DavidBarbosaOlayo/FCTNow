@@ -55,8 +55,33 @@ mvn spring-boot:run
 ## Endpoints base
 
 - Healthcheck: `GET http://localhost:8080/api/health`
+- Login: `POST http://localhost:8080/api/auth/login`
+- Usuario autenticado: `GET http://localhost:8080/api/auth/me`
 - OpenAPI JSON: `http://localhost:8080/api/openapi`
 - Swagger UI: `http://localhost:8080/api/swagger-ui.html`
+
+## Autenticacion
+
+La API usa autenticacion JWT stateless para los endpoints protegidos bajo `/api/**`.
+Quedan publicos `POST /api/auth/login`, `GET /api/health` y la documentacion OpenAPI/Swagger.
+
+Roles base del dominio:
+
+- `ALUMNO`
+- `EMPRESA`
+- `TUTOR_CENTRO`
+- `COORDINADOR`
+- `ADMIN`
+
+Configuracion relevante:
+
+```bash
+FCTNOW_JWT_SECRET=change-this-local-secret-with-at-least-32-bytes
+FCTNOW_JWT_EXPIRATION=PT1H
+```
+
+No se crea un usuario inicial de desarrollo por defecto. Los usuarios deben existir en las
+tablas `app_users` y `user_roles`; los tests crean sus propios datos.
 
 ## Migraciones
 

@@ -18,3 +18,10 @@ springdoc:
     path: /api/openapi
   swagger-ui:
     path: /api/swagger-ui.html
+
+fctnow:
+  security:
+    jwt:
+      issuer: fctnow
+      secret: ${FCTNOW_JWT_SECRET:local-development-secret-for-fctnow-jwt-signing-change-me}
+      expiration: ${FCTNOW_JWT_EXPIRATION:PT1H}
