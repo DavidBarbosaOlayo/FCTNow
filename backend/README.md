@@ -36,6 +36,13 @@ cd backend
 mvn spring-boot:run
 ```
 
+## Tests
+
+```bash
+cd backend
+mvn test
+```
+
 El perfil por defecto es `local`. Se puede sobrescribir la conexion con variables de entorno:
 
 ```bash
