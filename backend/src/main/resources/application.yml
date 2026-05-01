@@ -1,0 +1,20 @@
+server:
+  port: ${FCTNOW_API_PORT:8080}
+
+spring:
+  application:
+    name: fctnow-backend
+  profiles:
+    default: local
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+springdoc:
+  api-docs:
+    path: /api/openapi
+  swagger-ui:
+    path: /api/swagger-ui.html
