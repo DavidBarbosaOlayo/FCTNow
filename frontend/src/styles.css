@@ -485,6 +485,99 @@ app-root .route-actions a {
   text-decoration: none;
 }
 
+app-root .login-page {
+  align-content: start;
+  padding-top: 3rem;
+}
+
+app-root .login-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(20rem, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+app-root .login-copy p:not(.eyebrow) {
+  margin: 1rem 0 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+app-root .login-form {
+  display: grid;
+  gap: 1rem;
+}
+
+app-root .form-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+app-root .form-field label {
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+app-root .form-field input {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.72);
+  font: inherit;
+  outline: none;
+}
+
+app-root .form-field input:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.16);
+}
+
+app-root .form-field input[aria-invalid='true'] {
+  border-color: #b84f3b;
+}
+
+app-root .field-error,
+app-root .form-alert {
+  margin: 0;
+  color: #8f3324;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+app-root .form-alert {
+  padding: 0.8rem 0.9rem;
+  border: 1px solid rgba(184, 79, 59, 0.22);
+  border-radius: 0.65rem;
+  background: rgba(184, 79, 59, 0.08);
+}
+
+app-root .login-submit {
+  min-height: 3rem;
+  border: 0;
+  border-radius: 0.65rem;
+  color: #f7fbf8;
+  background: var(--accent);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+app-root .login-submit:hover:not(:disabled),
+app-root .login-submit:focus-visible:not(:disabled) {
+  background: #0b5f59;
+  outline: none;
+}
+
+app-root .login-submit:disabled {
+  color: rgba(25, 36, 47, 0.52);
+  background: rgba(25, 36, 47, 0.12);
+  cursor: not-allowed;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
@@ -511,7 +604,8 @@ app-root .route-actions a {
   app-root .signal-strip,
   app-root .journey-track,
   app-root .module-grid,
-  app-root .actor-grid {
+  app-root .actor-grid,
+  app-root .login-panel {
     grid-template-columns: 1fr;
   }
 
