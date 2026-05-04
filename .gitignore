@@ -46,7 +46,6 @@ testem.log
 /frontend/typings
 __screenshots__/
 .codex/
-AGENTS.md
 
 # System files
 .DS_Store
