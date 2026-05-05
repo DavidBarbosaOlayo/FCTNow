@@ -1,5 +1,6 @@
 import { provideZonelessChangeDetection, Type } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AdminPage } from './admin/admin';
@@ -38,11 +39,22 @@ describe('route placeholder pages', () => {
     it(`should render ${pageCase.expectedText}`, async () => {
       await TestBed.configureTestingModule({
         imports: [pageCase.component],
-        providers: [provideZonelessChangeDetection(), provideHttpClient(), provideRouter([])],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          provideRouter([]),
+        ],
       }).compileComponents();
 
       const fixture = TestBed.createComponent(pageCase.component);
       fixture.detectChanges();
+      const httpTesting = TestBed.inject(HttpTestingController);
+      for (const request of httpTesting.match('/api/ofertas')) {
+        request.flush([]);
+      }
+      fixture.detectChanges();
+      httpTesting.verify();
       const compiled = fixture.nativeElement as HTMLElement;
 
       expect(compiled.textContent).toContain(pageCase.expectedText);
