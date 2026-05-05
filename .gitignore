@@ -47,6 +47,10 @@ testem.log
 __screenshots__/
 .codex/
 
+# Local AI/context files
+AGENTS.md
+docs/contracts/empresas-ofertas.md
+
 # System files
 .DS_Store
 Thumbs.db
