@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { OfertaFct, OfertaFctFilters, OfertaModalidad } from './ofertas.models';
 import { OfertasService } from './ofertas.service';
 
@@ -23,7 +24,7 @@ type ModalidadOption = {
 
 @Component({
   selector: 'app-practicas-page',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, RouterLink],
   template: `
     <main class="page-shell route-page practicas-page">
       <header class="route-hero practicas-hero">
@@ -142,6 +143,14 @@ type ModalidadOption = {
                 </dl>
 
                 <p class="offer-tasks">{{ oferta.tareas }}</p>
+
+                <a
+                  class="offer-link"
+                  [routerLink]="['/practicas', oferta.id]"
+                  [attr.aria-label]="'Ver detalle de ' + oferta.titulo"
+                >
+                  Ver detalle
+                </a>
               </article>
             }
           </div>
@@ -364,6 +373,25 @@ type ModalidadOption = {
       .offer-tasks {
         padding-top: 0.85rem;
         border-top: 1px solid var(--line);
+      }
+
+      .offer-link {
+        justify-self: start;
+        min-height: 2.5rem;
+        display: inline-flex;
+        align-items: center;
+        padding: 0 0.85rem;
+        border-radius: 0.5rem;
+        color: #f7fbf8;
+        background: var(--accent);
+        font-weight: 800;
+        text-decoration: none;
+      }
+
+      .offer-link:hover,
+      .offer-link:focus-visible {
+        background: #0b5f59;
+        outline: none;
       }
 
       @media (max-width: 980px) {
