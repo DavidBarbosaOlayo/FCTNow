@@ -4,3 +4,7 @@ spring:
     username: ${FCTNOW_DB_USERNAME:fctnow}
     password: ${FCTNOW_DB_PASSWORD:fctnow}
     driver-class-name: org.postgresql.Driver
+  flyway:
+    locations:
+      - classpath:db/migration
+      - classpath:db/seed/local
