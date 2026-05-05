@@ -12,6 +12,11 @@ export const routes: Routes = [
     loadComponent: () => import('./practicas/practicas').then((m) => m.PracticasPage),
   },
   {
+    path: 'practicas/:id',
+    title: 'Detalle de práctica | FCTNow',
+    loadComponent: () => import('./practicas/oferta-detail').then((m) => m.OfertaDetailPage),
+  },
+  {
     path: 'mensajes',
     title: 'Mensajes | FCTNow',
     loadComponent: () => import('./mensajes/mensajes').then((m) => m.MensajesPage),

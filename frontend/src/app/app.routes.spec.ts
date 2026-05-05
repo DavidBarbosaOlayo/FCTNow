@@ -5,6 +5,7 @@ describe('routes', () => {
     expect(routes.map((route) => route.path)).toEqual([
       '',
       'practicas',
+      'practicas/:id',
       'mensajes',
       'notificaciones',
       'perfil',
