@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { OfertaFct } from './ofertas.models';
 import { OfertasService } from './ofertas.service';
@@ -39,6 +40,7 @@ describe('PracticasPage', () => {
       imports: [PracticasPage],
       providers: [
         provideZonelessChangeDetection(),
+        provideRouter([]),
         { provide: OfertasService, useValue: ofertasService },
       ],
     }).compileComponents();
@@ -57,6 +59,11 @@ describe('PracticasPage', () => {
     expect(compiled.textContent).toContain('Tech Norte Formacion');
     expect(compiled.textContent).toContain('Practicas de desarrollo web');
     expect(compiled.textContent).toContain('1 oferta disponible');
+
+    const detailLink = compiled.querySelector<HTMLAnchorElement>('.offer-link');
+    expect(detailLink).not.toBeNull();
+    expect(detailLink?.textContent).toContain('Ver detalle');
+    expect(detailLink?.getAttribute('href')).toBe('/practicas/34');
   });
 
   it('should apply filters when the form is submitted', async () => {
