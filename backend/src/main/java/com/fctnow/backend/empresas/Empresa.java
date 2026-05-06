@@ -97,6 +97,35 @@ public class Empresa {
     this.estado = estado;
   }
 
+  public void update(
+      String nombre,
+      IdentificadorFiscalTipo tipoIdentificadorFiscal,
+      String identificadorFiscal,
+      String sector,
+      String descripcion,
+      String direccion,
+      String localidad,
+      String provincia,
+      String codigoPostal,
+      String emailContacto,
+      String telefonoContacto,
+      String personaContacto,
+      EmpresaEstado estado) {
+    this.nombre = nombre;
+    this.tipoIdentificadorFiscal = tipoIdentificadorFiscal;
+    this.identificadorFiscal = identificadorFiscal;
+    this.sector = sector;
+    this.descripcion = descripcion;
+    this.direccion = direccion;
+    this.localidad = localidad;
+    this.provincia = provincia;
+    this.codigoPostal = codigoPostal;
+    this.emailContacto = emailContacto;
+    this.telefonoContacto = telefonoContacto;
+    this.personaContacto = personaContacto;
+    this.estado = estado;
+  }
+
   public Long getId() {
     return id;
   }
