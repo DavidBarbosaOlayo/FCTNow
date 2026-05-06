@@ -11,10 +11,13 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { AuthService } from '../auth/auth.service';
 import { OfertaFct, OfertaModalidad } from './ofertas.models';
 import { OfertasService } from './ofertas.service';
+import { SolicitudesService } from './solicitudes.service';
 
 type DetailStatus = 'loading' | 'loaded' | 'error' | 'not-found';
+type ApplicationStatus = 'idle' | 'checking' | 'requested' | 'submitting' | 'error';
 
 type ModalidadOption = {
   value: OfertaModalidad;
@@ -112,6 +115,43 @@ type ModalidadOption = {
               </div>
             }
           </section>
+
+          <section class="detail-panel application-panel" aria-labelledby="oferta-solicitud">
+            <h2 id="oferta-solicitud">Solicitud</h2>
+
+            @if (!isAuthenticated()) {
+              <p>Inicia sesion con tu cuenta de alumno para solicitar esta oferta FCT.</p>
+              <a class="primary-action" routerLink="/login">Iniciar sesion</a>
+            } @else if (applicationStatus() === 'checking') {
+              <p aria-live="polite">Comprobando si ya has solicitado esta oferta.</p>
+            } @else if (applicationStatus() === 'requested') {
+              <p class="success-copy" aria-live="polite">
+                Ya has solicitado esta oferta. Puedes seguir consultando el detalle mientras el
+                centro revisa las solicitudes.
+              </p>
+            } @else {
+              <p>
+                Solicita esta oferta si encaja con tus preferencias de FCT. El centro podra
+                revisar tu interes en fases posteriores.
+              </p>
+              <button
+                type="button"
+                class="primary-action"
+                [disabled]="applicationStatus() === 'submitting'"
+                (click)="requestOffer(oferta.id)"
+              >
+                @if (applicationStatus() === 'submitting') {
+                  Enviando solicitud
+                } @else {
+                  Solicitar oferta
+                }
+              </button>
+
+              @if (applicationStatus() === 'error') {
+                <p class="error-copy" role="alert">{{ applicationMessage() }}</p>
+              }
+            }
+          </section>
         </div>
       }
     </main>
@@ -139,7 +179,9 @@ type ModalidadOption = {
       }
 
       .back-link:hover,
-      .back-link:focus-visible {
+      .back-link:focus-visible,
+      .primary-action:hover,
+      .primary-action:focus-visible {
         border-color: rgba(15, 118, 110, 0.36);
         outline: none;
       }
@@ -271,6 +313,48 @@ type ModalidadOption = {
         font-size: 1rem;
       }
 
+      .application-panel {
+        grid-column: 1 / -1;
+      }
+
+      .application-panel p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .primary-action {
+        justify-self: start;
+        min-height: 2.55rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 1rem;
+        border: 1px solid rgba(15, 118, 110, 0.28);
+        border-radius: 0.5rem;
+        color: #ffffff;
+        background: #0f766e;
+        font: inherit;
+        font-weight: 800;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      .primary-action:disabled {
+        cursor: progress;
+        opacity: 0.72;
+      }
+
+      .success-copy {
+        color: #0f766e;
+        font-weight: 800;
+      }
+
+      .error-copy {
+        color: #b84f3b;
+        font-weight: 800;
+      }
+
       .state-panel {
         max-width: 44rem;
         padding: 1.2rem;
@@ -313,12 +397,17 @@ type ModalidadOption = {
 export class OfertaDetailPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly ofertasService = inject(OfertasService);
+  private readonly solicitudesService = inject(SolicitudesService);
+  private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
 
   protected readonly status = signal<DetailStatus>('loading');
   protected readonly oferta = signal<OfertaFct | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly applicationStatus = signal<ApplicationStatus>('idle');
+  protected readonly applicationMessage = signal<string | null>(null);
+  protected readonly isAuthenticated = this.authService.isAuthenticated;
 
   private readonly modalidadOptions: ModalidadOption[] = [
     { value: 'PRESENCIAL', label: 'Presencial' },
@@ -332,6 +421,8 @@ export class OfertaDetailPage implements OnInit {
 
       this.oferta.set(null);
       this.errorMessage.set(null);
+      this.applicationStatus.set('idle');
+      this.applicationMessage.set(null);
 
       if (offerId === null) {
         this.status.set('not-found');
@@ -361,6 +452,7 @@ export class OfertaDetailPage implements OnInit {
         next: (oferta) => {
           this.oferta.set(oferta);
           this.status.set('loaded');
+          this.loadApplicationState(oferta.id);
         },
         error: (error: unknown) => {
           this.oferta.set(null);
@@ -372,6 +464,57 @@ export class OfertaDetailPage implements OnInit {
 
           this.errorMessage.set(detailErrorMessage(error));
           this.status.set('error');
+        },
+      });
+  }
+
+  protected requestOffer(offerId: number): void {
+    if (!this.isAuthenticated() || this.applicationStatus() === 'submitting') {
+      return;
+    }
+
+    this.applicationStatus.set('submitting');
+    this.applicationMessage.set(null);
+
+    this.solicitudesService
+      .requestOffer(offerId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.applicationStatus.set('requested');
+        },
+        error: (error: unknown) => {
+          if (isConflict(error)) {
+            this.applicationStatus.set('requested');
+            return;
+          }
+
+          this.applicationMessage.set(applicationErrorMessage(error));
+          this.applicationStatus.set('error');
+        },
+      });
+  }
+
+  private loadApplicationState(offerId: number): void {
+    if (!this.isAuthenticated()) {
+      this.applicationStatus.set('idle');
+      return;
+    }
+
+    this.applicationStatus.set('checking');
+
+    this.solicitudesService
+      .mine()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (solicitudes) => {
+          this.applicationStatus.set(
+            solicitudes.some((solicitud) => solicitud.ofertaId === offerId) ? 'requested' : 'idle',
+          );
+        },
+        error: (error: unknown) => {
+          this.applicationMessage.set(applicationErrorMessage(error));
+          this.applicationStatus.set('error');
         },
       });
   }
@@ -390,6 +533,10 @@ function isNotFound(error: unknown): boolean {
   return error instanceof HttpErrorResponse && error.status === 404;
 }
 
+function isConflict(error: unknown): boolean {
+  return error instanceof HttpErrorResponse && error.status === 409;
+}
+
 function detailErrorMessage(error: unknown): string {
   if (error instanceof HttpErrorResponse) {
     if (error.status === 401) {
@@ -402,4 +549,26 @@ function detailErrorMessage(error: unknown): string {
   }
 
   return 'Inténtalo de nuevo desde el catálogo de prácticas.';
+}
+
+function applicationErrorMessage(error: unknown): string {
+  if (error instanceof HttpErrorResponse) {
+    if (error.status === 401) {
+      return 'Inicia sesion para solicitar esta oferta FCT.';
+    }
+
+    if (error.status === 403) {
+      return 'Solo los alumnos pueden solicitar ofertas FCT.';
+    }
+
+    if (error.status === 404) {
+      return 'La oferta no existe, no esta publicada o ya no esta disponible.';
+    }
+
+    if (error.status === 0) {
+      return 'No se pudo contactar con el backend. Comprueba que el servidor este disponible.';
+    }
+  }
+
+  return 'No se pudo enviar la solicitud. Intentalo de nuevo.';
 }
