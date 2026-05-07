@@ -39,4 +39,23 @@ public interface OfertaFctRepository extends JpaRepository<OfertaFct, Long> {
   Optional<OfertaFct> findByIdAndEstadoWithEmpresa(
       @Param("id") Long id,
       @Param("estado") OfertaEstado estado);
+
+  @Query("""
+      select o
+      from OfertaFct o
+      join fetch o.empresa
+      where o.empresa.id = :empresaId
+      order by o.createdAt desc, o.id desc
+      """)
+  List<OfertaFct> findByEmpresaIdWithEmpresa(@Param("empresaId") Long empresaId);
+
+  @Query("""
+      select o
+      from OfertaFct o
+      join fetch o.empresa
+      where o.id = :id and o.empresa.id = :empresaId
+      """)
+  Optional<OfertaFct> findByIdAndEmpresaIdWithEmpresa(
+      @Param("id") Long id,
+      @Param("empresaId") Long empresaId);
 }

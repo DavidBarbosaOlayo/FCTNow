@@ -64,8 +64,8 @@ class SolicitudFctControllerTest {
   void setUp() {
     solicitudFctRepository.deleteAll();
     ofertaFctRepository.deleteAll();
-    empresaRepository.deleteAll();
     userAccountRepository.deleteAll();
+    empresaRepository.deleteAll();
 
     userAccountRepository.save(new UserAccount(
         "alumno@example.com",
