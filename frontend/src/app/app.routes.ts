@@ -49,6 +49,12 @@ export const routes: Routes = [
       import('./alumnos/mis-solicitudes').then((m) => m.MisSolicitudesPage),
   },
   {
+    path: 'alumno/preferencias',
+    title: 'Preferencias | FCTNow',
+    loadComponent: () =>
+      import('./alumnos/preferencias').then((m) => m.PreferenciasAlumnoPage),
+  },
+  {
     path: 'empresa',
     title: 'Empresa | FCTNow',
     loadComponent: () => import('./empresas/empresa').then((m) => m.EmpresaPage),
