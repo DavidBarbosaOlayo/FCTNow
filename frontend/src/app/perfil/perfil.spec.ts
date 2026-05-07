@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { PLATFORM_ID, provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { AuthenticatedUser } from '../auth/auth.models';
 import { AuthService } from '../auth/auth.service';
@@ -10,6 +10,7 @@ import { PerfilPage } from './perfil';
 describe('PerfilPage', () => {
   let fixture: ComponentFixture<PerfilPage>;
   let authService: jasmine.SpyObj<AuthService>;
+  let navigateSpy: jasmine.Spy;
 
   const user: AuthenticatedUser = {
     id: 8,
@@ -27,7 +28,11 @@ describe('PerfilPage', () => {
     result?: Observable<AuthenticatedUser>;
     platformId?: string;
   } = {}): Promise<void> {
-    authService = jasmine.createSpyObj<AuthService>('AuthService', ['accessToken', 'loadAuthenticatedUser']);
+    authService = jasmine.createSpyObj<AuthService>('AuthService', [
+      'accessToken',
+      'loadAuthenticatedUser',
+      'logout',
+    ]);
     authService.accessToken.and.returnValue(accessToken);
     authService.loadAuthenticatedUser.and.returnValue(result as never);
 
@@ -40,6 +45,9 @@ describe('PerfilPage', () => {
         { provide: PLATFORM_ID, useValue: platformId },
       ],
     }).compileComponents();
+
+    const router = TestBed.inject(Router);
+    navigateSpy = spyOn(router, 'navigateByUrl').and.returnValue(Promise.resolve(true));
 
     fixture = TestBed.createComponent(PerfilPage);
   }
@@ -104,6 +112,34 @@ describe('PerfilPage', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(authService.loadAuthenticatedUser).not.toHaveBeenCalled();
+    expect(compiled.textContent).toContain('Inicia sesión para ver tu perfil');
+  });
+
+  it('should expose a logout button when the profile is loaded', async () => {
+    await configure();
+
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const button = compiled.querySelector<HTMLButtonElement>('button.logout-action');
+    expect(button).not.toBeNull();
+    expect(button?.textContent?.trim()).toBe('Cerrar sesión');
+  });
+
+  it('should clear the session and redirect to /login when logout is clicked', async () => {
+    await configure();
+
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const button = compiled.querySelector<HTMLButtonElement>('button.logout-action');
+    button?.click();
+    fixture.detectChanges();
+
+    expect(authService.logout).toHaveBeenCalled();
+    expect(navigateSpy).toHaveBeenCalledWith('/login');
     expect(compiled.textContent).toContain('Inicia sesión para ver tu perfil');
   });
 });

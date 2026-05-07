@@ -10,7 +10,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthenticatedUser, UserRole } from '../auth/auth.models';
 import { AuthService } from '../auth/auth.service';
 
@@ -79,6 +79,12 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
               <dd>{{ rolesText(user.roles) }}</dd>
             </div>
           </dl>
+
+          <div class="profile-actions">
+            <button type="button" class="logout-action" (click)="logout()">
+              Cerrar sesión
+            </button>
+          </div>
         </section>
       }
     </main>
@@ -172,6 +178,30 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
         font-weight: 800;
       }
 
+      .profile-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .logout-action {
+        min-height: 2.5rem;
+        padding: 0 0.95rem;
+        border: 1px solid rgba(184, 79, 59, 0.4);
+        border-radius: 0.5rem;
+        background: rgba(255, 246, 241, 0.92);
+        color: #8a3a25;
+        font: inherit;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      .logout-action:hover,
+      .logout-action:focus-visible {
+        border-color: rgba(184, 79, 59, 0.65);
+        outline: none;
+      }
+
       .profile-details {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -244,6 +274,7 @@ export class PerfilPage implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly router = inject(Router);
 
   protected readonly status = signal<ProfileStatus>('loading');
   protected readonly user = signal<AuthenticatedUser | null>(null);
@@ -291,6 +322,13 @@ export class PerfilPage implements OnInit {
 
   protected rolesText(roles: UserRole[]): string {
     return roles.map((role) => this.roleLabel(role)).join(', ');
+  }
+
+  protected logout(): void {
+    this.authService.logout();
+    this.user.set(null);
+    this.status.set('not-authenticated');
+    this.router.navigateByUrl('/login');
   }
 }
 
