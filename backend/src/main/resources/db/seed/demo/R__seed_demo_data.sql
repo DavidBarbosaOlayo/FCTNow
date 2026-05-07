@@ -88,6 +88,10 @@ INSERT INTO empresas (
     'ACTIVA'
   );
 
+UPDATE app_users
+   SET empresa_id = (SELECT id FROM empresas WHERE identificador_fiscal = 'B12345678')
+ WHERE email = 'empresa@example.com';
+
 INSERT INTO ofertas_fct (
   empresa_id,
   titulo,

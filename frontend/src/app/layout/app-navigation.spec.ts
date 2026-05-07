@@ -72,4 +72,22 @@ describe('AppNavigation', () => {
     expect(labels).not.toContain('Mis solicitudes');
     expect(hrefs).not.toContain('/alumno/solicitudes');
   });
+
+  it('should expose the empresa offers link only when the user has the EMPRESA role', () => {
+    configure(['EMPRESA']);
+
+    const { labels, hrefs } = renderLabels();
+
+    expect(labels).toContain('Mis ofertas');
+    expect(hrefs).toContain('/empresa/ofertas');
+  });
+
+  it('should hide the empresa offers link for users without the EMPRESA role', () => {
+    configure(['ALUMNO']);
+
+    const { labels, hrefs } = renderLabels();
+
+    expect(labels).not.toContain('Mis ofertas');
+    expect(hrefs).not.toContain('/empresa/ofertas');
+  });
 });

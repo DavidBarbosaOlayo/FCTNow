@@ -54,6 +54,24 @@ export const routes: Routes = [
     loadComponent: () => import('./empresas/empresa').then((m) => m.EmpresaPage),
   },
   {
+    path: 'empresa/ofertas',
+    title: 'Mis ofertas | FCTNow',
+    loadComponent: () =>
+      import('./empresas/mis-ofertas-empresa').then((m) => m.MisOfertasEmpresaPage),
+  },
+  {
+    path: 'empresa/ofertas/nueva',
+    title: 'Nueva oferta | FCTNow',
+    loadComponent: () =>
+      import('./empresas/oferta-empresa-form').then((m) => m.OfertaEmpresaFormPage),
+  },
+  {
+    path: 'empresa/ofertas/:id/editar',
+    title: 'Editar oferta | FCTNow',
+    loadComponent: () =>
+      import('./empresas/oferta-empresa-form').then((m) => m.OfertaEmpresaFormPage),
+  },
+  {
     path: 'tutor',
     title: 'Tutor centro | FCTNow',
     loadComponent: () => import('./fct/tutor').then((m) => m.TutorPage),

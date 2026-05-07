@@ -108,6 +108,37 @@ public class OfertaFct {
     this.estado = estado;
   }
 
+  public void updateContent(
+      String titulo,
+      String descripcion,
+      String familiaProfesional,
+      String cicloFormativo,
+      String localidad,
+      String provincia,
+      OfertaModalidad modalidad,
+      LocalDate fechaInicio,
+      LocalDate fechaFin,
+      Integer plazas,
+      String requisitos,
+      String tareas) {
+    this.titulo = titulo;
+    this.descripcion = descripcion;
+    this.familiaProfesional = familiaProfesional;
+    this.cicloFormativo = cicloFormativo;
+    this.localidad = localidad;
+    this.provincia = provincia;
+    this.modalidad = modalidad;
+    this.fechaInicio = fechaInicio;
+    this.fechaFin = fechaFin;
+    this.plazas = plazas;
+    this.requisitos = requisitos;
+    this.tareas = tareas;
+  }
+
+  public void changeEstado(OfertaEstado estado) {
+    this.estado = estado;
+  }
+
   public Long getId() {
     return id;
   }

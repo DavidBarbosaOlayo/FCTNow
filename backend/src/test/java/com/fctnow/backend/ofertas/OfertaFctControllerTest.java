@@ -56,8 +56,8 @@ class OfertaFctControllerTest {
   @BeforeEach
   void setUp() {
     ofertaFctRepository.deleteAll();
-    empresaRepository.deleteAll();
     userAccountRepository.deleteAll();
+    empresaRepository.deleteAll();
 
     userAccountRepository.save(new UserAccount(
         "alumno@example.com",
