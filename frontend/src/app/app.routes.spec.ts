@@ -12,6 +12,7 @@ describe('routes', () => {
       'login',
       'alumno',
       'alumno/solicitudes',
+      'alumno/preferencias',
       'empresa',
       'empresa/ofertas',
       'empresa/ofertas/nueva',
