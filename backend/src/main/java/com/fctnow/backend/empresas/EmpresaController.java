@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,6 +32,22 @@ public class EmpresaController {
   @SecurityRequirement(name = "bearerAuth")
   public List<EmpresaResponse> list() {
     return empresaService.findAll();
+  }
+
+  @GetMapping("/me")
+  @Operation(summary = "Get the authenticated company profile")
+  @SecurityRequirement(name = "bearerAuth")
+  public EmpresaResponse mine(JwtAuthenticationToken authentication) {
+    return empresaService.findMine(authentication);
+  }
+
+  @PutMapping("/me")
+  @Operation(summary = "Update the authenticated company profile")
+  @SecurityRequirement(name = "bearerAuth")
+  public EmpresaResponse updateMine(
+      @Valid @RequestBody EmpresaPerfilRequest request,
+      JwtAuthenticationToken authentication) {
+    return empresaService.updateMine(request, authentication);
   }
 
   @GetMapping("/{id}")
