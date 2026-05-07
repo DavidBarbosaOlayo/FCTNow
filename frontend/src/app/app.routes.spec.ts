@@ -11,6 +11,7 @@ describe('routes', () => {
       'perfil',
       'login',
       'alumno',
+      'alumno/solicitudes',
       'empresa',
       'tutor',
       'coordinador',

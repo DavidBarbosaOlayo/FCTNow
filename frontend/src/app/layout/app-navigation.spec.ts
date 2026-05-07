@@ -1,22 +1,41 @@
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { AuthenticatedUser, UserRole } from '../auth/auth.models';
+import { AuthService } from '../auth/auth.service';
 import { AppNavigation } from './app-navigation';
 
 describe('AppNavigation', () => {
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [AppNavigation],
-      providers: [provideZonelessChangeDetection(), provideRouter([])],
-    }).compileComponents();
-  });
+  function configure(roles: UserRole[] | null) {
+    const user = roles
+      ? ({ id: 1, email: 'demo@example.com', displayName: 'Demo', roles } as AuthenticatedUser)
+      : null;
+    const currentUser = signal<AuthenticatedUser | null>(user);
 
-  it('should render the main route links', () => {
+    TestBed.configureTestingModule({
+      imports: [AppNavigation],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        { provide: AuthService, useValue: { currentUser } },
+      ],
+    });
+  }
+
+  function renderLabels(): { labels: string[]; hrefs: string[] } {
     const fixture = TestBed.createComponent(AppNavigation);
     fixture.detectChanges();
     const links = Array.from(fixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
-    const labels = links.map((link) => link.textContent?.trim());
-    const hrefs = links.map((link) => link.getAttribute('href'));
+    return {
+      labels: links.map((link) => link.textContent?.trim() ?? ''),
+      hrefs: links.map((link) => link.getAttribute('href') ?? ''),
+    };
+  }
+
+  it('should render the base routes when there is no active session', () => {
+    configure(null);
+
+    const { labels, hrefs } = renderLabels();
 
     expect(labels).toEqual([
       'FCTNow',
@@ -34,5 +53,23 @@ describe('AppNavigation', () => {
       '/notificaciones',
       '/perfil',
     ]);
+  });
+
+  it('should expose the alumno applications link only when the user has the ALUMNO role', () => {
+    configure(['ALUMNO']);
+
+    const { labels, hrefs } = renderLabels();
+
+    expect(labels).toContain('Mis solicitudes');
+    expect(hrefs).toContain('/alumno/solicitudes');
+  });
+
+  it('should hide the alumno applications link for users without the ALUMNO role', () => {
+    configure(['EMPRESA']);
+
+    const { labels, hrefs } = renderLabels();
+
+    expect(labels).not.toContain('Mis solicitudes');
+    expect(hrefs).not.toContain('/alumno/solicitudes');
   });
 });
