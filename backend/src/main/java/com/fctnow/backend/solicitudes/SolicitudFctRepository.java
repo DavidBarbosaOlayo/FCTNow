@@ -1,6 +1,7 @@
 package com.fctnow.backend.solicitudes;
 
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,4 +19,27 @@ public interface SolicitudFctRepository extends JpaRepository<SolicitudFct, Long
       order by s.createdAt desc, s.id desc
       """)
   List<SolicitudFct> findByAlumnoIdWithOferta(@Param("alumnoId") Long alumnoId);
+
+  @Query("""
+      select s
+      from SolicitudFct s
+      join fetch s.oferta o
+      join fetch o.empresa
+      join fetch s.alumno
+      where o.empresa.id = :empresaId
+      order by s.createdAt desc, s.id desc
+      """)
+  List<SolicitudFct> findByEmpresaIdWithDetails(@Param("empresaId") Long empresaId);
+
+  @Query("""
+      select s
+      from SolicitudFct s
+      join fetch s.oferta o
+      join fetch o.empresa
+      join fetch s.alumno
+      where s.id = :id and o.empresa.id = :empresaId
+      """)
+  Optional<SolicitudFct> findByIdAndEmpresaIdWithDetails(
+      @Param("id") Long id,
+      @Param("empresaId") Long empresaId);
 }

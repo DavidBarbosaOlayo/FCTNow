@@ -71,4 +71,8 @@ public class SolicitudFct {
   public Instant getCreatedAt() {
     return createdAt;
   }
+
+  public void changeEstado(SolicitudEstado estado) {
+    this.estado = estado;
+  }
 }
