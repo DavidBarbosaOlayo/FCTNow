@@ -8,15 +8,23 @@ public record SolicitudFctResponse(
     String ofertaTitulo,
     String empresaNombre,
     SolicitudEstado estado,
-    Instant createdAt) {
+    Instant createdAt,
+    boolean asignadaPorCentro,
+    Instant fechaAsignacion) {
 
   static SolicitudFctResponse from(SolicitudFct solicitud) {
+    return from(solicitud, null);
+  }
+
+  static SolicitudFctResponse from(SolicitudFct solicitud, Instant fechaAsignacion) {
     return new SolicitudFctResponse(
         solicitud.getId(),
         solicitud.getOferta().getId(),
         solicitud.getOferta().getTitulo(),
         solicitud.getOferta().getEmpresa().getNombre(),
         solicitud.getEstado(),
-        solicitud.getCreatedAt());
+        solicitud.getCreatedAt(),
+        fechaAsignacion != null,
+        fechaAsignacion);
   }
 }

@@ -90,6 +90,12 @@ export const routes: Routes = [
       import('./empresas/oferta-empresa-form').then((m) => m.OfertaEmpresaFormPage),
   },
   {
+    path: 'asignaciones',
+    title: 'Asignaciones FCT | FCTNow',
+    loadComponent: () =>
+      import('./asignaciones/asignaciones').then((m) => m.AsignacionesPage),
+  },
+  {
     path: 'tutor',
     title: 'Tutor centro | FCTNow',
     loadComponent: () => import('./fct/tutor').then((m) => m.TutorPage),

@@ -42,4 +42,19 @@ public interface SolicitudFctRepository extends JpaRepository<SolicitudFct, Long
   Optional<SolicitudFct> findByIdAndEmpresaIdWithDetails(
       @Param("id") Long id,
       @Param("empresaId") Long empresaId);
+
+  @Query("""
+      select s
+      from SolicitudFct s
+      join fetch s.oferta o
+      join fetch o.empresa
+      join fetch s.alumno
+      where s.estado = com.fctnow.backend.solicitudes.SolicitudEstado.ACEPTADA
+        and not exists (
+          select 1 from com.fctnow.backend.asignaciones.AsignacionFct a
+          where a.solicitud = s
+        )
+      order by s.createdAt desc, s.id desc
+      """)
+  List<SolicitudFct> findAceptadasSinAsignacion();
 }

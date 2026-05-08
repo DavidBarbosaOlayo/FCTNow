@@ -64,6 +64,8 @@ describe('OfertaDetailPage', () => {
         empresaNombre: offer.empresaNombre,
         estado: 'SOLICITADA',
         createdAt: '2026-05-06T10:00:00Z',
+        asignadaPorCentro: false,
+        fechaAsignacion: null,
       }),
     );
 
@@ -136,6 +138,8 @@ describe('OfertaDetailPage', () => {
           empresaNombre: offer.empresaNombre,
           estado: 'SOLICITADA',
           createdAt: '2026-05-06T10:00:00Z',
+          asignadaPorCentro: false,
+          fechaAsignacion: null,
         },
       ]),
     });

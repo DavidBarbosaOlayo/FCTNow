@@ -116,4 +116,31 @@ describe('AppNavigation', () => {
     expect(labels).not.toContain('Solicitudes recibidas');
     expect(hrefs).not.toContain('/empresa/solicitudes');
   });
+
+  it('should expose the asignaciones link for tutor centro', () => {
+    configure(['TUTOR_CENTRO']);
+
+    const { labels, hrefs } = renderLabels();
+
+    expect(labels).toContain('Asignaciones');
+    expect(hrefs).toContain('/asignaciones');
+  });
+
+  it('should expose the asignaciones link for coordinador', () => {
+    configure(['COORDINADOR']);
+
+    const { labels, hrefs } = renderLabels();
+
+    expect(labels).toContain('Asignaciones');
+    expect(hrefs).toContain('/asignaciones');
+  });
+
+  it('should hide the asignaciones link for users without centro roles', () => {
+    configure(['ALUMNO']);
+
+    const { labels, hrefs } = renderLabels();
+
+    expect(labels).not.toContain('Asignaciones');
+    expect(hrefs).not.toContain('/asignaciones');
+  });
 });

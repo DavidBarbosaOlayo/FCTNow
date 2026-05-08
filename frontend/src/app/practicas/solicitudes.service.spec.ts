@@ -52,6 +52,8 @@ describe('SolicitudesService', () => {
         empresaNombre: 'Tech Norte Formacion',
         estado: 'SOLICITADA',
         createdAt: '2026-05-06T10:00:00Z',
+        asignadaPorCentro: false,
+        fechaAsignacion: null,
       },
     ]);
   });
@@ -74,6 +76,8 @@ describe('SolicitudesService', () => {
       empresaNombre: 'Tech Norte Formacion',
       estado: 'SOLICITADA',
       createdAt: '2026-05-06T10:00:00Z',
+      asignadaPorCentro: false,
+      fechaAsignacion: null,
     });
   });
 
