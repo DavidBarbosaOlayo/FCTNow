@@ -11,14 +11,16 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
+import { PreferenciasAlumnoPage } from '../alumnos/preferencias';
 import { AuthenticatedUser, UserRole } from '../auth/auth.models';
 import { AuthService } from '../auth/auth.service';
+import { EmpresaPerfilPage } from '../empresas/empresa-perfil';
 
 type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
 
 @Component({
   selector: 'app-perfil-page',
-  imports: [RouterLink],
+  imports: [EmpresaPerfilPage, PreferenciasAlumnoPage, RouterLink],
   template: `
     <main class="page-shell route-page profile-page">
       <header class="route-hero profile-hero">
@@ -86,6 +88,18 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
             </button>
           </div>
         </section>
+
+        @if (user.roles.includes('ALUMNO')) {
+          <section class="profile-role-section" aria-label="Preferencias del alumno">
+            <app-preferencias-alumno-page [embedded]="true" />
+          </section>
+        }
+
+        @if (user.roles.includes('EMPRESA')) {
+          <section class="profile-role-section" aria-label="Perfil de empresa">
+            <app-empresa-perfil-page [embedded]="true" />
+          </section>
+        }
       }
     </main>
   `,
@@ -228,6 +242,11 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
       .profile-details dd {
         color: var(--ink);
         font-weight: 800;
+      }
+
+      .profile-role-section {
+        display: grid;
+        gap: 1rem;
       }
 
       .back-link {

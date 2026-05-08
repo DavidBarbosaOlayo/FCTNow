@@ -1,27 +1,47 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { PLATFORM_ID, provideZonelessChangeDetection } from '@angular/core';
+import { Component, Input, PLATFORM_ID, provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
-import { AuthenticatedUser } from '../auth/auth.models';
+import { PreferenciasAlumnoPage } from '../alumnos/preferencias';
+import { AuthenticatedUser, UserRole } from '../auth/auth.models';
 import { AuthService } from '../auth/auth.service';
+import { EmpresaPerfilPage } from '../empresas/empresa-perfil';
 import { PerfilPage } from './perfil';
+
+@Component({
+  selector: 'app-preferencias-alumno-page',
+  template: '',
+})
+class PreferenciasAlumnoStub {
+  @Input() embedded = false;
+}
+
+@Component({
+  selector: 'app-empresa-perfil-page',
+  template: '',
+})
+class EmpresaPerfilStub {
+  @Input() embedded = false;
+}
 
 describe('PerfilPage', () => {
   let fixture: ComponentFixture<PerfilPage>;
   let authService: jasmine.SpyObj<AuthService>;
   let navigateSpy: jasmine.Spy;
 
-  const user: AuthenticatedUser = {
-    id: 8,
-    email: 'alumno@example.com',
-    displayName: 'Alumno Demo',
-    roles: ['ALUMNO', 'ADMIN'],
-  };
+  function buildUser(roles: UserRole[]): AuthenticatedUser {
+    return {
+      id: 8,
+      email: 'demo@example.com',
+      displayName: 'Demo Usuario',
+      roles,
+    };
+  }
 
   async function configure({
     accessToken = 'jwt-token',
-    result = of(user),
+    result = of(buildUser(['ALUMNO', 'ADMIN'])),
     platformId = 'browser',
   }: {
     accessToken?: string | null;
@@ -36,7 +56,7 @@ describe('PerfilPage', () => {
     authService.accessToken.and.returnValue(accessToken);
     authService.loadAuthenticatedUser.and.returnValue(result as never);
 
-    await TestBed.configureTestingModule({
+    TestBed.configureTestingModule({
       imports: [PerfilPage],
       providers: [
         provideZonelessChangeDetection(),
@@ -44,7 +64,12 @@ describe('PerfilPage', () => {
         { provide: AuthService, useValue: authService },
         { provide: PLATFORM_ID, useValue: platformId },
       ],
-    }).compileComponents();
+    });
+    TestBed.overrideComponent(PerfilPage, {
+      remove: { imports: [EmpresaPerfilPage, PreferenciasAlumnoPage] },
+      add: { imports: [EmpresaPerfilStub, PreferenciasAlumnoStub] },
+    });
+    await TestBed.compileComponents();
 
     const router = TestBed.inject(Router);
     navigateSpy = spyOn(router, 'navigateByUrl').and.returnValue(Promise.resolve(true));
@@ -60,10 +85,8 @@ describe('PerfilPage', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(authService.loadAuthenticatedUser).toHaveBeenCalled();
-    expect(compiled.textContent).toContain('Alumno Demo');
-    expect(compiled.textContent).toContain('alumno@example.com');
-    expect(compiled.textContent).toContain('Alumno');
-    expect(compiled.textContent).toContain('Administración');
+    expect(compiled.textContent).toContain('Demo Usuario');
+    expect(compiled.textContent).toContain('demo@example.com');
     expect(compiled.textContent).toContain('Alumno, Administración');
   });
 
@@ -141,5 +164,51 @@ describe('PerfilPage', () => {
     expect(authService.logout).toHaveBeenCalled();
     expect(navigateSpy).toHaveBeenCalledWith('/login');
     expect(compiled.textContent).toContain('Inicia sesión para ver tu perfil');
+  });
+
+  it('should embed the preferencias section for an ALUMNO user', async () => {
+    await configure({ result: of(buildUser(['ALUMNO'])) });
+
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('app-preferencias-alumno-page')).not.toBeNull();
+    expect(compiled.querySelector('app-empresa-perfil-page')).toBeNull();
+    expect(compiled.querySelector('section[aria-label="Preferencias del alumno"]')).not.toBeNull();
+  });
+
+  it('should embed the empresa perfil section for an EMPRESA user', async () => {
+    await configure({ result: of(buildUser(['EMPRESA'])) });
+
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('app-empresa-perfil-page')).not.toBeNull();
+    expect(compiled.querySelector('app-preferencias-alumno-page')).toBeNull();
+    expect(compiled.querySelector('section[aria-label="Perfil de empresa"]')).not.toBeNull();
+  });
+
+  it('should embed both sections for a user with ALUMNO and EMPRESA roles', async () => {
+    await configure({ result: of(buildUser(['ALUMNO', 'EMPRESA'])) });
+
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('app-preferencias-alumno-page')).not.toBeNull();
+    expect(compiled.querySelector('app-empresa-perfil-page')).not.toBeNull();
+  });
+
+  it('should not embed role sections for users without ALUMNO or EMPRESA roles', async () => {
+    await configure({ result: of(buildUser(['TUTOR_CENTRO'])) });
+
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('app-preferencias-alumno-page')).toBeNull();
+    expect(compiled.querySelector('app-empresa-perfil-page')).toBeNull();
   });
 });
