@@ -1,3 +1,38 @@
+INSERT INTO app_users (
+  email,
+  password_hash,
+  display_name,
+  enabled
+) VALUES
+  (
+    'alumno@example.com',
+    '$2a$10$9ssoe.HD9QeqKkShCVorTONNHxV8uNIJKyOQVlvBtiN7FClz8mXDK',
+    'Alumno Demo',
+    TRUE
+  ),
+  (
+    'empresa@example.com',
+    '$2a$10$9ssoe.HD9QeqKkShCVorTONNHxV8uNIJKyOQVlvBtiN7FClz8mXDK',
+    'Empresa Demo',
+    TRUE
+  )
+ON CONFLICT (email) DO UPDATE SET
+  display_name = EXCLUDED.display_name,
+  enabled = EXCLUDED.enabled,
+  updated_at = NOW();
+
+INSERT INTO user_roles (user_id, role)
+SELECT id, 'ALUMNO'
+FROM app_users
+WHERE email = 'alumno@example.com'
+ON CONFLICT (user_id, role) DO NOTHING;
+
+INSERT INTO user_roles (user_id, role)
+SELECT id, 'EMPRESA'
+FROM app_users
+WHERE email = 'empresa@example.com'
+ON CONFLICT (user_id, role) DO NOTHING;
+
 INSERT INTO empresas (
   nombre,
   tipo_identificador_fiscal,
@@ -208,3 +243,12 @@ WHERE NOT EXISTS (
   WHERE existing.empresa_id = e.id
     AND existing.titulo = seed.titulo
 );
+
+UPDATE app_users
+   SET empresa_id = (SELECT id FROM empresas WHERE identificador_fiscal = 'B12345678'),
+       updated_at = NOW()
+ WHERE email = 'empresa@example.com'
+   AND (
+     empresa_id IS NULL
+     OR empresa_id <> (SELECT id FROM empresas WHERE identificador_fiscal = 'B12345678')
+   );
