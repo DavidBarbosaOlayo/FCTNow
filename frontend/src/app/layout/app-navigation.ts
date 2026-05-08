@@ -7,7 +7,7 @@ type NavigationItem = {
   label: string;
   path: string;
   exact: boolean;
-  requireRole?: UserRole;
+  requireRole?: UserRole | UserRole[];
 };
 
 @Component({
@@ -51,6 +51,12 @@ export class AppNavigation {
       exact: true,
       requireRole: 'EMPRESA',
     },
+    {
+      label: 'Asignaciones',
+      path: '/asignaciones',
+      exact: true,
+      requireRole: ['TUTOR_CENTRO', 'COORDINADOR'],
+    },
     { label: 'Mensajes', path: '/mensajes', exact: true },
     { label: 'Notificaciones', path: '/notificaciones', exact: true },
     { label: 'Perfil', path: '/perfil', exact: true },
@@ -58,8 +64,12 @@ export class AppNavigation {
 
   protected readonly visibleItems = computed<NavigationItem[]>(() => {
     const roles = this.currentUser()?.roles ?? [];
-    return this.navigationItems.filter(
-      (item) => !item.requireRole || roles.includes(item.requireRole),
-    );
+    return this.navigationItems.filter((item) => {
+      if (!item.requireRole) {
+        return true;
+      }
+      const required = Array.isArray(item.requireRole) ? item.requireRole : [item.requireRole];
+      return required.some((role) => roles.includes(role));
+    });
   });
 }

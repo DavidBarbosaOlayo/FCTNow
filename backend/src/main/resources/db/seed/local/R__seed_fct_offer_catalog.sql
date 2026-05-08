@@ -15,6 +15,18 @@ INSERT INTO app_users (
     '$2a$10$9ssoe.HD9QeqKkShCVorTONNHxV8uNIJKyOQVlvBtiN7FClz8mXDK',
     'Empresa Demo',
     TRUE
+  ),
+  (
+    'tutor@example.com',
+    '$2a$10$9ssoe.HD9QeqKkShCVorTONNHxV8uNIJKyOQVlvBtiN7FClz8mXDK',
+    'Tutor Centro Demo',
+    TRUE
+  ),
+  (
+    'coordinador@example.com',
+    '$2a$10$9ssoe.HD9QeqKkShCVorTONNHxV8uNIJKyOQVlvBtiN7FClz8mXDK',
+    'Coordinador Demo',
+    TRUE
   )
 ON CONFLICT (email) DO UPDATE SET
   display_name = EXCLUDED.display_name,
@@ -31,6 +43,18 @@ INSERT INTO user_roles (user_id, role)
 SELECT id, 'EMPRESA'
 FROM app_users
 WHERE email = 'empresa@example.com'
+ON CONFLICT (user_id, role) DO NOTHING;
+
+INSERT INTO user_roles (user_id, role)
+SELECT id, 'TUTOR_CENTRO'
+FROM app_users
+WHERE email = 'tutor@example.com'
+ON CONFLICT (user_id, role) DO NOTHING;
+
+INSERT INTO user_roles (user_id, role)
+SELECT id, 'COORDINADOR'
+FROM app_users
+WHERE email = 'coordinador@example.com'
 ON CONFLICT (user_id, role) DO NOTHING;
 
 INSERT INTO empresas (

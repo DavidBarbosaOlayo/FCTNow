@@ -79,16 +79,27 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
                 <dl class="solicitud-details" aria-label="Datos de la solicitud">
                   <div>
                     <dt>Estado</dt>
-                    <dd>
+                    <dd class="estado-cell">
                       <span class="estado-pill" [attr.data-estado]="solicitud.estado">
                         {{ estadoLabel(solicitud.estado) }}
                       </span>
+                      @if (solicitud.asignadaPorCentro) {
+                        <span class="estado-pill" data-estado="ASIGNADA">
+                          Asignada por el centro
+                        </span>
+                      }
                     </dd>
                   </div>
                   <div>
                     <dt>Fecha de envío</dt>
                     <dd>{{ formatFecha(solicitud.createdAt) }}</dd>
                   </div>
+                  @if (solicitud.fechaAsignacion; as fecha) {
+                    <div>
+                      <dt>Asignada el</dt>
+                      <dd>{{ formatFecha(fecha) }}</dd>
+                    </div>
+                  }
                 </dl>
 
                 <a
@@ -237,6 +248,19 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
       .estado-pill[data-estado='RECHAZADA'] {
         background: rgba(184, 79, 59, 0.18);
         color: #7a2c1c;
+      }
+
+      .estado-pill[data-estado='ASIGNADA'] {
+        background: rgba(11, 95, 89, 0.16);
+        color: #0b5f59;
+      }
+
+      .estado-cell {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.4rem;
+        margin: 0.2rem 0 0;
       }
 
       .solicitud-link,

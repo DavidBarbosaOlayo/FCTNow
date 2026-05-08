@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fctnow.backend.asignaciones.AsignacionFct;
+import com.fctnow.backend.asignaciones.AsignacionFctRepository;
 import com.fctnow.backend.auth.LoginRequest;
 import com.fctnow.backend.empresas.Empresa;
 import com.fctnow.backend.empresas.EmpresaEstado;
@@ -57,11 +59,18 @@ class SolicitudFctControllerTest {
   @Autowired
   private SolicitudFctRepository solicitudFctRepository;
 
+  @Autowired
+  private AsignacionFctRepository asignacionFctRepository;
+
+  @Autowired
+  private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
+
   private Long publishedOfferId;
   private Long draftOfferId;
 
   @BeforeEach
   void setUp() {
+    asignacionFctRepository.deleteAll();
     solicitudFctRepository.deleteAll();
     ofertaFctRepository.deleteAll();
     userAccountRepository.deleteAll();
@@ -157,7 +166,30 @@ class SolicitudFctControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(1))
         .andExpect(jsonPath("$[0].ofertaId").value(publishedOfferId))
-        .andExpect(jsonPath("$[0].estado").value("SOLICITADA"));
+        .andExpect(jsonPath("$[0].estado").value("SOLICITADA"))
+        .andExpect(jsonPath("$[0].asignadaPorCentro").value(false))
+        .andExpect(jsonPath("$[0].fechaAsignacion").doesNotExist());
+  }
+
+  @Test
+  void mineMarksAsignadaPorCentroWhenAssigned() throws Exception {
+    mockMvc.perform(post("/api/ofertas/{id}/solicitudes", publishedOfferId)
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("alumno@example.com")))
+        .andExpect(status().isCreated());
+
+    Long solicitudId = solicitudFctRepository.findAll().getFirst().getId();
+    transactionTemplate.executeWithoutResult(status -> {
+      SolicitudFct managed = solicitudFctRepository.findById(solicitudId).orElseThrow();
+      managed.changeEstado(SolicitudEstado.ACEPTADA);
+      asignacionFctRepository.save(new AsignacionFct(managed, "Asignada por el centro"));
+    });
+
+    mockMvc.perform(get("/api/solicitudes/me")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("alumno@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].estado").value("ACEPTADA"))
+        .andExpect(jsonPath("$[0].asignadaPorCentro").value(true))
+        .andExpect(jsonPath("$[0].fechaAsignacion").exists());
   }
 
   @Test

@@ -7,4 +7,6 @@ export type SolicitudFct = {
   empresaNombre: string;
   estado: SolicitudEstado;
   createdAt: string;
+  asignadaPorCentro: boolean;
+  fechaAsignacion: string | null;
 };

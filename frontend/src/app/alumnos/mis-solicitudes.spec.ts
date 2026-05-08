@@ -21,6 +21,8 @@ describe('MisSolicitudesPage', () => {
       empresaNombre: 'Tech Norte Formacion',
       estado: 'SOLICITADA',
       createdAt: '2026-05-06T10:00:00Z',
+      asignadaPorCentro: false,
+      fechaAsignacion: null,
     },
   ];
 
@@ -146,5 +148,37 @@ describe('MisSolicitudesPage', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Aceptada');
     expect(compiled.textContent).toContain('Rechazada');
+  });
+
+  it('should render the asignada por el centro badge when the solicitud is assigned', async () => {
+    await configure({
+      result: of([
+        {
+          ...sampleSolicitudes[0],
+          id: 4,
+          estado: 'ACEPTADA',
+          asignadaPorCentro: true,
+          fechaAsignacion: '2026-05-09T08:00:00Z',
+        },
+      ]),
+    });
+
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Aceptada');
+    expect(compiled.textContent).toContain('Asignada por el centro');
+    expect(compiled.textContent).toContain('Asignada el');
+  });
+
+  it('should hide the asignacion badge when not assigned yet', async () => {
+    await configure();
+
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).not.toContain('Asignada por el centro');
   });
 });
