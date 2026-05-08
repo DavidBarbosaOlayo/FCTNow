@@ -60,6 +60,12 @@ export const routes: Routes = [
       import('./empresas/mis-ofertas-empresa').then((m) => m.MisOfertasEmpresaPage),
   },
   {
+    path: 'empresa/solicitudes',
+    title: 'Solicitudes recibidas | FCTNow',
+    loadComponent: () =>
+      import('./empresas/mis-solicitudes-empresa').then((m) => m.MisSolicitudesEmpresaPage),
+  },
+  {
     path: 'empresa/ofertas/nueva',
     title: 'Nueva oferta | FCTNow',
     loadComponent: () =>

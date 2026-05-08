@@ -131,4 +131,20 @@ describe('MisSolicitudesPage', () => {
     expect(solicitudesService.mine).not.toHaveBeenCalled();
     expect(compiled.textContent).toContain('Inicia sesión para ver tus solicitudes');
   });
+
+  it('should render the new estados with their labels', async () => {
+    await configure({
+      result: of([
+        { ...sampleSolicitudes[0], id: 2, estado: 'ACEPTADA' },
+        { ...sampleSolicitudes[0], id: 3, estado: 'RECHAZADA' },
+      ]),
+    });
+
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Aceptada');
+    expect(compiled.textContent).toContain('Rechazada');
+  });
 });

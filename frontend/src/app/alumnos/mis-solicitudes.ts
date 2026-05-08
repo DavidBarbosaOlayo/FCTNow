@@ -229,6 +229,16 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         font-weight: 800;
       }
 
+      .estado-pill[data-estado='ACEPTADA'] {
+        background: rgba(46, 125, 50, 0.18);
+        color: #1b5e20;
+      }
+
+      .estado-pill[data-estado='RECHAZADA'] {
+        background: rgba(184, 79, 59, 0.18);
+        color: #7a2c1c;
+      }
+
       .solicitud-link,
       .back-link {
         justify-self: start;
@@ -353,6 +363,8 @@ export class MisSolicitudesPage implements OnInit {
 
 const ESTADO_LABELS: Record<SolicitudEstado, string> = {
   SOLICITADA: 'Solicitada',
+  ACEPTADA: 'Aceptada',
+  RECHAZADA: 'Rechazada',
 };
 
 function isUnauthorized(error: unknown): boolean {

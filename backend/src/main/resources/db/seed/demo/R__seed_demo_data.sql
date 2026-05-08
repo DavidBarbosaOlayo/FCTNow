@@ -141,7 +141,7 @@ INSERT INTO ofertas_fct (
     'PUBLICADA'
   ),
   (
-    (SELECT id FROM empresas WHERE identificador_fiscal = 'B87654321'),
+    (SELECT id FROM empresas WHERE identificador_fiscal = 'B12345678'),
     'Apoyo administrativo sanitario',
     'Practicas en gestion documental, atencion telefonica y apoyo administrativo.',
     'Administracion y gestion',
@@ -157,7 +157,7 @@ INSERT INTO ofertas_fct (
     'PUBLICADA'
   ),
   (
-    (SELECT id FROM empresas WHERE identificador_fiscal = 'B11223344'),
+    (SELECT id FROM empresas WHERE identificador_fiscal = 'B12345678'),
     'Gestion de almacen e inventario',
     'Participacion en tareas de almacen, recepcion de mercancias y control de stock.',
     'Comercio y marketing',

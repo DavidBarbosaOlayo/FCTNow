@@ -14,6 +14,7 @@ describe('routes', () => {
       'alumno/solicitudes',
       'empresa',
       'empresa/ofertas',
+      'empresa/solicitudes',
       'empresa/ofertas/nueva',
       'empresa/ofertas/:id/editar',
       'tutor',

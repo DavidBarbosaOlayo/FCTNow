@@ -1,5 +1,7 @@
 package com.fctnow.backend.solicitudes;
 
 public enum SolicitudEstado {
-  SOLICITADA
+  SOLICITADA,
+  ACEPTADA,
+  RECHAZADA
 }

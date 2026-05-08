@@ -1,4 +1,4 @@
-export type SolicitudEstado = 'SOLICITADA';
+export type SolicitudEstado = 'SOLICITADA' | 'ACEPTADA' | 'RECHAZADA';
 
 export type SolicitudFct = {
   id: number;
