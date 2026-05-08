@@ -47,10 +47,8 @@ testem.log
 /typings
 /frontend/typings
 __screenshots__/
-.codex/
 
-# Local AI/context files
-AGENTS.md
+# Local context files
 docs/contracts/empresas-ofertas.md
 
 # System files
