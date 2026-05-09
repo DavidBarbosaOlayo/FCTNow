@@ -12,8 +12,11 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { OfertaExterna, OfertaExternaPage } from './ofertas-externas.models';
+import { OfertasExternasService } from './ofertas-externas.service';
 import { OfertaFct, OfertaFctFilters, OfertaModalidad } from './ofertas.models';
 import { OfertasService } from './ofertas.service';
+import { FAMILIAS_PROFESIONALES, LOCALIDADES_ES } from './practicas-options';
 
 type CatalogStatus = 'loading' | 'loaded' | 'error';
 
@@ -50,22 +53,22 @@ type ModalidadOption = {
 
           <div class="filter-field">
             <label for="practicas-familia">Familia profesional</label>
-            <input
-              id="practicas-familia"
-              type="text"
-              formControlName="familiaProfesional"
-              placeholder="Informática y comunicaciones"
-            />
+            <select id="practicas-familia" formControlName="familiaProfesional">
+              <option value="">Todas las familias</option>
+              @for (familia of familiaOptions; track familia.value) {
+                <option [value]="familia.value">{{ familia.label }}</option>
+              }
+            </select>
           </div>
 
           <div class="filter-field">
             <label for="practicas-localidad">Localidad</label>
-            <input
-              id="practicas-localidad"
-              type="text"
-              formControlName="localidad"
-              placeholder="Valencia"
-            />
+            <select id="practicas-localidad" formControlName="localidad">
+              <option value="">Toda España</option>
+              @for (localidad of localidadOptions; track localidad) {
+                <option [value]="localidad">{{ localidad }}</option>
+              }
+            </select>
           </div>
 
           <div class="filter-field">
@@ -83,6 +86,123 @@ type ModalidadOption = {
             <button class="secondary-action" type="button" (click)="clearFilters()">Limpiar</button>
           </div>
         </form>
+      </section>
+
+      <section
+        class="catalog-results catalog-results-externas"
+        aria-live="polite"
+        aria-label="Ofertas externas de Adzuna"
+      >
+        <div class="results-heading">
+          <p class="eyebrow">Ofertas reales · Adzuna</p>
+          <h2>{{ externasResultsTitle() }}</h2>
+          <p class="results-hint">
+            Resultados de portales de empleo que coinciden con tu búsqueda. La aplicación se realiza
+            en el sitio externo.
+          </p>
+        </div>
+
+        @if (externasStatus() === 'loading') {
+          <div class="state-panel">
+            <p class="eyebrow">Cargando</p>
+            <h2>Buscando ofertas reales</h2>
+            <p>Estamos consultando ofertas reales de Adzuna para España.</p>
+          </div>
+        } @else if (externasStatus() === 'error') {
+          <div class="state-panel alert" role="alert">
+            <p class="eyebrow">Fuente externa no disponible</p>
+            <h2>No se pudieron cargar las ofertas externas</h2>
+            <p>{{ externasErrorMessage() }}</p>
+          </div>
+        } @else if (ofertasExternas().length === 0) {
+          <div class="state-panel">
+            <p class="eyebrow">Sin resultados</p>
+            <h2>No hay ofertas externas con esos filtros</h2>
+            <p>Prueba con otra palabra clave o cambia la localidad.</p>
+          </div>
+        } @else {
+          <div class="offer-grid">
+            @for (oferta of ofertasExternas(); track oferta.id) {
+              <article class="offer-card offer-card-externa">
+                <div class="offer-card-heading">
+                  <span class="offer-source-tag" aria-label="Fuente externa">Adzuna</span>
+                  <p class="offer-company">{{ oferta.empresaNombre || 'Empresa no especificada' }}</p>
+                  <h2>{{ oferta.titulo }}</h2>
+                  @if (oferta.descripcion) {
+                    <p>{{ oferta.descripcion }}</p>
+                  }
+                </div>
+
+                <dl class="offer-details" aria-label="Datos principales de la oferta externa">
+                  @if (oferta.localidad) {
+                    <div>
+                      <dt>Localidad</dt>
+                      <dd>{{ oferta.localidad }}{{ oferta.region ? ', ' + oferta.region : '' }}</dd>
+                    </div>
+                  }
+                  @if (oferta.categoria) {
+                    <div>
+                      <dt>Categoría</dt>
+                      <dd>{{ oferta.categoria }}</dd>
+                    </div>
+                  }
+                  @if (oferta.jornada) {
+                    <div>
+                      <dt>Jornada</dt>
+                      <dd>{{ oferta.jornada }}</dd>
+                    </div>
+                  }
+                  @if (oferta.salarioMinimo || oferta.salarioMaximo) {
+                    <div>
+                      <dt>Salario</dt>
+                      <dd>{{ salaryLabel(oferta) }}</dd>
+                    </div>
+                  }
+                </dl>
+
+                <a
+                  class="offer-link"
+                  [href]="oferta.urlAplicacion"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  [attr.aria-label]="'Ver oferta de ' + oferta.titulo + ' en Adzuna'"
+                >
+                  Ver oferta en Adzuna
+                </a>
+              </article>
+            }
+          </div>
+
+          @if (canLoadMoreExternal()) {
+            <div class="load-more-row">
+              <p class="load-more-hint">
+                Mostrando {{ ofertasExternas().length }} de {{ externasTotal() }}
+              </p>
+              <button
+                type="button"
+                class="load-more-action"
+                (click)="loadMoreExternalOffers()"
+                [disabled]="externasLoadingMore()"
+              >
+                {{ externasLoadingMore() ? 'Cargando…' : 'Cargar más ofertas' }}
+              </button>
+            </div>
+          }
+
+          @if (externasLoadingMoreError()) {
+            <p class="load-more-error" role="alert">{{ externasErrorMessage() }}</p>
+          }
+
+          <p class="adzuna-attribution">
+            <a
+              [href]="externasAttributionUrl()"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {{ externasAttribution() }}
+            </a>
+          </p>
+        }
       </section>
 
       <section class="catalog-results" aria-live="polite" aria-label="Ofertas FCT publicadas">
@@ -309,9 +429,10 @@ type ModalidadOption = {
       }
 
       .offer-card {
-        display: grid;
+        display: flex;
+        flex-direction: column;
         gap: 1rem;
-        min-height: 100%;
+        height: 100%;
         padding: 1rem;
         border: 1px solid var(--line);
         border-radius: 0.5rem;
@@ -376,11 +497,13 @@ type ModalidadOption = {
       }
 
       .offer-link {
-        justify-self: start;
-        min-height: 2.5rem;
+        margin-top: auto;
+        align-self: flex-start;
+        min-height: 2.75rem;
         display: inline-flex;
         align-items: center;
-        padding: 0 0.85rem;
+        justify-content: center;
+        padding: 0 1rem;
         border-radius: 0.5rem;
         color: #f7fbf8;
         background: var(--accent);
@@ -391,6 +514,100 @@ type ModalidadOption = {
       .offer-link:hover,
       .offer-link:focus-visible {
         background: #0b5f59;
+        outline: none;
+      }
+
+      .catalog-results-externas {
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--line);
+      }
+
+      .results-hint {
+        margin: 0.35rem 0 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.55;
+      }
+
+      .offer-card-externa {
+        background: rgba(244, 236, 223, 0.78);
+        border-color: rgba(199, 101, 59, 0.28);
+      }
+
+      .offer-source-tag {
+        align-self: start;
+        display: inline-flex;
+        align-items: center;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        background: rgba(199, 101, 59, 0.18);
+        color: var(--accent-warm);
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .load-more-row {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.75rem 0 0.25rem;
+      }
+
+      .load-more-action {
+        min-height: 2.75rem;
+        padding: 0 1.4rem;
+        border: 0;
+        border-radius: 0.5rem;
+        color: #f7fbf8;
+        background: var(--accent);
+        font: inherit;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      .load-more-action:hover:not(:disabled),
+      .load-more-action:focus-visible:not(:disabled) {
+        background: #0b5f59;
+        outline: none;
+      }
+
+      .load-more-action:disabled {
+        cursor: progress;
+        background: rgba(15, 118, 110, 0.55);
+      }
+
+      .load-more-hint {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .load-more-error {
+        margin: 0.5rem 0 0;
+        color: #b8423b;
+        font-size: 0.92rem;
+        text-align: center;
+      }
+
+      .adzuna-attribution {
+        margin: 0.2rem 0 0;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .adzuna-attribution a {
+        color: var(--accent);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .adzuna-attribution a:hover,
+      .adzuna-attribution a:focus-visible {
+        text-decoration: underline;
         outline: none;
       }
 
@@ -426,6 +643,7 @@ type ModalidadOption = {
 export class PracticasPage implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly ofertasService = inject(OfertasService);
+  private readonly ofertasExternasService = inject(OfertasExternasService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
 
@@ -433,11 +651,25 @@ export class PracticasPage implements OnInit {
   protected readonly ofertas = signal<OfertaFct[]>([]);
   protected readonly errorMessage = signal<string | null>(null);
 
+  protected readonly externasStatus = signal<CatalogStatus>('loading');
+  protected readonly ofertasExternas = signal<OfertaExterna[]>([]);
+  protected readonly externasErrorMessage = signal<string | null>(null);
+  protected readonly externasAttribution = signal<string>('Resultados ofrecidos por Adzuna');
+  protected readonly externasAttributionUrl = signal<string>('https://www.adzuna.es/');
+  protected readonly externasTotal = signal<number>(0);
+  protected readonly externasPage = signal<number>(1);
+  protected readonly externasLoadingMore = signal<boolean>(false);
+
+  private static readonly EXTERNAS_PAGE_SIZE = 21;
+
   protected readonly modalidadOptions: ModalidadOption[] = [
     { value: 'PRESENCIAL', label: 'Presencial' },
     { value: 'HIBRIDA', label: 'Híbrida' },
     { value: 'REMOTA', label: 'Remota' },
   ];
+
+  protected readonly familiaOptions = FAMILIAS_PROFESIONALES;
+  protected readonly localidadOptions = LOCALIDADES_ES;
 
   protected readonly filtersForm = this.formBuilder.nonNullable.group({
     q: [''],
@@ -449,14 +681,17 @@ export class PracticasPage implements OnInit {
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) {
       this.status.set('loaded');
+      this.externasStatus.set('loaded');
       return;
     }
 
     this.loadOffers();
+    this.loadExternalOffers();
   }
 
   protected search(): void {
     this.loadOffers();
+    this.loadExternalOffers();
   }
 
   protected clearFilters(): void {
@@ -467,6 +702,7 @@ export class PracticasPage implements OnInit {
       modalidad: '',
     });
     this.loadOffers();
+    this.loadExternalOffers();
   }
 
   protected modalidadLabel(modalidad: OfertaModalidad): string {
@@ -476,6 +712,28 @@ export class PracticasPage implements OnInit {
   protected resultsTitle(): string {
     const count = this.ofertas().length;
     return count === 1 ? '1 oferta disponible' : `${count} ofertas disponibles`;
+  }
+
+  protected externasResultsTitle(): string {
+    const count = this.ofertasExternas().length;
+    const total = this.externasTotal();
+    if (count === 0) {
+      return 'Sin coincidencias en fuentes externas';
+    }
+    if (total > count) {
+      return `${count} de ${total} ofertas externas`;
+    }
+    return count === 1 ? '1 oferta externa' : `${count} ofertas externas`;
+  }
+
+  protected salaryLabel(oferta: OfertaExterna): string {
+    const min = oferta.salarioMinimo;
+    const max = oferta.salarioMaximo;
+    const formatter = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+    const range = min != null && max != null && min !== max
+      ? `${formatter.format(min)} - ${formatter.format(max)}`
+      : formatter.format((max ?? min) ?? 0);
+    return oferta.salarioEstimado ? `${range} (estimado)` : range;
   }
 
   private loadOffers(): void {
@@ -494,6 +752,78 @@ export class PracticasPage implements OnInit {
           this.ofertas.set([]);
           this.errorMessage.set(catalogErrorMessage(error));
           this.status.set('error');
+        },
+      });
+  }
+
+  protected loadMoreExternalOffers(): void {
+    if (this.externasLoadingMore() || !this.canLoadMoreExternal()) {
+      return;
+    }
+    this.fetchExternalOffers(this.externasPage() + 1, true);
+  }
+
+  protected canLoadMoreExternal(): boolean {
+    return this.ofertasExternas().length < this.externasTotal();
+  }
+
+  protected externasLoadingMoreError(): boolean {
+    return this.externasStatus() === 'loaded' && this.externasErrorMessage() !== null;
+  }
+
+  private loadExternalOffers(): void {
+    this.externasPage.set(1);
+    this.fetchExternalOffers(1, false);
+  }
+
+  private fetchExternalOffers(page: number, append: boolean): void {
+    if (append) {
+      this.externasLoadingMore.set(true);
+    } else {
+      this.externasStatus.set('loading');
+      this.externasErrorMessage.set(null);
+    }
+
+    const filters = this.currentFilters();
+    const adzunaCategory = this.familiaOptions.find(
+      (option) => option.value === filters.familiaProfesional,
+    )?.adzunaCategory;
+
+    this.ofertasExternasService
+      .list({
+        q: filters.q,
+        where: filters.localidad,
+        category: adzunaCategory ?? undefined,
+        page,
+        resultsPerPage: PracticasPage.EXTERNAS_PAGE_SIZE,
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response: OfertaExternaPage) => {
+          this.ofertasExternas.update((existing) =>
+            append ? [...existing, ...response.results] : response.results,
+          );
+          this.externasTotal.set(response.totalResults);
+          this.externasPage.set(page);
+          if (response.attribution) {
+            this.externasAttribution.set(response.attribution);
+          }
+          if (response.attributionUrl) {
+            this.externasAttributionUrl.set(response.attributionUrl);
+          }
+          this.externasStatus.set('loaded');
+          this.externasLoadingMore.set(false);
+        },
+        error: (error: unknown) => {
+          if (append) {
+            this.externasLoadingMore.set(false);
+            this.externasErrorMessage.set(externalCatalogErrorMessage(error));
+          } else {
+            this.ofertasExternas.set([]);
+            this.externasTotal.set(0);
+            this.externasErrorMessage.set(externalCatalogErrorMessage(error));
+            this.externasStatus.set('error');
+          }
         },
       });
   }
@@ -522,4 +852,20 @@ function catalogErrorMessage(error: unknown): string {
   }
 
   return 'Inténtalo de nuevo o ajusta los filtros de búsqueda.';
+}
+
+function externalCatalogErrorMessage(error: unknown): string {
+  if (error instanceof HttpErrorResponse) {
+    if (error.status === 401) {
+      return 'Inicia sesión para consultar las ofertas externas.';
+    }
+    if (error.status === 503) {
+      return 'La fuente externa no está disponible ahora mismo. Vuelve a intentarlo en unos minutos.';
+    }
+    if (error.status === 0) {
+      return 'No se pudo contactar con el backend para obtener ofertas externas.';
+    }
+  }
+
+  return 'No se pudieron obtener ofertas externas. Inténtalo de nuevo más tarde.';
 }

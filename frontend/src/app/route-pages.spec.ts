@@ -53,6 +53,18 @@ describe('route placeholder pages', () => {
       for (const request of httpTesting.match('/api/ofertas')) {
         request.flush([]);
       }
+      for (const request of httpTesting.match((candidate) =>
+        candidate.url === '/api/ofertas/externas',
+      )) {
+        request.flush({
+          results: [],
+          page: 1,
+          resultsPerPage: 20,
+          totalResults: 0,
+          attribution: 'Resultados ofrecidos por Adzuna',
+          attributionUrl: 'https://www.adzuna.es/',
+        });
+      }
       fixture.detectChanges();
       httpTesting.verify();
       const compiled = fixture.nativeElement as HTMLElement;
