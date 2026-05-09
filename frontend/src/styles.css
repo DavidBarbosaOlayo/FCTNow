@@ -46,7 +46,7 @@ app-root .app-header {
 }
 
 app-root .app-header.is-scrolled {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(244, 236, 223, 0.82);
   border-color: var(--line);
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(14px);
@@ -773,7 +773,7 @@ app-root .login-submit:disabled {
   }
 
   app-root .app-header.is-menu-open {
-    background: rgba(255, 255, 255, 0.96);
+    background: rgba(244, 236, 223, 0.92);
     border-color: var(--line);
     box-shadow: var(--shadow-soft);
     backdrop-filter: blur(14px);
