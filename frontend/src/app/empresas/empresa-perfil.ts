@@ -14,6 +14,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
+import { FAMILIAS_PROFESIONALES, LOCALIDADES_ES } from '../practicas/practicas-options';
 import { EmpresaPerfil, EmpresaPerfilRequest, EmpresaEstado } from './empresa-perfil.models';
 import { EmpresaPerfilService } from './empresa-perfil.service';
 
@@ -89,7 +90,12 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
             <label>
               <span>Sector</span>
-              <input formControlName="sector" maxlength="100" />
+              <select formControlName="sector">
+                <option value="">Selecciona un sector</option>
+                @for (familia of sectorOptions; track familia.value) {
+                  <option [value]="familia.value">{{ familia.label }}</option>
+                }
+              </select>
             </label>
 
             <label>
@@ -99,7 +105,12 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
             <label>
               <span>Localidad</span>
-              <input formControlName="localidad" maxlength="100" />
+              <select formControlName="localidad">
+                <option value="">Selecciona una localidad</option>
+                @for (localidad of localidadOptions; track localidad) {
+                  <option [value]="localidad">{{ localidad }}</option>
+                }
+              </select>
             </label>
 
             <label>
@@ -441,6 +452,9 @@ export class EmpresaPerfilPage implements OnInit {
     personaContacto: ['', [Validators.required, Validators.maxLength(150)]],
   });
 
+  protected readonly sectorOptions = FAMILIAS_PROFESIONALES;
+  protected readonly localidadOptions = LOCALIDADES_ES;
+
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId) || !this.authService.accessToken()) {
       this.status.set('not-authenticated');
@@ -457,10 +471,10 @@ export class EmpresaPerfilPage implements OnInit {
             nombre: empresa.nombre,
             tipoIdentificadorFiscal: empresa.tipoIdentificadorFiscal,
             identificadorFiscal: empresa.identificadorFiscal,
-            sector: empresa.sector,
+            sector: this.sanitizeSector(empresa.sector),
             descripcion: empresa.descripcion ?? '',
             direccion: empresa.direccion,
-            localidad: empresa.localidad,
+            localidad: this.sanitizeLocalidad(empresa.localidad),
             provincia: empresa.provincia,
             codigoPostal: empresa.codigoPostal,
             emailContacto: empresa.emailContacto,
@@ -529,16 +543,24 @@ export class EmpresaPerfilPage implements OnInit {
       nombre: empresa.nombre,
       tipoIdentificadorFiscal: empresa.tipoIdentificadorFiscal,
       identificadorFiscal: empresa.identificadorFiscal,
-      sector: empresa.sector,
+      sector: this.sanitizeSector(empresa.sector),
       descripcion: empresa.descripcion ?? '',
       direccion: empresa.direccion,
-      localidad: empresa.localidad,
+      localidad: this.sanitizeLocalidad(empresa.localidad),
       provincia: empresa.provincia,
       codigoPostal: empresa.codigoPostal,
       emailContacto: empresa.emailContacto,
       telefonoContacto: empresa.telefonoContacto ?? '',
       personaContacto: empresa.personaContacto,
     });
+  }
+
+  private sanitizeSector(value: string | null | undefined): string {
+    return this.sectorOptions.some((f) => f.value === value) ? (value as string) : '';
+  }
+
+  private sanitizeLocalidad(value: string | null | undefined): string {
+    return value && this.localidadOptions.includes(value) ? value : '';
   }
 
   protected estadoLabel(estado: EmpresaEstado | undefined): string {

@@ -8,14 +8,17 @@ import {
   OnInit,
   PLATFORM_ID,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { OfertaModalidad } from '../practicas/ofertas.models';
+import { CicloFormativoOption, GRADO_LABELS, GradoFp, getCiclosByFamilia } from '../practicas/ciclos-formativos';
+import { FAMILIAS_PROFESIONALES, LOCALIDADES_ES } from '../practicas/practicas-options';
 import { AlumnoPreferencias, AlumnoPreferenciasRequest } from './preferencias.models';
 import { AlumnoPreferenciasService } from './preferencias.service';
 
@@ -73,17 +76,38 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
             <div class="form-grid">
               <label>
                 <span>Familia profesional</span>
-                <input formControlName="familiaProfesional" maxlength="150" />
+                <select formControlName="familiaProfesional">
+                  <option value="">Selecciona una familia</option>
+                  @for (familia of familiaOptions; track familia.value) {
+                    <option [value]="familia.value">{{ familia.label }}</option>
+                  }
+                </select>
               </label>
 
               <label>
                 <span>Ciclo formativo</span>
-                <input formControlName="cicloFormativo" maxlength="150" />
+                <select formControlName="cicloFormativo">
+                  <option value="">
+                    {{ cicloDisabled() ? 'Selecciona antes una familia' : 'Selecciona un ciclo' }}
+                  </option>
+                  @for (grupo of cicloGroups(); track grupo.grado) {
+                    <optgroup [label]="grupo.label">
+                      @for (ciclo of grupo.ciclos; track ciclo.value) {
+                        <option [value]="ciclo.value">{{ ciclo.label }}</option>
+                      }
+                    </optgroup>
+                  }
+                </select>
               </label>
 
               <label>
                 <span>Localidad o zona preferida</span>
-                <input formControlName="localidadPreferida" maxlength="150" />
+                <select formControlName="localidadPreferida">
+                  <option value="">Selecciona una localidad</option>
+                  @for (localidad of localidadOptions; track localidad) {
+                    <option [value]="localidad">{{ localidad }}</option>
+                  }
+                </select>
               </label>
 
               <label>
@@ -463,13 +487,67 @@ export class PreferenciasAlumnoPage implements OnInit {
   protected readonly editing = signal(false);
 
   protected readonly form = this.fb.nonNullable.group({
-    familiaProfesional: ['', [Validators.maxLength(150)]],
-    cicloFormativo: ['', [Validators.maxLength(150)]],
-    localidadPreferida: ['', [Validators.maxLength(150)]],
+    familiaProfesional: [''],
+    cicloFormativo: [''],
+    localidadPreferida: [''],
     modalidadPreferida: [''],
     fechaDisponibilidad: [''],
     observaciones: ['', [Validators.maxLength(1000)]],
   });
+
+  protected readonly familiaOptions = FAMILIAS_PROFESIONALES;
+  protected readonly localidadOptions = LOCALIDADES_ES;
+
+  private readonly familiaValue = toSignal(this.form.controls.familiaProfesional.valueChanges, {
+    initialValue: this.form.controls.familiaProfesional.value,
+  });
+
+  protected readonly cicloOptions = computed<CicloFormativoOption[]>(() =>
+    getCiclosByFamilia(this.familiaValue()),
+  );
+
+  protected readonly cicloDisabled = computed(() => !this.familiaValue());
+
+  protected readonly cicloGroups = computed<{ grado: GradoFp; label: string; ciclos: CicloFormativoOption[] }[]>(() => {
+    const ciclos = this.cicloOptions();
+    if (ciclos.length === 0) {
+      return [];
+    }
+    const grados: GradoFp[] = ['GRADO_MEDIO', 'GRADO_SUPERIOR'];
+    return grados
+      .map((grado) => ({
+        grado,
+        label: GRADO_LABELS[grado],
+        ciclos: ciclos.filter((c) => c.grado === grado),
+      }))
+      .filter((group) => group.ciclos.length > 0);
+  });
+
+  constructor() {
+    this.form.controls.familiaProfesional.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((familia) => {
+        const cicloActual = this.form.controls.cicloFormativo.value;
+        if (!cicloActual) {
+          return;
+        }
+        const ciclos = getCiclosByFamilia(familia);
+        if (!ciclos.some((c) => c.value === cicloActual)) {
+          this.form.controls.cicloFormativo.setValue('');
+        }
+      });
+
+    effect(() => {
+      const cicloControl = this.form.controls.cicloFormativo;
+      if (this.cicloDisabled()) {
+        if (cicloControl.enabled) {
+          cicloControl.disable({ emitEvent: false });
+        }
+      } else if (cicloControl.disabled) {
+        cicloControl.enable({ emitEvent: false });
+      }
+    });
+  }
 
   protected readonly cvSummary = computed(() => {
     const preferences = this.preferences();
@@ -493,14 +571,7 @@ export class PreferenciasAlumnoPage implements OnInit {
       .subscribe({
         next: (preferences) => {
           this.preferences.set(preferences);
-          this.form.patchValue({
-            familiaProfesional: preferences.familiaProfesional ?? '',
-            cicloFormativo: preferences.cicloFormativo ?? '',
-            localidadPreferida: preferences.localidadPreferida ?? '',
-            modalidadPreferida: preferences.modalidadPreferida ?? '',
-            fechaDisponibilidad: preferences.fechaDisponibilidad ?? '',
-            observaciones: preferences.observaciones ?? '',
-          });
+          this.patchFormFromPreferences();
           this.status.set('loaded');
         },
         error: (error: unknown) => {
@@ -577,14 +648,34 @@ export class PreferenciasAlumnoPage implements OnInit {
 
   private patchFormFromPreferences(): void {
     const preferences = this.preferences();
+    const sanitized = this.sanitizeCatalogFields(preferences);
     this.form.patchValue({
-      familiaProfesional: preferences?.familiaProfesional ?? '',
-      cicloFormativo: preferences?.cicloFormativo ?? '',
-      localidadPreferida: preferences?.localidadPreferida ?? '',
+      familiaProfesional: sanitized.familiaProfesional,
+      cicloFormativo: sanitized.cicloFormativo,
+      localidadPreferida: sanitized.localidadPreferida,
       modalidadPreferida: preferences?.modalidadPreferida ?? '',
       fechaDisponibilidad: preferences?.fechaDisponibilidad ?? '',
       observaciones: preferences?.observaciones ?? '',
     });
+  }
+
+  private sanitizeCatalogFields(preferences: AlumnoPreferencias | null): {
+    familiaProfesional: string;
+    cicloFormativo: string;
+    localidadPreferida: string;
+  } {
+    const familiaRaw = preferences?.familiaProfesional ?? '';
+    const familiaProfesional = this.familiaOptions.some((f) => f.value === familiaRaw) ? familiaRaw : '';
+
+    const cicloRaw = preferences?.cicloFormativo ?? '';
+    const cicloFormativo = getCiclosByFamilia(familiaProfesional).some((c) => c.value === cicloRaw)
+      ? cicloRaw
+      : '';
+
+    const localidadRaw = preferences?.localidadPreferida ?? '';
+    const localidadPreferida = this.localidadOptions.includes(localidadRaw) ? localidadRaw : '';
+
+    return { familiaProfesional, cicloFormativo, localidadPreferida };
   }
 
   protected onFileSelected(event: Event): void {

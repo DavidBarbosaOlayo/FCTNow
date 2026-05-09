@@ -16,7 +16,7 @@ describe('EmpresaPerfilPage', () => {
     nombre: 'Tech Norte',
     tipoIdentificadorFiscal: 'CIF',
     identificadorFiscal: 'B12345678',
-    sector: 'Informatica',
+    sector: 'Informática y comunicaciones',
     descripcion: 'Empresa colaboradora',
     direccion: 'Calle Mayor 12',
     localidad: 'Valencia',
