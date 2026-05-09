@@ -12,11 +12,17 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { ExternalOfferDetailDialog } from './external-offer-detail-dialog';
 import { OfertaExterna, OfertaExternaPage } from './ofertas-externas.models';
 import { OfertasExternasService } from './ofertas-externas.service';
 import { OfertaFct, OfertaFctFilters, OfertaModalidad } from './ofertas.models';
 import { OfertasService } from './ofertas.service';
 import { FAMILIAS_PROFESIONALES, LOCALIDADES_ES } from './practicas-options';
+import {
+  SolicitudExterna,
+  SolicitudExternaEstado,
+} from './solicitudes-externas.models';
+import { SolicitudesExternasService } from './solicitudes-externas.service';
 
 type CatalogStatus = 'loading' | 'loaded' | 'error';
 
@@ -27,7 +33,7 @@ type ModalidadOption = {
 
 @Component({
   selector: 'app-practicas-page',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, ExternalOfferDetailDialog],
   template: `
     <main class="page-shell route-page practicas-page">
       <header class="route-hero practicas-hero">
@@ -125,7 +131,62 @@ type ModalidadOption = {
             @for (oferta of ofertasExternas(); track oferta.id) {
               <article class="offer-card offer-card-externa">
                 <div class="offer-card-heading">
-                  <span class="offer-source-tag" aria-label="Fuente externa">Adzuna</span>
+                  <div class="external-card-topline">
+                    <span class="offer-source-tag" aria-label="Fuente externa">Adzuna</span>
+                    <div class="external-tracking-corner" aria-label="Seguimiento de solicitud">
+                      @if (solicitudFor(oferta); as solicitud) {
+                        @if (solicitud.estado === 'SOLICITADA') {
+                          <button
+                            type="button"
+                            class="tracking-toggle is-estado-solicitada"
+                            [disabled]="isExternalActionInFlight(oferta)"
+                            aria-label="Solicitada — pulsa para anular"
+                            (click)="anularSolicitud(oferta)"
+                          >
+                            <span class="state">Solicitada</span>
+                            <span class="hover">Anular solicitud</span>
+                          </button>
+                          <button
+                            type="button"
+                            class="tracking-label is-primary"
+                            [disabled]="isExternalActionInFlight(oferta)"
+                            (click)="markAsAceptada(oferta)"
+                          >
+                            Marcar aceptada
+                          </button>
+                        } @else if (solicitud.estado === 'ACEPTADA') {
+                          <button
+                            type="button"
+                            class="tracking-toggle is-estado-aceptada"
+                            [disabled]="isExternalActionInFlight(oferta)"
+                            aria-label="Aceptada — pulsa para anular"
+                            (click)="anularSolicitud(oferta)"
+                          >
+                            <span class="state">Aceptada</span>
+                            <span class="hover">Anular solicitud</span>
+                          </button>
+                        } @else {
+                          <button
+                            type="button"
+                            class="tracking-label"
+                            [disabled]="isExternalActionInFlight(oferta)"
+                            (click)="markAsSolicitada(oferta)"
+                          >
+                            Marcar como solicitada
+                          </button>
+                        }
+                      } @else {
+                        <button
+                          type="button"
+                          class="tracking-label"
+                          [disabled]="isExternalActionInFlight(oferta)"
+                          (click)="markAsSolicitada(oferta)"
+                        >
+                          Marcar como solicitada
+                        </button>
+                      }
+                    </div>
+                  </div>
                   <p class="offer-company">{{ oferta.empresaNombre || 'Empresa no especificada' }}</p>
                   <h2>{{ oferta.titulo }}</h2>
                   @if (oferta.descripcion) {
@@ -160,18 +221,31 @@ type ModalidadOption = {
                   }
                 </dl>
 
-                <a
-                  class="offer-link"
-                  [href]="oferta.urlAplicacion"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  [attr.aria-label]="'Ver oferta de ' + oferta.titulo + ' en Adzuna'"
-                >
-                  Ver oferta en Adzuna
-                </a>
+                <div class="external-card-actions">
+                  <a
+                    class="offer-link"
+                    [href]="oferta.urlAplicacion"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    [attr.aria-label]="'Ver oferta de ' + oferta.titulo + ' en Adzuna'"
+                  >
+                    Ver oferta en Adzuna
+                  </a>
+                  <button
+                    type="button"
+                    class="offer-link secondary"
+                    (click)="openExternalDetail(oferta)"
+                  >
+                    Ver detalles
+                  </button>
+                </div>
               </article>
             }
           </div>
+
+          @if (externalActionError()) {
+            <p class="load-more-error" role="alert">{{ externalActionError() }}</p>
+          }
 
           @if (canLoadMoreExternal()) {
             <div class="load-more-row">
@@ -276,6 +350,17 @@ type ModalidadOption = {
           </div>
         }
       </section>
+
+      @if (selectedExternalOffer(); as detail) {
+        <app-external-offer-detail-dialog
+          [offer]="detail"
+          [solicitud]="solicitudFor(detail)"
+          [actionInFlight]="isExternalActionInFlight(detail)"
+          (closed)="closeExternalDetail()"
+          (solicit)="markAsSolicitada(detail)"
+          (anular)="anularSolicitud(detail)"
+        />
+      }
     </main>
   `,
   styles: [
@@ -505,16 +590,31 @@ type ModalidadOption = {
         justify-content: center;
         padding: 0 1rem;
         border-radius: 0.5rem;
+        border: 0;
         color: #f7fbf8;
         background: var(--accent);
+        font: inherit;
         font-weight: 800;
         text-decoration: none;
+        cursor: pointer;
       }
 
       .offer-link:hover,
       .offer-link:focus-visible {
         background: #0b5f59;
         outline: none;
+      }
+
+      .offer-link.secondary {
+        border: 1px solid var(--line);
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.68);
+      }
+
+      .offer-link.secondary:hover,
+      .offer-link.secondary:focus-visible {
+        border-color: rgba(15, 118, 110, 0.36);
+        background: rgba(255, 255, 255, 0.9);
       }
 
       .catalog-results-externas {
@@ -534,18 +634,38 @@ type ModalidadOption = {
         border-color: rgba(199, 101, 59, 0.28);
       }
 
+      .external-card-topline {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.4rem;
+      }
+
+      .external-tracking-corner {
+        margin-left: auto;
+        display: inline-flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 0.35rem;
+        min-width: 0;
+      }
+
       .offer-source-tag {
-        align-self: start;
+        flex: 0 0 auto;
         display: inline-flex;
         align-items: center;
-        padding: 0.2rem 0.55rem;
+        justify-content: center;
+        height: 1.85rem;
+        padding: 0 0.65rem;
         border-radius: 999px;
         background: rgba(199, 101, 59, 0.18);
         color: var(--accent-warm);
         font-size: 0.72rem;
         font-weight: 800;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.07em;
         text-transform: uppercase;
+        white-space: nowrap;
       }
 
       .load-more-row {
@@ -591,6 +711,177 @@ type ModalidadOption = {
         color: #b8423b;
         font-size: 0.92rem;
         text-align: center;
+      }
+
+      .external-card-actions {
+        margin-top: auto;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        padding-top: 0.85rem;
+        border-top: 1px dashed var(--line);
+      }
+
+      .tracking-label {
+        max-width: 11.5rem;
+        min-height: 1.9rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.15rem 0.65rem;
+        border: 1px solid rgba(15, 118, 110, 0.28);
+        border-radius: 999px;
+        color: var(--accent);
+        background: rgba(15, 118, 110, 0.1);
+        font: inherit;
+        font-size: 0.74rem;
+        font-weight: 800;
+        line-height: 1.15;
+        text-align: center;
+        cursor: pointer;
+      }
+
+      .tracking-label:hover:not(:disabled),
+      .tracking-label:focus-visible:not(:disabled) {
+        border-color: rgba(15, 118, 110, 0.44);
+        background: rgba(15, 118, 110, 0.16);
+        outline: none;
+      }
+
+      .tracking-label:disabled {
+        cursor: progress;
+        opacity: 0.65;
+      }
+
+      .external-status-tag {
+        align-self: start;
+        display: inline-flex;
+        align-items: center;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        background: rgba(15, 118, 110, 0.16);
+        color: var(--accent);
+      }
+
+      .external-status-tag.is-estado-aceptada {
+        background: rgba(15, 118, 110, 0.22);
+        color: #0b5f59;
+      }
+
+      .external-status-tag.is-estado-rechazada,
+      .external-status-tag.is-estado-retirada {
+        background: rgba(184, 79, 59, 0.16);
+        color: #b8423b;
+      }
+
+      .tracking-toggle {
+        max-width: 12rem;
+        min-height: 1.85rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.15rem 0.7rem;
+        border: 1px solid rgba(15, 118, 110, 0.28);
+        border-radius: 999px;
+        background: rgba(15, 118, 110, 0.16);
+        color: var(--accent);
+        font: inherit;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        line-height: 1.15;
+        cursor: pointer;
+      }
+
+      .tracking-toggle.is-estado-aceptada {
+        border-color: rgba(11, 95, 89, 0.4);
+        background: rgba(15, 118, 110, 0.22);
+        color: #0b5f59;
+      }
+
+      .tracking-label.is-primary {
+        border-color: rgba(15, 118, 110, 0.55);
+        background: var(--accent);
+        color: #f7fbf8;
+      }
+
+      .tracking-label.is-primary:hover:not(:disabled),
+      .tracking-label.is-primary:focus-visible:not(:disabled) {
+        background: #0b5f59;
+        border-color: #0b5f59;
+        color: #f7fbf8;
+      }
+
+      .tracking-toggle .hover {
+        display: none;
+      }
+
+      .tracking-toggle:hover:not(:disabled),
+      .tracking-toggle:focus-visible:not(:disabled) {
+        border-color: rgba(184, 79, 59, 0.5);
+        background: rgba(184, 79, 59, 0.16);
+        color: #b8423b;
+        outline: none;
+      }
+
+      .tracking-toggle:hover:not(:disabled) .state,
+      .tracking-toggle:focus-visible:not(:disabled) .state {
+        display: none;
+      }
+
+      .tracking-toggle:hover:not(:disabled) .hover,
+      .tracking-toggle:focus-visible:not(:disabled) .hover {
+        display: inline;
+      }
+
+      .tracking-toggle:disabled {
+        cursor: progress;
+        opacity: 0.65;
+      }
+
+      .tracking-action {
+        min-height: 2.3rem;
+        padding: 0 0.85rem;
+        border-radius: 0.45rem;
+        font: inherit;
+        font-size: 0.84rem;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      .tracking-action.primary {
+        border: 0;
+        color: #f7fbf8;
+        background: var(--accent);
+      }
+
+      .tracking-action.primary:hover:not(:disabled),
+      .tracking-action.primary:focus-visible:not(:disabled) {
+        background: #0b5f59;
+        outline: none;
+      }
+
+      .tracking-action.secondary {
+        border: 1px solid var(--line);
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.6);
+      }
+
+      .tracking-action.secondary:hover:not(:disabled),
+      .tracking-action.secondary:focus-visible:not(:disabled) {
+        border-color: rgba(15, 118, 110, 0.36);
+        outline: none;
+      }
+
+      .tracking-action:disabled {
+        cursor: progress;
+        opacity: 0.65;
       }
 
       .adzuna-attribution {
@@ -644,6 +935,7 @@ export class PracticasPage implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly ofertasService = inject(OfertasService);
   private readonly ofertasExternasService = inject(OfertasExternasService);
+  private readonly solicitudesExternasService = inject(SolicitudesExternasService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
 
@@ -659,6 +951,10 @@ export class PracticasPage implements OnInit {
   protected readonly externasTotal = signal<number>(0);
   protected readonly externasPage = signal<number>(1);
   protected readonly externasLoadingMore = signal<boolean>(false);
+  protected readonly mineExternas = signal<SolicitudExterna[]>([]);
+  protected readonly externalActionInFlight = signal<string | null>(null);
+  protected readonly externalActionError = signal<string | null>(null);
+  protected readonly selectedExternalOffer = signal<OfertaExterna | null>(null);
 
   private static readonly EXTERNAS_PAGE_SIZE = 21;
 
@@ -687,6 +983,7 @@ export class PracticasPage implements OnInit {
 
     this.loadOffers();
     this.loadExternalOffers();
+    this.loadMineExternas();
   }
 
   protected search(): void {
@@ -736,6 +1033,14 @@ export class PracticasPage implements OnInit {
     return oferta.salarioEstimado ? `${range} (estimado)` : range;
   }
 
+  protected openExternalDetail(oferta: OfertaExterna): void {
+    this.selectedExternalOffer.set(oferta);
+  }
+
+  protected closeExternalDetail(): void {
+    this.selectedExternalOffer.set(null);
+  }
+
   private loadOffers(): void {
     this.status.set('loading');
     this.errorMessage.set(null);
@@ -754,6 +1059,159 @@ export class PracticasPage implements OnInit {
           this.status.set('error');
         },
       });
+  }
+
+  protected solicitudFor(oferta: OfertaExterna): SolicitudExterna | null {
+    return this.mineExternas().find(
+      (item) => item.fuente === oferta.fuente && item.idExterno === oferta.id,
+    ) ?? null;
+  }
+
+  protected externalActionKey(oferta: OfertaExterna): string {
+    return `${oferta.fuente}:${oferta.id}`;
+  }
+
+  protected isExternalActionInFlight(oferta: OfertaExterna): boolean {
+    return this.externalActionInFlight() === this.externalActionKey(oferta);
+  }
+
+  protected estadoLabel(estado: SolicitudExternaEstado): string {
+    switch (estado) {
+      case 'SOLICITADA': return 'Solicitada';
+      case 'ACEPTADA': return 'Aceptada';
+      case 'RECHAZADA': return 'Rechazada';
+      case 'RETIRADA': return 'Retirada';
+      default: return estado;
+    }
+  }
+
+  protected estadoModifierClass(estado: SolicitudExternaEstado): string {
+    return `is-estado-${estado.toLowerCase()}`;
+  }
+
+  protected canMarkAsSolicitada(oferta: OfertaExterna): boolean {
+    const current = this.solicitudFor(oferta);
+    return current === null
+      || current.estado === 'RETIRADA'
+      || current.estado === 'RECHAZADA';
+  }
+
+  protected markAsSolicitada(oferta: OfertaExterna): void {
+    if (this.isExternalActionInFlight(oferta)) {
+      return;
+    }
+    this.runExternalAction(oferta, this.solicitudesExternasService.create({
+      fuente: 'ADZUNA',
+      idExterno: oferta.id,
+      titulo: oferta.titulo,
+      empresaNombre: oferta.empresaNombre ?? null,
+      localidad: oferta.localidad ?? null,
+      region: oferta.region ?? null,
+      urlAplicacion: oferta.urlAplicacion,
+      publicadoEn: oferta.publicadoEn ?? null,
+      categoria: oferta.categoria ?? null,
+    }));
+  }
+
+  protected markAsAceptada(oferta: OfertaExterna): void {
+    const current = this.solicitudFor(oferta);
+    if (!current || this.isExternalActionInFlight(oferta) || !this.confirmExternalAcceptance()) {
+      return;
+    }
+    this.runExternalAction(
+      oferta,
+      this.solicitudesExternasService.changeEstado(current.id, 'ACEPTADA'),
+    );
+  }
+
+  protected retirarSolicitud(oferta: OfertaExterna): void {
+    const current = this.solicitudFor(oferta);
+    if (!current || this.isExternalActionInFlight(oferta)) {
+      return;
+    }
+    this.runExternalAction(
+      oferta,
+      this.solicitudesExternasService.changeEstado(current.id, 'RETIRADA'),
+    );
+  }
+
+  protected anularSolicitud(oferta: OfertaExterna): void {
+    const current = this.solicitudFor(oferta);
+    if (!current || this.isExternalActionInFlight(oferta)) {
+      return;
+    }
+    if (!this.confirmAnular(current.estado)) {
+      return;
+    }
+    this.runExternalAction(
+      oferta,
+      this.solicitudesExternasService.changeEstado(current.id, 'RETIRADA'),
+    );
+  }
+
+  private confirmAnular(estado: SolicitudExternaEstado): boolean {
+    if (!isPlatformBrowser(this.platformId)) {
+      return false;
+    }
+    const detalle = estado === 'ACEPTADA'
+      ? 'Esta solicitud está marcada como aceptada. Si la anulas, deberás volver a marcarla si la empresa te confirma de nuevo.'
+      : 'La solicitud quedará marcada como retirada y se ocultará del seguimiento activo.';
+    return window.confirm(`¿Anular la solicitud? ${detalle}`);
+  }
+
+  private runExternalAction(
+    oferta: OfertaExterna,
+    request$: import('rxjs').Observable<SolicitudExterna>,
+  ): void {
+    this.externalActionInFlight.set(this.externalActionKey(oferta));
+    this.externalActionError.set(null);
+    request$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (updated) => {
+          this.upsertMineExterna(updated);
+          this.externalActionInFlight.set(null);
+        },
+        error: (error: unknown) => {
+          this.externalActionInFlight.set(null);
+          this.externalActionError.set(externalCatalogErrorMessage(error));
+        },
+      });
+  }
+
+  private upsertMineExterna(solicitud: SolicitudExterna): void {
+    this.mineExternas.update((existing) => {
+      const idx = existing.findIndex(
+        (item) => item.fuente === solicitud.fuente && item.idExterno === solicitud.idExterno,
+      );
+      if (idx === -1) {
+        return [solicitud, ...existing];
+      }
+      const next = existing.slice();
+      next[idx] = solicitud;
+      return next;
+    });
+  }
+
+  private loadMineExternas(): void {
+    this.solicitudesExternasService
+      .mine()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (items) => this.mineExternas.set(items),
+        error: () => {
+          this.mineExternas.set([]);
+        },
+      });
+  }
+
+  private confirmExternalAcceptance(): boolean {
+    if (!isPlatformBrowser(this.platformId)) {
+      return false;
+    }
+    return window.confirm(
+      'Confirma solo si la empresa externa te ha aceptado. Tu tutor podra crear la asignacion FCT desde esta solicitud.',
+    );
   }
 
   protected loadMoreExternalOffers(): void {

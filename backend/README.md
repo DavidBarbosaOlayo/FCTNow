@@ -100,6 +100,23 @@ ADZUNA_TIMEOUT=PT8S
 Si `ADZUNA_APP_ID` o `ADZUNA_APP_KEY` no estan presentes el endpoint responde
 `503 Service Unavailable` y el frontend hace fallback mostrando solo el catalogo interno.
 
+Las ofertas externas no se importan al catalogo interno. Cuando un alumno aplica fuera de
+FCTNow puede registrar manualmente el seguimiento con `POST /api/alumno/solicitudes-externas`,
+consultarlo con `GET /api/alumno/solicitudes-externas` y cambiar su estado con
+`PATCH /api/alumno/solicitudes-externas/{id}/estado`.
+
+Estados soportados para solicitudes externas:
+
+- `SOLICITADA`
+- `ACEPTADA`
+- `RECHAZADA`
+- `RETIRADA`
+
+El paso a `ACEPTADA` lo declara el alumno cuando la empresa externa le confirma la plaza. El
+personal de centro consulta esas candidatas con `GET /api/asignaciones/externas/candidatas` y
+crea la asignacion desde `POST /api/asignaciones/externas`, manteniendo el snapshot y la
+atribucion a Adzuna aunque la publicacion original caduque.
+
 ## Migraciones
 
 Flyway ejecuta las migraciones de `src/main/resources/db/migration` al arrancar la aplicacion.

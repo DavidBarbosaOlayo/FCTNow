@@ -65,6 +65,9 @@ describe('route placeholder pages', () => {
           attributionUrl: 'https://www.adzuna.es/',
         });
       }
+      for (const request of httpTesting.match('/api/alumno/solicitudes-externas')) {
+        request.flush([]);
+      }
       fixture.detectChanges();
       httpTesting.verify();
       const compiled = fixture.nativeElement as HTMLElement;

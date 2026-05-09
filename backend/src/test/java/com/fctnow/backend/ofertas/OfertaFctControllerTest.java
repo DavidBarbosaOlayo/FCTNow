@@ -147,9 +147,10 @@ class OfertaFctControllerTest {
   }
 
   @Test
-  void listRequiresAuthentication() throws Exception {
+  void listAllowsAnonymousAccess() throws Exception {
     mockMvc.perform(get("/api/ofertas"))
-        .andExpect(status().isUnauthorized());
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(2));
   }
 
   @Test

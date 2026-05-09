@@ -1,7 +1,6 @@
 package com.fctnow.backend.ofertas;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,7 +22,6 @@ public class OfertaFctController {
 
   @GetMapping
   @Operation(summary = "List published FCT offers")
-  @SecurityRequirement(name = "bearerAuth")
   public List<OfertaFctResponse> list(
       @RequestParam(required = false) String q,
       @RequestParam(required = false) String familiaProfesional,
@@ -38,7 +36,6 @@ public class OfertaFctController {
 
   @GetMapping("/{id}")
   @Operation(summary = "Get a published FCT offer")
-  @SecurityRequirement(name = "bearerAuth")
   public OfertaFctResponse detail(@PathVariable Long id) {
     return ofertaFctService.findPublishedOffer(id);
   }

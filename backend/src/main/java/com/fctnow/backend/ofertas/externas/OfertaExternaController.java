@@ -1,7 +1,6 @@
 package com.fctnow.backend.ofertas.externas;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,7 +22,6 @@ public class OfertaExternaController {
 
   @GetMapping
   @Operation(summary = "List external internship offers from Adzuna")
-  @SecurityRequirement(name = "bearerAuth")
   public OfertaExternaPageResponse list(
       @RequestParam(required = false) String q,
       @RequestParam(required = false) String where,
