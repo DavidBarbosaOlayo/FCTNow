@@ -14,7 +14,7 @@ describe('PreferenciasAlumnoPage', () => {
   let preferenciasService: jasmine.SpyObj<AlumnoPreferenciasService>;
 
   const samplePreferences: AlumnoPreferencias = {
-    familiaProfesional: 'Informatica y comunicaciones',
+    familiaProfesional: 'Informática y comunicaciones',
     cicloFormativo: 'Desarrollo de Aplicaciones Web',
     localidadPreferida: 'Valencia',
     modalidadPreferida: 'HIBRIDA',
@@ -78,7 +78,7 @@ describe('PreferenciasAlumnoPage', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(preferenciasService.getMine).toHaveBeenCalled();
     expect(compiled.textContent).toContain('Preferencias y CV');
-    expect(compiled.textContent).toContain('Informatica y comunicaciones');
+    expect(compiled.textContent).toContain('Informática y comunicaciones');
     expect(compiled.textContent).toContain('Desarrollo de Aplicaciones Web');
     expect(compiled.textContent).toContain('Híbrida');
     expect(compiled.textContent).toContain('cv-alumno.pdf');
@@ -95,10 +95,15 @@ describe('PreferenciasAlumnoPage', () => {
     clickEditar(compiled);
 
     expect(compiled.querySelector('form')).not.toBeNull();
-    const familyInput = compiled.querySelector<HTMLInputElement>(
-      'input[formcontrolname="familiaProfesional"]',
+    const familySelect = compiled.querySelector<HTMLSelectElement>(
+      'select[formcontrolname="familiaProfesional"]',
     );
-    expect(familyInput?.value).toBe('Informatica y comunicaciones');
+    expect(familySelect?.value).toBe('Informática y comunicaciones');
+    const cicloSelect = compiled.querySelector<HTMLSelectElement>(
+      'select[formcontrolname="cicloFormativo"]',
+    );
+    expect(cicloSelect?.disabled).toBeFalse();
+    expect(cicloSelect?.value).toBe('Desarrollo de Aplicaciones Web');
   });
 
   it('should save preferences with normalized empty values and return to view mode', async () => {
@@ -109,11 +114,11 @@ describe('PreferenciasAlumnoPage', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     clickEditar(compiled);
 
-    const localityInput = compiled.querySelector<HTMLInputElement>(
-      'input[formcontrolname="localidadPreferida"]',
+    const localitySelect = compiled.querySelector<HTMLSelectElement>(
+      'select[formcontrolname="localidadPreferida"]',
     );
-    localityInput!.value = '';
-    localityInput!.dispatchEvent(new Event('input'));
+    localitySelect!.value = '';
+    localitySelect!.dispatchEvent(new Event('change'));
 
     const form = compiled.querySelector<HTMLFormElement>('form')!;
     form.dispatchEvent(new Event('submit'));
@@ -134,11 +139,11 @@ describe('PreferenciasAlumnoPage', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     clickEditar(compiled);
 
-    const familyInput = compiled.querySelector<HTMLInputElement>(
-      'input[formcontrolname="familiaProfesional"]',
+    const familySelect = compiled.querySelector<HTMLSelectElement>(
+      'select[formcontrolname="familiaProfesional"]',
     );
-    familyInput!.value = 'Otra familia';
-    familyInput!.dispatchEvent(new Event('input'));
+    familySelect!.value = 'Sanidad';
+    familySelect!.dispatchEvent(new Event('change'));
 
     const cancelButton = Array.from(compiled.querySelectorAll<HTMLButtonElement>('button')).find(
       (btn) => btn.textContent?.trim() === 'Cancelar',
@@ -147,7 +152,7 @@ describe('PreferenciasAlumnoPage', () => {
     fixture.detectChanges();
 
     expect(compiled.querySelector('form')).toBeNull();
-    expect(compiled.textContent).toContain('Informatica y comunicaciones');
+    expect(compiled.textContent).toContain('Informática y comunicaciones');
     expect(preferenciasService.updateMine).not.toHaveBeenCalled();
   });
 
@@ -202,6 +207,48 @@ describe('PreferenciasAlumnoPage', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('No se pudieron cargar tus preferencias');
     expect(compiled.textContent).toContain('backend esté disponible');
+  });
+
+  it('should reset cicloFormativo and refresh options when the familia changes', async () => {
+    await configure();
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    clickEditar(compiled);
+
+    const familySelect = compiled.querySelector<HTMLSelectElement>(
+      'select[formcontrolname="familiaProfesional"]',
+    )!;
+    familySelect.value = 'Sanidad';
+    familySelect.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    const cicloSelect = compiled.querySelector<HTMLSelectElement>(
+      'select[formcontrolname="cicloFormativo"]',
+    )!;
+    expect(cicloSelect.value).toBe('');
+    const cicloValues = Array.from(cicloSelect.querySelectorAll('option'))
+      .map((opt) => opt.value)
+      .filter((v) => v !== '');
+    expect(cicloValues).toContain('Farmacia y Parafarmacia');
+    expect(cicloValues).not.toContain('Desarrollo de Aplicaciones Web');
+  });
+
+  it('should disable cicloFormativo when there is no familia selected', async () => {
+    await configure({
+      result: of({ ...samplePreferences, familiaProfesional: null, cicloFormativo: null }),
+    });
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    clickEditar(compiled);
+
+    const cicloSelect = compiled.querySelector<HTMLSelectElement>(
+      'select[formcontrolname="cicloFormativo"]',
+    )!;
+    expect(cicloSelect.disabled).toBeTrue();
   });
 
   it('should avoid calling the backend during server rendering', async () => {

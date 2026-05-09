@@ -12,11 +12,14 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { AlumnoPreferenciasService } from '../alumnos/preferencias.service';
+import { AuthService } from '../auth/auth.service';
 import { ExternalOfferDetailDialog } from './external-offer-detail-dialog';
 import { OfertaExterna, OfertaExternaPage } from './ofertas-externas.models';
 import { OfertasExternasService } from './ofertas-externas.service';
 import { OfertaFct, OfertaFctFilters, OfertaModalidad } from './ofertas.models';
 import { OfertasService } from './ofertas.service';
+import { PracticasCacheService } from './practicas-cache.service';
 import { FAMILIAS_PROFESIONALES, LOCALIDADES_ES } from './practicas-options';
 import {
   SolicitudExterna,
@@ -119,6 +122,15 @@ type ModalidadOption = {
             <p class="eyebrow">Fuente externa no disponible</p>
             <h2>No se pudieron cargar las ofertas externas</h2>
             <p>{{ externasErrorMessage() }}</p>
+          </div>
+        } @else if (hasExternalUnsupportedFilters()) {
+          <div class="state-panel">
+            <p class="eyebrow">Filtro no disponible</p>
+            <h2>La modalidad solo se aplica a las ofertas FCT publicadas</h2>
+            <p>
+              La fuente externa no devuelve el dato de modalidad, así que no podemos filtrar
+              esas ofertas por presencial, híbrida o remota.
+            </p>
           </div>
         } @else if (ofertasExternas().length === 0) {
           <div class="state-panel">
@@ -936,6 +948,9 @@ export class PracticasPage implements OnInit {
   private readonly ofertasService = inject(OfertasService);
   private readonly ofertasExternasService = inject(OfertasExternasService);
   private readonly solicitudesExternasService = inject(SolicitudesExternasService);
+  private readonly preferenciasService = inject(AlumnoPreferenciasService);
+  private readonly authService = inject(AuthService);
+  private readonly cache = inject(PracticasCacheService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
 
@@ -981,14 +996,46 @@ export class PracticasPage implements OnInit {
       return;
     }
 
-    this.loadOffers();
-    this.loadExternalOffers();
+    this.applyAlumnoPreferencesToFilters();
     this.loadMineExternas();
   }
 
+  private applyAlumnoPreferencesToFilters(): void {
+    const isAlumno = this.authService.currentUser()?.roles.includes('ALUMNO') ?? false;
+    if (!isAlumno || !this.authService.accessToken()) {
+      this.loadOffers();
+      this.loadExternalOffers();
+      return;
+    }
+
+    this.preferenciasService
+      .getMine()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (preferences) => {
+          const familia = preferences.familiaProfesional ?? '';
+          const localidad = preferences.localidadPreferida ?? '';
+          const familiaValida = this.familiaOptions.some((f) => f.value === familia) ? familia : '';
+          const localidadValida = this.localidadOptions.includes(localidad) ? localidad : '';
+          if (familiaValida || localidadValida) {
+            this.filtersForm.patchValue({
+              familiaProfesional: familiaValida,
+              localidad: localidadValida,
+            });
+          }
+          this.loadOffers();
+          this.loadExternalOffers();
+        },
+        error: () => {
+          this.loadOffers();
+          this.loadExternalOffers();
+        },
+      });
+  }
+
   protected search(): void {
-    this.loadOffers();
-    this.loadExternalOffers();
+    this.loadOffers(true);
+    this.loadExternalOffers(true);
   }
 
   protected clearFilters(): void {
@@ -998,8 +1045,8 @@ export class PracticasPage implements OnInit {
       localidad: '',
       modalidad: '',
     });
-    this.loadOffers();
-    this.loadExternalOffers();
+    this.loadOffers(true);
+    this.loadExternalOffers(true);
   }
 
   protected modalidadLabel(modalidad: OfertaModalidad): string {
@@ -1041,16 +1088,31 @@ export class PracticasPage implements OnInit {
     this.selectedExternalOffer.set(null);
   }
 
-  private loadOffers(): void {
+  private loadOffers(forceRefresh = false): void {
+    const filters = this.currentFilters();
+    const filtersKey = this.cache.buildFiltersKey(filters);
+
+    if (!forceRefresh) {
+      const cached = this.cache.getInternas(filtersKey);
+      if (cached) {
+        this.ofertas.set(cached.ofertas);
+        this.errorMessage.set(null);
+        this.status.set('loaded');
+        return;
+      }
+    }
+
     this.status.set('loading');
     this.errorMessage.set(null);
 
     this.ofertasService
-      .list(this.currentFilters())
+      .list(filters)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (ofertas) => {
-          this.ofertas.set(ofertas);
+          const filteredOffers = this.applyClientSideFilters(ofertas, filters);
+          this.ofertas.set(filteredOffers);
+          this.cache.setInternas({ filtersKey, ofertas: filteredOffers });
           this.status.set('loaded');
         },
         error: (error: unknown) => {
@@ -1191,14 +1253,24 @@ export class PracticasPage implements OnInit {
       next[idx] = solicitud;
       return next;
     });
+    this.cache.setMineExternas(this.mineExternas());
   }
 
   private loadMineExternas(): void {
+    const cached = this.cache.getMineExternas();
+    if (cached) {
+      this.mineExternas.set(cached);
+      return;
+    }
+
     this.solicitudesExternasService
       .mine()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (items) => this.mineExternas.set(items),
+        next: (items) => {
+          this.mineExternas.set(items);
+          this.cache.setMineExternas(items);
+        },
         error: () => {
           this.mineExternas.set([]);
         },
@@ -1229,7 +1301,34 @@ export class PracticasPage implements OnInit {
     return this.externasStatus() === 'loaded' && this.externasErrorMessage() !== null;
   }
 
-  private loadExternalOffers(): void {
+  private loadExternalOffers(forceRefresh = false): void {
+    const filters = this.currentFilters();
+    if (this.hasExternalUnsupportedFilters(filters)) {
+      this.ofertasExternas.set([]);
+      this.externasTotal.set(0);
+      this.externasPage.set(1);
+      this.externasErrorMessage.set(null);
+      this.externasStatus.set('loaded');
+      this.externasLoadingMore.set(false);
+      return;
+    }
+
+    const filtersKey = this.cache.buildFiltersKey(filters);
+
+    if (!forceRefresh) {
+      const cached = this.cache.getExternas(filtersKey);
+      if (cached) {
+        this.ofertasExternas.set(cached.ofertas);
+        this.externasTotal.set(cached.total);
+        this.externasPage.set(cached.page);
+        this.externasAttribution.set(cached.attribution);
+        this.externasAttributionUrl.set(cached.attributionUrl);
+        this.externasErrorMessage.set(null);
+        this.externasStatus.set('loaded');
+        return;
+      }
+    }
+
     this.externasPage.set(1);
     this.fetchExternalOffers(1, false);
   }
@@ -1271,6 +1370,14 @@ export class PracticasPage implements OnInit {
           }
           this.externasStatus.set('loaded');
           this.externasLoadingMore.set(false);
+          this.cache.setExternas({
+            filtersKey: this.cache.buildFiltersKey(filters),
+            ofertas: this.ofertasExternas(),
+            page,
+            total: response.totalResults,
+            attribution: this.externasAttribution(),
+            attributionUrl: this.externasAttributionUrl(),
+          });
         },
         error: (error: unknown) => {
           if (append) {
@@ -1290,11 +1397,46 @@ export class PracticasPage implements OnInit {
     const rawFilters = this.filtersForm.getRawValue();
 
     return {
-      q: rawFilters.q,
-      familiaProfesional: rawFilters.familiaProfesional,
-      localidad: rawFilters.localidad,
+      q: rawFilters.q.trim(),
+      familiaProfesional: rawFilters.familiaProfesional.trim(),
+      localidad: rawFilters.localidad.trim(),
       modalidad: rawFilters.modalidad || undefined,
     };
+  }
+
+  protected hasExternalUnsupportedFilters(filters: OfertaFctFilters = this.currentFilters()): boolean {
+    return Boolean(filters.modalidad);
+  }
+
+  private applyClientSideFilters(ofertas: OfertaFct[], filters: OfertaFctFilters): OfertaFct[] {
+    const normalizedQuery = normalizeText(filters.q);
+    const normalizedFamilia = normalizeText(filters.familiaProfesional);
+    const normalizedLocalidad = normalizeText(filters.localidad);
+
+    return ofertas.filter((oferta) => {
+      if (filters.modalidad && oferta.modalidad !== filters.modalidad) {
+        return false;
+      }
+
+      if (normalizedFamilia && normalizeText(oferta.familiaProfesional) !== normalizedFamilia) {
+        return false;
+      }
+
+      if (normalizedLocalidad && normalizeText(oferta.localidad) !== normalizedLocalidad) {
+        return false;
+      }
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      return [
+        oferta.titulo,
+        oferta.empresaNombre,
+        oferta.descripcion,
+        oferta.tareas,
+      ].some((field) => normalizeText(field).includes(normalizedQuery));
+    });
   }
 }
 
@@ -1326,4 +1468,12 @@ function externalCatalogErrorMessage(error: unknown): string {
   }
 
   return 'No se pudieron obtener ofertas externas. Inténtalo de nuevo más tarde.';
+}
+
+function normalizeText(value: string | null | undefined): string {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
 }

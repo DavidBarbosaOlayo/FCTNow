@@ -3,6 +3,8 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
+import { AlumnoPreferenciasService } from '../alumnos/preferencias.service';
+import { AuthService } from '../auth/auth.service';
 import { OfertaExternaPage } from './ofertas-externas.models';
 import { OfertasExternasService } from './ofertas-externas.service';
 import { OfertaFct } from './ofertas.models';
@@ -84,6 +86,14 @@ describe('PracticasPage', () => {
         { provide: OfertasService, useValue: ofertasService },
         { provide: OfertasExternasService, useValue: ofertasExternasService },
         { provide: SolicitudesExternasService, useValue: solicitudesExternasService },
+        {
+          provide: AuthService,
+          useValue: { currentUser: () => null, accessToken: () => null },
+        },
+        {
+          provide: AlumnoPreferenciasService,
+          useValue: { getMine: () => throwError(() => new Error('not used')) },
+        },
       ],
     }).compileComponents();
 
@@ -151,13 +161,31 @@ describe('PracticasPage', () => {
       localidad: 'Valencia',
       modalidad: 'HIBRIDA',
     });
-    expect(ofertasExternasService.list).toHaveBeenCalledWith({
-      q: 'datos',
-      where: 'Valencia',
-      category: 'it-jobs',
-      page: 1,
-      resultsPerPage: 21,
-    });
+    expect(ofertasExternasService.list).not.toHaveBeenCalled();
+    expect(compiled.textContent).toContain('La modalidad solo se aplica a las ofertas FCT publicadas');
+  });
+
+  it('should enforce modalidad filtering on the internal list even if the API returns mixed offers', async () => {
+    const remoteOffer: OfertaFct = {
+      ...offer,
+      id: 35,
+      titulo: 'Practicas remotas de QA',
+      modalidad: 'REMOTA',
+    };
+
+    await configure(of([offer, remoteOffer]));
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    setSelectValue(compiled, '#practicas-modalidad', 'REMOTA');
+
+    compiled.querySelector<HTMLFormElement>('form')?.dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    expect(compiled.textContent).toContain('Practicas remotas de QA');
+    expect(compiled.textContent).not.toContain('Practicas de desarrollo web');
+    expect(compiled.textContent).toContain('1 oferta disponible');
   });
 
   it('should render the empty state', async () => {

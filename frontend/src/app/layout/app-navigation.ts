@@ -30,6 +30,7 @@ type NavigationItem = {
   exact: boolean;
   icon: NavigationIconKey;
   requireRole?: UserRole | UserRole[];
+  hideForRole?: UserRole | UserRole[];
 };
 
 const SCROLL_THRESHOLD_PX = 12;
@@ -171,7 +172,7 @@ export class AppNavigation {
 
   private readonly navigationItems: NavigationItem[] = [
     { label: 'Inicio', path: '/', exact: true, icon: 'home' },
-    { label: 'Prácticas', path: '/practicas', exact: true, icon: 'briefcase' },
+    { label: 'Prácticas', path: '/practicas', exact: true, icon: 'briefcase', hideForRole: 'EMPRESA' },
     {
       label: 'Mis solicitudes',
       path: '/alumno/solicitudes',
@@ -208,6 +209,12 @@ export class AppNavigation {
   protected readonly visibleItems = computed<NavigationItem[]>(() => {
     const roles = this.currentUser()?.roles ?? [];
     return this.navigationItems.filter((item) => {
+      if (item.hideForRole) {
+        const hidden = Array.isArray(item.hideForRole) ? item.hideForRole : [item.hideForRole];
+        if (hidden.some((role) => roles.includes(role))) {
+          return false;
+        }
+      }
       if (!item.requireRole) {
         return true;
       }
