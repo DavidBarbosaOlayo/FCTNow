@@ -25,3 +25,9 @@ fctnow:
       issuer: fctnow
       secret: ${FCTNOW_JWT_SECRET:local-development-secret-for-fctnow-jwt-signing-change-me}
       expiration: ${FCTNOW_JWT_EXPIRATION:PT1H}
+  adzuna:
+    base-url: ${ADZUNA_BASE_URL:https://api.adzuna.com/v1/api/jobs}
+    country: ${ADZUNA_COUNTRY:es}
+    app-id: ${ADZUNA_APP_ID:}
+    app-key: ${ADZUNA_APP_KEY:}
+    timeout: ${ADZUNA_TIMEOUT:PT8S}

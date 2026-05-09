@@ -13,3 +13,9 @@ fctnow:
       issuer: fctnow-test
       secret: test-secret-for-fctnow-jwt-signing-with-at-least-32-bytes
       expiration: PT1H
+  adzuna:
+    base-url: http://localhost/adzuna-test
+    country: es
+    app-id: test-app-id
+    app-key: test-app-key
+    timeout: PT2S

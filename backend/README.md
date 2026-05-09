@@ -83,6 +83,23 @@ FCTNOW_JWT_EXPIRATION=PT1H
 No se crea un usuario inicial de desarrollo por defecto. Los usuarios deben existir en las
 tablas `app_users` y `user_roles`; los tests crean sus propios datos.
 
+## Integracion con Adzuna
+
+El endpoint `GET /api/ofertas/externas` consulta la API de Adzuna en el backend y devuelve
+ofertas reales mapeadas a un DTO interno. Las credenciales se leen de variables de entorno y no
+se exponen al frontend:
+
+```bash
+ADZUNA_APP_ID=tu-app-id
+ADZUNA_APP_KEY=tu-app-key
+ADZUNA_COUNTRY=es
+ADZUNA_BASE_URL=https://api.adzuna.com/v1/api/jobs
+ADZUNA_TIMEOUT=PT8S
+```
+
+Si `ADZUNA_APP_ID` o `ADZUNA_APP_KEY` no estan presentes el endpoint responde
+`503 Service Unavailable` y el frontend hace fallback mostrando solo el catalogo interno.
+
 ## Migraciones
 
 Flyway ejecuta las migraciones de `src/main/resources/db/migration` al arrancar la aplicacion.
