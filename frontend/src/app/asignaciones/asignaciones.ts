@@ -12,6 +12,11 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import {
+  AsignacionExternaCandidata,
+  AsignacionFctExterna,
+} from './asignaciones-externas.models';
+import { AsignacionesExternasService } from './asignaciones-externas.service';
 import { AsignacionCandidata, AsignacionEstado, AsignacionFct } from './asignaciones.models';
 import { AsignacionesService } from './asignaciones.service';
 
@@ -86,6 +91,60 @@ type SaveStatus = 'idle' | 'saving';
         }
       </section>
 
+      <section class="create-panel external-create-panel" aria-label="Crear asignacion externa">
+        <p class="eyebrow">Ofertas externas · Adzuna</p>
+        <h2>Asignar solicitud externa aceptada</h2>
+        @if (candidatasExternasStatus() === 'loading') {
+          <p class="muted">Cargando solicitudes externas aceptadas...</p>
+        } @else if (candidatasExternas().length === 0) {
+          <p class="muted">
+            No hay solicitudes externas aceptadas pendientes de asignar. Cuando un alumno marque
+            una oferta de Adzuna como aceptada, aparecera aqui.
+          </p>
+        } @else {
+          <form [formGroup]="externalForm" (ngSubmit)="submitExternal()" novalidate>
+            <div class="form-row">
+              <label for="solicitudExternaId">Solicitud externa aceptada</label>
+              <select id="solicitudExternaId" formControlName="solicitudExternaId">
+                <option [ngValue]="null">Selecciona una solicitud externa</option>
+                @for (candidata of candidatasExternas(); track candidata.solicitudExternaId) {
+                  <option [ngValue]="candidata.solicitudExternaId">
+                    {{ candidata.alumnoNombre }} — {{ candidata.titulo }} ({{
+                      candidata.empresaNombre || 'Empresa externa'
+                    }})
+                  </option>
+                }
+              </select>
+            </div>
+            <div class="form-row">
+              <label for="observacionesExternas">Observaciones (opcional)</label>
+              <textarea
+                id="observacionesExternas"
+                rows="3"
+                maxlength="2000"
+                formControlName="observaciones"
+              ></textarea>
+            </div>
+            <div class="form-actions">
+              <button
+                type="submit"
+                class="primary-action"
+                [disabled]="saveExternalStatus() === 'saving' || externalForm.invalid"
+              >
+                @if (saveExternalStatus() === 'saving') {
+                  Guardando...
+                } @else {
+                  Crear asignacion externa
+                }
+              </button>
+            </div>
+          </form>
+        }
+        @if (externalCreateMessage(); as msg) {
+          <p class="action-feedback" role="status">{{ msg }}</p>
+        }
+      </section>
+
       @if (status() === 'loading') {
         <section class="state-panel" aria-live="polite">
           <p class="eyebrow">Cargando</p>
@@ -146,6 +205,65 @@ type SaveStatus = 'idle' | 'saving';
                     <dd>#{{ asignacion.solicitudId }}</dd>
                   </div>
                 </dl>
+
+                @if (asignacion.observaciones) {
+                  <p class="asignacion-observaciones">{{ asignacion.observaciones }}</p>
+                }
+              </article>
+            }
+          </div>
+        </section>
+      }
+
+      @if (asignacionesExternas().length > 0) {
+        <section
+          class="asignaciones-results external-results"
+          aria-live="polite"
+          aria-label="Asignaciones FCT externas"
+        >
+          <div class="results-heading">
+            <p class="eyebrow">Asignaciones externas · Adzuna</p>
+            <h2>{{ externalResultsTitle() }}</h2>
+          </div>
+
+          <div class="asignaciones-grid">
+            @for (asignacion of asignacionesExternas(); track asignacion.id) {
+              <article class="asignacion-card external-assignment-card">
+                <div class="asignacion-card-heading">
+                  <span class="estado-pill" [attr.data-estado]="asignacion.estado">
+                    {{ estadoLabel(asignacion.estado) }}
+                  </span>
+                  <span class="external-marker">Adzuna</span>
+                  <h3>{{ asignacion.alumnoNombre }}</h3>
+                </div>
+
+                <dl class="asignacion-details" aria-label="Datos de la asignacion externa">
+                  <div>
+                    <dt>Oferta</dt>
+                    <dd>{{ asignacion.titulo }}</dd>
+                  </div>
+                  <div>
+                    <dt>Empresa</dt>
+                    <dd>{{ asignacion.empresaNombre || 'Empresa externa' }}</dd>
+                  </div>
+                  <div>
+                    <dt>Fecha</dt>
+                    <dd>{{ formatFecha(asignacion.fechaAsignacion) }}</dd>
+                  </div>
+                  <div>
+                    <dt>Solicitud externa</dt>
+                    <dd>#{{ asignacion.solicitudExternaId }}</dd>
+                  </div>
+                </dl>
+
+                <a
+                  class="external-link"
+                  [href]="asignacion.urlAplicacion"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Abrir oferta original
+                </a>
 
                 @if (asignacion.observaciones) {
                   <p class="asignacion-observaciones">{{ asignacion.observaciones }}</p>
@@ -251,6 +369,12 @@ type SaveStatus = 'idle' | 'saving';
         box-shadow: var(--shadow-soft);
       }
 
+      .external-create-panel,
+      .external-assignment-card {
+        border-color: rgba(199, 101, 59, 0.28);
+        background: rgba(244, 236, 223, 0.72);
+      }
+
       .asignacion-card-heading {
         display: grid;
         gap: 0.45rem;
@@ -291,6 +415,19 @@ type SaveStatus = 'idle' | 'saving';
         color: #0b5f59;
       }
 
+      .external-marker {
+        justify-self: start;
+        display: inline-flex;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        background: rgba(199, 101, 59, 0.18);
+        color: var(--accent-warm);
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
       .asignacion-details {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -318,6 +455,19 @@ type SaveStatus = 'idle' | 'saving';
         color: var(--muted);
         font-style: italic;
         line-height: 1.5;
+      }
+
+      .external-link {
+        justify-self: start;
+        color: var(--accent);
+        font-weight: 800;
+        text-decoration: none;
+      }
+
+      .external-link:hover,
+      .external-link:focus-visible {
+        text-decoration: underline;
+        outline: none;
       }
 
       .primary-action,
@@ -392,6 +542,7 @@ type SaveStatus = 'idle' | 'saving';
 })
 export class AsignacionesPage implements OnInit {
   private readonly asignacionesService = inject(AsignacionesService);
+  private readonly asignacionesExternasService = inject(AsignacionesExternasService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly fb = inject(FormBuilder);
@@ -400,12 +551,24 @@ export class AsignacionesPage implements OnInit {
   protected readonly asignaciones = signal<AsignacionFct[]>([]);
   protected readonly candidatas = signal<AsignacionCandidata[]>([]);
   protected readonly candidatasStatus = signal<'loading' | 'loaded' | 'error'>('loading');
+  protected readonly asignacionesExternas = signal<AsignacionFctExterna[]>([]);
+  protected readonly candidatasExternas = signal<AsignacionExternaCandidata[]>([]);
+  protected readonly candidatasExternasStatus = signal<'loading' | 'loaded' | 'error'>('loading');
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly createMessage = signal<string | null>(null);
+  protected readonly externalCreateMessage = signal<string | null>(null);
   protected readonly saveStatus = signal<SaveStatus>('idle');
+  protected readonly saveExternalStatus = signal<SaveStatus>('idle');
 
   protected readonly form = this.fb.nonNullable.group({
     solicitudId: this.fb.nonNullable.control<number | null>(null, {
+      validators: [Validators.required],
+    }),
+    observaciones: this.fb.nonNullable.control<string>(''),
+  });
+
+  protected readonly externalForm = this.fb.nonNullable.group({
+    solicitudExternaId: this.fb.nonNullable.control<number | null>(null, {
       validators: [Validators.required],
     }),
     observaciones: this.fb.nonNullable.control<string>(''),
@@ -418,6 +581,8 @@ export class AsignacionesPage implements OnInit {
     }
     this.loadAsignaciones();
     this.loadCandidatas();
+    this.loadAsignacionesExternas();
+    this.loadCandidatasExternas();
   }
 
   protected estadoLabel(estado: AsignacionEstado): string {
@@ -442,6 +607,13 @@ export class AsignacionesPage implements OnInit {
   protected resultsTitle(): string {
     const count = this.asignaciones().length;
     return count === 1 ? '1 asignacion registrada' : `${count} asignaciones registradas`;
+  }
+
+  protected externalResultsTitle(): string {
+    const count = this.asignacionesExternas().length;
+    return count === 1
+      ? '1 asignacion externa registrada'
+      : `${count} asignaciones externas registradas`;
   }
 
   protected submit(): void {
@@ -479,6 +651,43 @@ export class AsignacionesPage implements OnInit {
       });
   }
 
+  protected submitExternal(): void {
+    if (this.externalForm.invalid) {
+      this.externalForm.markAllAsTouched();
+      return;
+    }
+    const { solicitudExternaId, observaciones } = this.externalForm.getRawValue();
+    if (solicitudExternaId === null) {
+      return;
+    }
+
+    const trimmed = (observaciones ?? '').trim();
+    this.saveExternalStatus.set('saving');
+    this.externalCreateMessage.set(null);
+
+    this.asignacionesExternasService
+      .create({
+        solicitudExternaId,
+        observaciones: trimmed.length === 0 ? undefined : trimmed,
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (asignacion) => {
+          this.asignacionesExternas.update((current) => [asignacion, ...current]);
+          this.candidatasExternas.update((current) =>
+            current.filter((item) => item.solicitudExternaId !== asignacion.solicitudExternaId),
+          );
+          this.externalCreateMessage.set('Asignacion externa creada correctamente.');
+          this.saveExternalStatus.set('idle');
+          this.externalForm.reset({ solicitudExternaId: null, observaciones: '' });
+        },
+        error: (error: unknown) => {
+          this.externalCreateMessage.set(createErrorMessage(error));
+          this.saveExternalStatus.set('idle');
+        },
+      });
+  }
+
   private loadCandidatas(): void {
     this.candidatasStatus.set('loading');
     this.asignacionesService
@@ -492,6 +701,23 @@ export class AsignacionesPage implements OnInit {
         error: () => {
           this.candidatas.set([]);
           this.candidatasStatus.set('error');
+        },
+      });
+  }
+
+  private loadCandidatasExternas(): void {
+    this.candidatasExternasStatus.set('loading');
+    this.asignacionesExternasService
+      .listCandidatas()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (candidatas) => {
+          this.candidatasExternas.set(candidatas);
+          this.candidatasExternasStatus.set('loaded');
+        },
+        error: () => {
+          this.candidatasExternas.set([]);
+          this.candidatasExternasStatus.set('error');
         },
       });
   }
@@ -516,6 +742,20 @@ export class AsignacionesPage implements OnInit {
           }
           this.errorMessage.set(listErrorMessage(error));
           this.status.set('error');
+        },
+      });
+  }
+
+  private loadAsignacionesExternas(): void {
+    this.asignacionesExternasService
+      .list()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (asignaciones) => {
+          this.asignacionesExternas.set(asignaciones);
+        },
+        error: () => {
+          this.asignacionesExternas.set([]);
         },
       });
   }

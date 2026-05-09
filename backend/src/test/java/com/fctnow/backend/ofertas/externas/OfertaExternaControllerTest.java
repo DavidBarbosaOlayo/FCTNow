@@ -60,9 +60,19 @@ class OfertaExternaControllerTest {
   }
 
   @Test
-  void listRequiresAuthentication() throws Exception {
+  void listAllowsAnonymousAccess() throws Exception {
+    when(adzunaService.search(any(), any(), any(), any(), any()))
+        .thenReturn(new OfertaExternaPageResponse(
+            java.util.List.of(),
+            1,
+            20,
+            0L,
+            "Resultados ofrecidos por Adzuna",
+            "https://www.adzuna.es/"));
+
     mockMvc.perform(get("/api/ofertas/externas"))
-        .andExpect(status().isUnauthorized());
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.results.length()").value(0));
   }
 
   @Test

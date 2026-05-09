@@ -4,6 +4,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
+import { SolicitudExterna } from '../practicas/solicitudes-externas.models';
+import { SolicitudesExternasService } from '../practicas/solicitudes-externas.service';
 import { SolicitudFct } from '../practicas/solicitudes.models';
 import { SolicitudesService } from '../practicas/solicitudes.service';
 import { MisSolicitudesPage } from './mis-solicitudes';
@@ -12,6 +14,7 @@ describe('MisSolicitudesPage', () => {
   let fixture: ComponentFixture<MisSolicitudesPage>;
   let authService: jasmine.SpyObj<AuthService>;
   let solicitudesService: jasmine.SpyObj<SolicitudesService>;
+  let solicitudesExternasService: jasmine.SpyObj<SolicitudesExternasService>;
 
   const sampleSolicitudes: SolicitudFct[] = [
     {
@@ -29,10 +32,12 @@ describe('MisSolicitudesPage', () => {
   async function configure({
     accessToken = 'jwt-token',
     result = of(sampleSolicitudes) as Observable<SolicitudFct[]>,
+    externasResult = of([]) as Observable<SolicitudExterna[]>,
     platformId = 'browser',
   }: {
     accessToken?: string | null;
     result?: Observable<SolicitudFct[]>;
+    externasResult?: Observable<SolicitudExterna[]>;
     platformId?: string;
   } = {}): Promise<void> {
     authService = jasmine.createSpyObj<AuthService>('AuthService', ['accessToken']);
@@ -40,6 +45,19 @@ describe('MisSolicitudesPage', () => {
 
     solicitudesService = jasmine.createSpyObj<SolicitudesService>('SolicitudesService', ['mine']);
     solicitudesService.mine.and.returnValue(result);
+    solicitudesExternasService = jasmine.createSpyObj<SolicitudesExternasService>(
+      'SolicitudesExternasService',
+      ['mine', 'changeEstado'],
+    );
+    solicitudesExternasService.mine.and.returnValue(externasResult);
+    solicitudesExternasService.changeEstado.and.callFake((id, estado) =>
+      of({
+        ...sampleSolicitudExterna,
+        id,
+        estado,
+        updatedAt: '2026-05-09T11:00:00Z',
+      }),
+    );
 
     await TestBed.configureTestingModule({
       imports: [MisSolicitudesPage],
@@ -48,12 +66,32 @@ describe('MisSolicitudesPage', () => {
         provideRouter([]),
         { provide: AuthService, useValue: authService },
         { provide: SolicitudesService, useValue: solicitudesService },
+        { provide: SolicitudesExternasService, useValue: solicitudesExternasService },
         { provide: PLATFORM_ID, useValue: platformId },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(MisSolicitudesPage);
   }
+
+  const sampleSolicitudExterna: SolicitudExterna = {
+    id: 20,
+    alumnoId: 7,
+    alumnoNombre: 'Alumno Demo',
+    fuente: 'ADZUNA',
+    idExterno: 'adz-20',
+    titulo: 'Becario QA',
+    empresaNombre: 'Logistica Levante',
+    localidad: 'Castellon',
+    region: 'Comunidad Valenciana',
+    urlAplicacion: 'https://www.adzuna.es/land/ad/20',
+    publicadoEn: null,
+    categoria: 'TI',
+    estado: 'SOLICITADA',
+    createdAt: '2026-05-08T09:00:00Z',
+    updatedAt: '2026-05-08T09:00:00Z',
+    actualizadoPorId: 7,
+  };
 
   it('should render the list of authenticated student applications', async () => {
     await configure();
@@ -93,6 +131,7 @@ describe('MisSolicitudesPage', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(solicitudesService.mine).not.toHaveBeenCalled();
+    expect(solicitudesExternasService.mine).not.toHaveBeenCalled();
     expect(compiled.textContent).toContain('Inicia sesión para ver tus solicitudes');
 
     const loginLink = compiled.querySelector<HTMLAnchorElement>('.back-link');
@@ -131,6 +170,7 @@ describe('MisSolicitudesPage', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(solicitudesService.mine).not.toHaveBeenCalled();
+    expect(solicitudesExternasService.mine).not.toHaveBeenCalled();
     expect(compiled.textContent).toContain('Inicia sesión para ver tus solicitudes');
   });
 
@@ -180,5 +220,29 @@ describe('MisSolicitudesPage', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).not.toContain('Asignada por el centro');
+  });
+
+  it('should render and update external solicitudes from Adzuna', async () => {
+    await configure({ externasResult: of([sampleSolicitudExterna]) });
+    spyOn(window, 'confirm').and.returnValue(true);
+
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Mis solicitudes externas');
+    expect(compiled.textContent).toContain('Becario QA');
+    expect(compiled.textContent).toContain('Logistica Levante');
+    expect(compiled.querySelector('.origen-badge')?.textContent).toContain('Adzuna');
+
+    const aceptarBtn = Array.from(compiled.querySelectorAll<HTMLButtonElement>('button')).find(
+      (button) => button.textContent?.trim() === 'Marcar como aceptada',
+    );
+    aceptarBtn!.click();
+    fixture.detectChanges();
+
+    expect(window.confirm).toHaveBeenCalled();
+    expect(solicitudesExternasService.changeEstado).toHaveBeenCalledWith(20, 'ACEPTADA');
+    expect(compiled.textContent).toContain('Aceptada');
   });
 });

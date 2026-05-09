@@ -11,7 +11,13 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { Observable } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
+import {
+  SolicitudExterna,
+  SolicitudExternaEstado,
+} from '../practicas/solicitudes-externas.models';
+import { SolicitudesExternasService } from '../practicas/solicitudes-externas.service';
 import { SolicitudEstado, SolicitudFct } from '../practicas/solicitudes.models';
 import { SolicitudesService } from '../practicas/solicitudes.service';
 
@@ -112,6 +118,112 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
               </article>
             }
           </div>
+        </section>
+      }
+
+      @if (showExternasSection()) {
+        <section
+          class="solicitudes-results externas-section"
+          aria-live="polite"
+          aria-label="Solicitudes externas Adzuna"
+        >
+          <div class="results-heading">
+            <p class="eyebrow">Ofertas externas · Adzuna</p>
+            <h2>Mis solicitudes externas</h2>
+            <p class="externas-hint">
+              Solicitudes que has marcado manualmente desde ofertas reales de Adzuna. Cuando una
+              empresa te coja, marca aquí la solicitud como aceptada para que tu tutor pueda
+              asignarla.
+            </p>
+          </div>
+
+          @if (externasStatus() === 'loading') {
+            <div class="state-panel">
+              <p class="eyebrow">Cargando</p>
+              <h2>Recuperando tus solicitudes externas</h2>
+            </div>
+          } @else if (externasStatus() === 'error') {
+            <div class="state-panel alert" role="alert">
+              <p class="eyebrow">Error</p>
+              <h2>No se pudieron cargar las solicitudes externas</h2>
+              <p>{{ externasErrorMessage() }}</p>
+            </div>
+          } @else if (solicitudesExternas().length === 0) {
+            <div class="state-panel">
+              <p class="eyebrow">Sin solicitudes externas</p>
+              <h2>Aún no has marcado ninguna oferta de Adzuna</h2>
+              <p>
+                Desde el listado de prácticas pulsa "Marcar como solicitada" en cualquier oferta
+                externa que hayas aplicado en Adzuna.
+              </p>
+            </div>
+          } @else {
+            <div class="solicitudes-grid">
+              @for (item of solicitudesExternas(); track item.id) {
+                <article class="solicitud-card solicitud-card-externa">
+                  <div class="solicitud-card-heading">
+                    <span class="origen-badge">Adzuna</span>
+                    <p class="solicitud-company">
+                      {{ item.empresaNombre || 'Empresa no especificada' }}
+                    </p>
+                    <h3>{{ item.titulo }}</h3>
+                  </div>
+
+                  <dl class="solicitud-details" aria-label="Datos de la solicitud externa">
+                    @if (item.localidad) {
+                      <div>
+                        <dt>Localidad</dt>
+                        <dd>{{ item.localidad }}{{ item.region ? ', ' + item.region : '' }}</dd>
+                      </div>
+                    }
+                    <div>
+                      <dt>Estado</dt>
+                      <dd class="estado-cell">
+                        <span class="estado-pill" [attr.data-estado]="item.estado">
+                          {{ estadoExternaLabel(item.estado) }}
+                        </span>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Última actualización</dt>
+                      <dd>{{ formatFecha(item.updatedAt) }}</dd>
+                    </div>
+                  </dl>
+
+                  <div class="externa-actions">
+                    @if (item.estado === 'SOLICITADA') {
+                      <button
+                        type="button"
+                        class="solicitud-link"
+                        [disabled]="externalActionInFlight() === item.id"
+                        (click)="markExternaAceptada(item)"
+                      >
+                        Marcar como aceptada
+                      </button>
+                    }
+                    @if (item.estado === 'SOLICITADA' || item.estado === 'ACEPTADA') {
+                      <button
+                        type="button"
+                        class="solicitud-link secondary"
+                        [disabled]="externalActionInFlight() === item.id"
+                        (click)="anularExterna(item)"
+                      >
+                        Anular solicitud
+                      </button>
+                    }
+                    <a
+                      class="solicitud-link secondary"
+                      [href]="item.urlAplicacion"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Abrir en Adzuna
+                    </a>
+                  </div>
+                </article>
+              }
+            </div>
+          }
         </section>
       }
     </main>
@@ -299,6 +411,59 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         outline: none;
       }
 
+      .externas-section {
+        margin-top: 1rem;
+      }
+
+      .externas-hint {
+        margin: 0.35rem 0 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.55;
+      }
+
+      .solicitud-card-externa {
+        background: rgba(244, 236, 223, 0.78);
+        border-color: rgba(199, 101, 59, 0.28);
+      }
+
+      .origen-badge {
+        align-self: start;
+        display: inline-flex;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        background: rgba(199, 101, 59, 0.18);
+        color: var(--accent-warm);
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .externa-actions {
+        margin-top: auto;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+
+      .externa-actions .solicitud-link {
+        justify-self: start;
+      }
+
+      .solicitud-link.secondary {
+        border: 1px solid var(--line);
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.62);
+      }
+
+      .solicitud-link.secondary:hover,
+      .solicitud-link.secondary:focus-visible {
+        border-color: rgba(15, 118, 110, 0.36);
+        background: rgba(255, 255, 255, 0.82);
+        outline: none;
+      }
+
       @media (max-width: 620px) {
         .mis-solicitudes-page {
           padding-top: 1rem;
@@ -315,12 +480,18 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
 export class MisSolicitudesPage implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly solicitudesService = inject(SolicitudesService);
+  private readonly solicitudesExternasService = inject(SolicitudesExternasService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
 
   protected readonly status = signal<ListStatus>('loading');
   protected readonly solicitudes = signal<SolicitudFct[]>([]);
   protected readonly errorMessage = signal<string | null>(null);
+
+  protected readonly externasStatus = signal<ListStatus>('loading');
+  protected readonly solicitudesExternas = signal<SolicitudExterna[]>([]);
+  protected readonly externasErrorMessage = signal<string | null>(null);
+  protected readonly externalActionInFlight = signal<number | null>(null);
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) {
@@ -335,6 +506,8 @@ export class MisSolicitudesPage implements OnInit {
 
     this.status.set('loading');
     this.errorMessage.set(null);
+    this.externasStatus.set('loading');
+    this.externasErrorMessage.set(null);
 
     this.solicitudesService
       .mine()
@@ -356,6 +529,7 @@ export class MisSolicitudesPage implements OnInit {
           this.status.set('error');
         },
       });
+    this.loadExternas();
   }
 
   protected estadoLabel(estado: SolicitudEstado): string {
@@ -383,12 +557,123 @@ export class MisSolicitudesPage implements OnInit {
     const count = this.solicitudes().length;
     return count === 1 ? '1 solicitud enviada' : `${count} solicitudes enviadas`;
   }
+
+  protected showExternasSection(): boolean {
+    if (this.status() === 'not-authenticated' || this.status() === 'error') {
+      return false;
+    }
+    return this.externasStatus() === 'loading'
+      || this.externasStatus() === 'error'
+      || this.solicitudesExternas().length > 0;
+  }
+
+  protected estadoExternaLabel(estado: SolicitudExternaEstado): string {
+    return ESTADO_EXTERNA_LABELS[estado] ?? estado;
+  }
+
+  protected markExternaAceptada(solicitud: SolicitudExterna): void {
+    if (this.externalActionInFlight() === solicitud.id || !this.confirmAceptada()) {
+      return;
+    }
+    this.runExternalAction(
+      solicitud,
+      this.solicitudesExternasService.changeEstado(solicitud.id, 'ACEPTADA'),
+    );
+  }
+
+  protected anularExterna(solicitud: SolicitudExterna): void {
+    if (this.externalActionInFlight() === solicitud.id) {
+      return;
+    }
+    if (!this.confirmAnular(solicitud.estado)) {
+      return;
+    }
+    this.runExternalAction(
+      solicitud,
+      this.solicitudesExternasService.changeEstado(solicitud.id, 'RETIRADA'),
+      { removeOnSuccess: true },
+    );
+  }
+
+  private confirmAnular(estado: SolicitudExternaEstado): boolean {
+    if (!isPlatformBrowser(this.platformId)) {
+      return false;
+    }
+    const detalle = estado === 'ACEPTADA'
+      ? 'Esta solicitud está marcada como aceptada. Si la anulas, deberás volver a marcarla desde el listado de prácticas si la empresa te confirma de nuevo.'
+      : 'La solicitud quedará anulada y desaparecerá de esta lista.';
+    return window.confirm(`¿Anular la solicitud? ${detalle}`);
+  }
+
+  private loadExternas(): void {
+    this.solicitudesExternasService
+      .mine()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (solicitudes) => {
+          const activas = solicitudes.filter((item) => item.estado !== 'RETIRADA');
+          this.solicitudesExternas.set(activas);
+          this.externasStatus.set(activas.length === 0 ? 'empty' : 'loaded');
+        },
+        error: (error: unknown) => {
+          this.solicitudesExternas.set([]);
+          this.externasErrorMessage.set(listErrorMessage(error));
+          this.externasStatus.set('error');
+        },
+      });
+  }
+
+  private runExternalAction(
+    solicitud: SolicitudExterna,
+    request$: Observable<SolicitudExterna>,
+    options: { removeOnSuccess?: boolean } = {},
+  ): void {
+    this.externalActionInFlight.set(solicitud.id);
+    this.externasErrorMessage.set(null);
+    request$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (updated) => {
+          this.solicitudesExternas.update((current) => {
+            if (options.removeOnSuccess) {
+              return current.filter((item) => item.id !== updated.id);
+            }
+            return current.map((item) => (item.id === updated.id ? updated : item));
+          });
+          if (this.solicitudesExternas().length === 0) {
+            this.externasStatus.set('empty');
+          }
+          this.externalActionInFlight.set(null);
+        },
+        error: (error: unknown) => {
+          this.externasErrorMessage.set(listErrorMessage(error));
+          this.externasStatus.set('error');
+          this.externalActionInFlight.set(null);
+        },
+      });
+  }
+
+  private confirmAceptada(): boolean {
+    if (!isPlatformBrowser(this.platformId)) {
+      return false;
+    }
+    return window.confirm(
+      'Confirma solo si la empresa externa te ha aceptado. Tu tutor podra crear la asignacion FCT desde esta solicitud.',
+    );
+  }
 }
 
 const ESTADO_LABELS: Record<SolicitudEstado, string> = {
   SOLICITADA: 'Solicitada',
   ACEPTADA: 'Aceptada',
   RECHAZADA: 'Rechazada',
+};
+
+const ESTADO_EXTERNA_LABELS: Record<SolicitudExternaEstado, string> = {
+  SOLICITADA: 'Solicitada',
+  ACEPTADA: 'Aceptada',
+  RECHAZADA: 'Rechazada',
+  RETIRADA: 'Retirada',
 };
 
 function isUnauthorized(error: unknown): boolean {

@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: fctnow-backend
+  config:
+    import: optional:classpath:application-secrets.yml
   profiles:
     default: local
   jpa:

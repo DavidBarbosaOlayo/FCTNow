@@ -51,6 +51,10 @@ __screenshots__/
 # Local context files
 docs/contracts/empresas-ofertas.md
 
+# Local secrets (Adzuna and similar API keys) - never commit
+backend/src/main/resources/application-secrets.yml
+backend/src/main/resources/application-secrets-*.yml
+
 # System files
 .DS_Store
 Thumbs.db
