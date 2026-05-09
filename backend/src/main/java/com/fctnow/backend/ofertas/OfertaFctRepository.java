@@ -3,6 +3,7 @@ package com.fctnow.backend.ofertas;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -58,4 +59,18 @@ public interface OfertaFctRepository extends JpaRepository<OfertaFct, Long> {
   Optional<OfertaFct> findByIdAndEmpresaIdWithEmpresa(
       @Param("id") Long id,
       @Param("empresaId") Long empresaId);
+
+  @Modifying
+  @Query("""
+      update OfertaFct o
+      set o.localidad = :newLocalidad,
+          o.provincia = :newProvincia
+      where o.empresa.id = :empresaId
+        and o.localidad = :oldLocalidad
+      """)
+  int updateLocationForCompanyOffersUsingPreviousCompanyLocality(
+      @Param("empresaId") Long empresaId,
+      @Param("oldLocalidad") String oldLocalidad,
+      @Param("newLocalidad") String newLocalidad,
+      @Param("newProvincia") String newProvincia);
 }

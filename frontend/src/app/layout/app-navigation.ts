@@ -42,9 +42,7 @@ export class AppNavigation {
     { label: 'Inicio', path: '/', exact: true },
     { label: 'Prácticas', path: '/practicas', exact: true },
     { label: 'Mis solicitudes', path: '/alumno/solicitudes', exact: true, requireRole: 'ALUMNO' },
-    { label: 'Preferencias', path: '/alumno/preferencias', exact: true, requireRole: 'ALUMNO' },
     { label: 'Mis ofertas', path: '/empresa/ofertas', exact: true, requireRole: 'EMPRESA' },
-    { label: 'Perfil empresa', path: '/empresa/perfil', exact: true, requireRole: 'EMPRESA' },
     {
       label: 'Solicitudes recibidas',
       path: '/empresa/solicitudes',

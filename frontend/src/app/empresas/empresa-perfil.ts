@@ -1,9 +1,10 @@
-import { isPlatformBrowser } from '@angular/common';
+import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  Input,
   OnInit,
   PLATFORM_ID,
   inject,
@@ -21,17 +22,24 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 @Component({
   selector: 'app-empresa-perfil-page',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [NgTemplateOutlet, ReactiveFormsModule, RouterLink],
   template: `
-    <main class="page-shell route-page empresa-perfil-page">
-      <header class="route-hero">
-        <p class="eyebrow">Empresa</p>
-        <h1>Perfil de empresa</h1>
-        <p>
-          Revisa y actualiza los datos basicos de contacto de tu empresa para las practicas FCT.
-        </p>
-      </header>
+    @if (embedded) {
+      <ng-container [ngTemplateOutlet]="bodyTpl"></ng-container>
+    } @else {
+      <main class="page-shell route-page empresa-perfil-page">
+        <header class="route-hero">
+          <p class="eyebrow">Empresa</p>
+          <h1>Perfil de empresa</h1>
+          <p>
+            Revisa y actualiza los datos básicos de contacto de tu empresa para las prácticas FCT.
+          </p>
+        </header>
+        <ng-container [ngTemplateOutlet]="bodyTpl"></ng-container>
+      </main>
+    }
 
+    <ng-template #bodyTpl>
       @if (status() === 'loading') {
         <section class="state-panel" aria-live="polite">
           <p class="eyebrow">Cargando</p>
@@ -40,9 +48,9 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
         </section>
       } @else if (status() === 'not-authenticated') {
         <section class="state-panel alert" role="alert">
-          <p class="eyebrow">Sesion no disponible</p>
-          <h2>Inicia sesion como empresa</h2>
-          <p>Necesitas una sesion activa de empresa para editar esta ficha.</p>
+          <p class="eyebrow">Sesión no disponible</p>
+          <h2>Inicia sesión como empresa</h2>
+          <p>Necesitas una sesión activa de empresa para editar esta ficha.</p>
           <a class="text-link" routerLink="/login">Ir al acceso</a>
         </section>
       } @else if (status() === 'error') {
@@ -51,7 +59,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
           <h2>No se pudo cargar tu perfil de empresa</h2>
           <p>{{ errorMessage() }}</p>
         </section>
-      } @else {
+      } @else if (editing()) {
         <form class="profile-form" [formGroup]="form" (ngSubmit)="save()">
           <div class="section-heading">
             <p class="eyebrow">Ficha vinculada</p>
@@ -85,7 +93,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
             </label>
 
             <label>
-              <span>Direccion</span>
+              <span>Dirección</span>
               <input formControlName="direccion" maxlength="200" />
             </label>
 
@@ -100,7 +108,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
             </label>
 
             <label>
-              <span>Codigo postal</span>
+              <span>Código postal</span>
               <input formControlName="codigoPostal" maxlength="5" inputmode="numeric" />
             </label>
 
@@ -110,7 +118,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
             </label>
 
             <label>
-              <span>Telefono de contacto</span>
+              <span>Teléfono de contacto</span>
               <input formControlName="telefonoContacto" maxlength="30" />
             </label>
 
@@ -121,28 +129,98 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
           </div>
 
           <label class="full-field">
-            <span>Descripcion breve</span>
+            <span>Descripción breve</span>
             <textarea formControlName="descripcion" maxlength="1000" rows="5"></textarea>
           </label>
 
           @if (form.invalid && form.touched) {
             <p class="form-message error" role="alert">
-              Revisa los campos obligatorios, el email y el codigo postal antes de guardar.
+              Revisa los campos obligatorios, el email y el código postal antes de guardar.
             </p>
           }
 
-          @if (saveStatus() === 'saved') {
-            <p class="form-message success" aria-live="polite">Perfil de empresa guardado.</p>
-          } @else if (saveStatus() === 'error') {
+          @if (saveStatus() === 'error') {
             <p class="form-message error" role="alert">{{ saveError() }}</p>
           }
 
-          <button class="primary-action" type="submit" [disabled]="form.invalid || saveStatus() === 'saving'">
-            {{ saveStatus() === 'saving' ? 'Guardando...' : 'Guardar perfil' }}
-          </button>
+          <div class="form-actions">
+            <button class="primary-action" type="submit" [disabled]="form.invalid || saveStatus() === 'saving'">
+              {{ saveStatus() === 'saving' ? 'Guardando...' : 'Guardar perfil' }}
+            </button>
+            <button class="secondary-action" type="button" (click)="cancelEdit()" [disabled]="saveStatus() === 'saving'">
+              Cancelar
+            </button>
+          </div>
         </form>
+      } @else {
+        <article class="profile-view" aria-label="Perfil de empresa guardado">
+          <div class="section-heading">
+            <p class="eyebrow">Ficha vinculada</p>
+            <h2>{{ empresa()?.nombre || '—' }}</h2>
+            <p>Estado actual: {{ estadoLabel(empresa()?.estado) }}</p>
+          </div>
+
+          <dl class="profile-view-grid">
+            <div>
+              <dt>Nombre</dt>
+              <dd>{{ empresa()?.nombre || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Tipo de identificador</dt>
+              <dd>{{ empresa()?.tipoIdentificadorFiscal || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Identificador fiscal</dt>
+              <dd>{{ empresa()?.identificadorFiscal || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Sector</dt>
+              <dd>{{ empresa()?.sector || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Dirección</dt>
+              <dd>{{ empresa()?.direccion || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Localidad</dt>
+              <dd>{{ empresa()?.localidad || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Provincia</dt>
+              <dd>{{ empresa()?.provincia || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Código postal</dt>
+              <dd>{{ empresa()?.codigoPostal || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Email de contacto</dt>
+              <dd>{{ empresa()?.emailContacto || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Teléfono de contacto</dt>
+              <dd>{{ empresa()?.telefonoContacto || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Persona de contacto</dt>
+              <dd>{{ empresa()?.personaContacto || '—' }}</dd>
+            </div>
+            <div class="full-row">
+              <dt>Descripción breve</dt>
+              <dd>{{ empresa()?.descripcion || '—' }}</dd>
+            </div>
+          </dl>
+
+          @if (saveStatus() === 'saved') {
+            <p class="form-message success" aria-live="polite">Perfil de empresa guardado.</p>
+          }
+
+          <button class="primary-action" type="button" (click)="enterEdit()">
+            Editar perfil
+          </button>
+        </article>
       }
-    </main>
+    </ng-template>
   `,
   styles: [
     `
@@ -153,6 +231,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
       }
 
       .profile-form,
+      .profile-view,
       .state-panel {
         display: grid;
         gap: 1rem;
@@ -276,8 +355,54 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
         color: #a13d2d;
       }
 
+      .form-actions {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+      }
+
+      .profile-view {
+        gap: 0.85rem;
+      }
+
+      .profile-view-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin: 0;
+      }
+
+      .profile-view-grid div {
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--line);
+        border-radius: 0.5rem;
+        background: rgba(255, 255, 255, 0.55);
+      }
+
+      .profile-view-grid .full-row {
+        grid-column: 1 / -1;
+      }
+
+      .profile-view-grid dt {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .profile-view-grid dd {
+        margin: 0.3rem 0 0;
+        color: var(--ink);
+        font-weight: 700;
+        line-height: 1.45;
+        white-space: pre-wrap;
+      }
+
       @media (max-width: 760px) {
-        .form-grid {
+        .form-grid,
+        .profile-view-grid {
           grid-template-columns: 1fr;
         }
       }
@@ -286,6 +411,8 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmpresaPerfilPage implements OnInit {
+  @Input() embedded = false;
+
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly empresaPerfilService = inject(EmpresaPerfilService);
@@ -297,6 +424,7 @@ export class EmpresaPerfilPage implements OnInit {
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly saveError = signal<string | null>(null);
   protected readonly empresa = signal<EmpresaPerfil | null>(null);
+  protected readonly editing = signal(false);
 
   protected readonly form = this.fb.nonNullable.group({
     nombre: ['', [Validators.required, Validators.maxLength(150)]],
@@ -367,13 +495,50 @@ export class EmpresaPerfilPage implements OnInit {
       .subscribe({
         next: (empresa) => {
           this.empresa.set(empresa);
+          this.patchFormFromEmpresa();
           this.saveStatus.set('saved');
+          this.editing.set(false);
         },
         error: (error: unknown) => {
           this.saveError.set(errorMessage(error));
           this.saveStatus.set('error');
         },
       });
+  }
+
+  protected enterEdit(): void {
+    this.patchFormFromEmpresa();
+    this.saveStatus.set('idle');
+    this.saveError.set(null);
+    this.editing.set(true);
+  }
+
+  protected cancelEdit(): void {
+    this.patchFormFromEmpresa();
+    this.saveStatus.set('idle');
+    this.saveError.set(null);
+    this.editing.set(false);
+  }
+
+  private patchFormFromEmpresa(): void {
+    const empresa = this.empresa();
+    if (!empresa) {
+      return;
+    }
+    this.form.patchValue({
+      nombre: empresa.nombre,
+      tipoIdentificadorFiscal: empresa.tipoIdentificadorFiscal,
+      identificadorFiscal: empresa.identificadorFiscal,
+      sector: empresa.sector,
+      descripcion: empresa.descripcion ?? '',
+      direccion: empresa.direccion,
+      localidad: empresa.localidad,
+      provincia: empresa.provincia,
+      codigoPostal: empresa.codigoPostal,
+      emailContacto: empresa.emailContacto,
+      telefonoContacto: empresa.telefonoContacto ?? '',
+      personaContacto: empresa.personaContacto,
+    });
   }
 
   protected estadoLabel(estado: EmpresaEstado | undefined): string {
@@ -405,7 +570,7 @@ export class EmpresaPerfilPage implements OnInit {
 const ESTADO_LABELS: Record<EmpresaEstado, string> = {
   ACTIVA: 'Activa',
   INACTIVA: 'Inactiva',
-  PENDIENTE_REVISION: 'Pendiente de revision',
+  PENDIENTE_REVISION: 'Pendiente de revisión',
   RECHAZADA: 'Rechazada',
 };
 
@@ -420,7 +585,7 @@ function isUnauthorized(error: unknown): boolean {
 function errorMessage(error: unknown): string {
   if (error instanceof HttpErrorResponse) {
     if (error.status === 0) {
-      return 'No se pudo contactar con el servidor. Comprueba que el backend este disponible.';
+      return 'No se pudo contactar con el servidor. Comprueba que el backend esté disponible.';
     }
     if (error.status === 400) {
       return 'Revisa los datos enviados antes de guardar.';
@@ -432,5 +597,5 @@ function errorMessage(error: unknown): string {
       return 'Ya existe una empresa con ese identificador fiscal.';
     }
   }
-  return 'No se pudo completar la operacion. Intentalo de nuevo.';
+  return 'No se pudo completar la operación. Inténtalo de nuevo.';
 }

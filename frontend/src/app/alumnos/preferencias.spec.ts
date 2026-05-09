@@ -61,7 +61,15 @@ describe('PreferenciasAlumnoPage', () => {
     fixture = TestBed.createComponent(PreferenciasAlumnoPage);
   }
 
-  it('should render the preferences form with current values and CV state', async () => {
+  function clickEditar(compiled: HTMLElement): void {
+    const button = Array.from(compiled.querySelectorAll<HTMLButtonElement>('button')).find(
+      (btn) => btn.textContent?.trim() === 'Editar preferencias',
+    );
+    button?.click();
+    fixture.detectChanges();
+  }
+
+  it('should render the saved preferences in view mode by default', async () => {
     await configure();
 
     fixture.detectChanges();
@@ -70,19 +78,40 @@ describe('PreferenciasAlumnoPage', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(preferenciasService.getMine).toHaveBeenCalled();
     expect(compiled.textContent).toContain('Preferencias y CV');
+    expect(compiled.textContent).toContain('Informatica y comunicaciones');
+    expect(compiled.textContent).toContain('Desarrollo de Aplicaciones Web');
+    expect(compiled.textContent).toContain('Híbrida');
     expect(compiled.textContent).toContain('cv-alumno.pdf');
-
-    const familyInput = compiled.querySelector<HTMLInputElement>('input[formcontrolname="familiaProfesional"]');
-    expect(familyInput?.value).toBe('Informatica y comunicaciones');
+    expect(compiled.querySelector('form')).toBeNull();
+    expect(compiled.querySelector('input[type="file"]')).toBeNull();
   });
 
-  it('should save preferences with normalized empty values', async () => {
+  it('should switch to edit mode when the Editar button is clicked', async () => {
     await configure();
     fixture.detectChanges();
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const localityInput = compiled.querySelector<HTMLInputElement>('input[formcontrolname="localidadPreferida"]');
+    clickEditar(compiled);
+
+    expect(compiled.querySelector('form')).not.toBeNull();
+    const familyInput = compiled.querySelector<HTMLInputElement>(
+      'input[formcontrolname="familiaProfesional"]',
+    );
+    expect(familyInput?.value).toBe('Informatica y comunicaciones');
+  });
+
+  it('should save preferences with normalized empty values and return to view mode', async () => {
+    await configure();
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    clickEditar(compiled);
+
+    const localityInput = compiled.querySelector<HTMLInputElement>(
+      'input[formcontrolname="localidadPreferida"]',
+    );
     localityInput!.value = '';
     localityInput!.dispatchEvent(new Event('input'));
 
@@ -94,14 +123,42 @@ describe('PreferenciasAlumnoPage', () => {
       jasmine.objectContaining({ localidadPreferida: null }),
     );
     expect(compiled.textContent).toContain('Preferencias guardadas');
+    expect(compiled.querySelector('form')).toBeNull();
   });
 
-  it('should upload the selected CV', async () => {
+  it('should revert form changes when cancelEdit is clicked', async () => {
     await configure();
     fixture.detectChanges();
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
+    clickEditar(compiled);
+
+    const familyInput = compiled.querySelector<HTMLInputElement>(
+      'input[formcontrolname="familiaProfesional"]',
+    );
+    familyInput!.value = 'Otra familia';
+    familyInput!.dispatchEvent(new Event('input'));
+
+    const cancelButton = Array.from(compiled.querySelectorAll<HTMLButtonElement>('button')).find(
+      (btn) => btn.textContent?.trim() === 'Cancelar',
+    );
+    cancelButton?.click();
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('form')).toBeNull();
+    expect(compiled.textContent).toContain('Informatica y comunicaciones');
+    expect(preferenciasService.updateMine).not.toHaveBeenCalled();
+  });
+
+  it('should upload the selected CV after entering edit mode', async () => {
+    await configure();
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    clickEditar(compiled);
+
     const file = new File(['pdf'], 'nuevo-cv.pdf', { type: 'application/pdf' });
     const input = compiled.querySelector<HTMLInputElement>('input[type="file"]')!;
     Object.defineProperty(input, 'files', {

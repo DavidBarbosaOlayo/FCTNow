@@ -50,9 +50,8 @@ export const routes: Routes = [
   },
   {
     path: 'alumno/preferencias',
-    title: 'Preferencias | FCTNow',
-    loadComponent: () =>
-      import('./alumnos/preferencias').then((m) => m.PreferenciasAlumnoPage),
+    redirectTo: '/perfil',
+    pathMatch: 'full',
   },
   {
     path: 'empresa',
@@ -67,9 +66,8 @@ export const routes: Routes = [
   },
   {
     path: 'empresa/perfil',
-    title: 'Perfil de empresa | FCTNow',
-    loadComponent: () =>
-      import('./empresas/empresa-perfil').then((m) => m.EmpresaPerfilPage),
+    redirectTo: '/perfil',
+    pathMatch: 'full',
   },
   {
     path: 'empresa/solicitudes',

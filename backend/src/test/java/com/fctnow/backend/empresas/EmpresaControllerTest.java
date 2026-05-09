@@ -1,5 +1,6 @@
 package com.fctnow.backend.empresas;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -8,11 +9,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fctnow.backend.auth.LoginRequest;
+import com.fctnow.backend.ofertas.OfertaEstado;
+import com.fctnow.backend.ofertas.OfertaFct;
 import com.fctnow.backend.ofertas.OfertaFctRepository;
+import com.fctnow.backend.ofertas.OfertaModalidad;
 import com.fctnow.backend.solicitudes.SolicitudFctRepository;
 import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
 import com.fctnow.backend.user.UserRole;
+import java.time.LocalDate;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -137,6 +142,59 @@ class EmpresaControllerTest {
         .andExpect(jsonPath("$.identificadorFiscal").value("B12312312"))
         .andExpect(jsonPath("$.emailContacto").value("contacto@perfil.example"))
         .andExpect(jsonPath("$.estado").value("ACTIVA"));
+  }
+
+  @Test
+  void updateMineSynchronizesOffersThatUsePreviousCompanyLocality() throws Exception {
+    Empresa empresa = empresaRepository.findById(linkedEmpresaId).orElseThrow();
+    empresa.update(
+        empresa.getNombre(),
+        empresa.getTipoIdentificadorFiscal(),
+        empresa.getIdentificadorFiscal(),
+        empresa.getSector(),
+        empresa.getDescripcion(),
+        empresa.getDireccion(),
+        "Valencia",
+        "Barcelona",
+        empresa.getCodigoPostal(),
+        empresa.getEmailContacto(),
+        empresa.getTelefonoContacto(),
+        empresa.getPersonaContacto(),
+        empresa.getEstado());
+    empresaRepository.saveAndFlush(empresa);
+
+    Long inheritedLocationOfferId = ofertaFctRepository.save(offer(
+        empresa,
+        "Oferta con provincia desfasada",
+        "Valencia",
+        "Valencia"))
+        .getId();
+    Long customLocationOfferId = ofertaFctRepository.save(offer(
+        empresa,
+        "Oferta con sede propia",
+        "Alicante",
+        "Alicante"))
+        .getId();
+
+    mockMvc.perform(put("/api/empresas/me")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("empresa@example.com"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(validPerfilRequest(
+                "Empresa Perfil Actualizada",
+                "b12312312",
+                "Valencia",
+                "Castellon"))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.localidad").value("Valencia"))
+        .andExpect(jsonPath("$.provincia").value("Castellon"));
+
+    OfertaFct inheritedLocationOffer = ofertaFctRepository.findById(inheritedLocationOfferId).orElseThrow();
+    OfertaFct customLocationOffer = ofertaFctRepository.findById(customLocationOfferId).orElseThrow();
+
+    assertThat(inheritedLocationOffer.getLocalidad()).isEqualTo("Valencia");
+    assertThat(inheritedLocationOffer.getProvincia()).isEqualTo("Castellon");
+    assertThat(customLocationOffer.getLocalidad()).isEqualTo("Alicante");
+    assertThat(customLocationOffer.getProvincia()).isEqualTo("Alicante");
   }
 
   @Test
@@ -334,6 +392,14 @@ class EmpresaControllerTest {
   private EmpresaPerfilRequest validPerfilRequest(
       String nombre,
       String identificadorFiscal) {
+    return validPerfilRequest(nombre, identificadorFiscal, "Valencia", "Valencia");
+  }
+
+  private EmpresaPerfilRequest validPerfilRequest(
+      String nombre,
+      String identificadorFiscal,
+      String localidad,
+      String provincia) {
     return new EmpresaPerfilRequest(
         nombre,
         IdentificadorFiscalTipo.CIF,
@@ -341,8 +407,8 @@ class EmpresaControllerTest {
         "Desarrollo de software",
         "Empresa colaboradora para practicas FCT.",
         "Calle Perfil 4",
-        "Valencia",
-        "Valencia",
+        localidad,
+        provincia,
         "46002",
         "CONTACTO@PERFIL.EXAMPLE",
         "961111111",
@@ -367,6 +433,28 @@ class EmpresaControllerTest {
         "960000000",
         "Laura Garcia",
         estado);
+  }
+
+  private OfertaFct offer(
+      Empresa empresa,
+      String titulo,
+      String localidad,
+      String provincia) {
+    return new OfertaFct(
+        empresa,
+        titulo,
+        "Descripcion de la oferta.",
+        "Informatica y comunicaciones",
+        "Desarrollo de Aplicaciones Web",
+        localidad,
+        provincia,
+        OfertaModalidad.PRESENCIAL,
+        LocalDate.of(2026, 9, 15),
+        LocalDate.of(2026, 12, 15),
+        2,
+        "Conocimientos basicos.",
+        "Tareas variadas.",
+        OfertaEstado.PUBLICADA);
   }
 
   private String accessToken() throws Exception {

@@ -1,5 +1,6 @@
 package com.fctnow.backend.empresas;
 
+import com.fctnow.backend.ofertas.OfertaFctRepository;
 import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
 import com.fctnow.backend.user.UserRole;
@@ -17,12 +18,15 @@ public class EmpresaService {
 
   private final EmpresaRepository empresaRepository;
   private final UserAccountRepository userAccountRepository;
+  private final OfertaFctRepository ofertaFctRepository;
 
   public EmpresaService(
       EmpresaRepository empresaRepository,
-      UserAccountRepository userAccountRepository) {
+      UserAccountRepository userAccountRepository,
+      OfertaFctRepository ofertaFctRepository) {
     this.empresaRepository = empresaRepository;
     this.userAccountRepository = userAccountRepository;
+    this.ofertaFctRepository = ofertaFctRepository;
   }
 
   @Transactional(readOnly = true)
@@ -85,6 +89,11 @@ public class EmpresaService {
           "Ya existe una empresa con ese identificador fiscal");
     }
 
+    String oldLocalidad = empresa.getLocalidad();
+    String oldProvincia = empresa.getProvincia();
+    String newLocalidad = required(request.localidad());
+    String newProvincia = required(request.provincia());
+
     empresa.update(
         required(request.nombre()),
         request.tipoIdentificadorFiscal(),
@@ -92,13 +101,15 @@ public class EmpresaService {
         required(request.sector()),
         optional(request.descripcion()),
         required(request.direccion()),
-        required(request.localidad()),
-        required(request.provincia()),
+        newLocalidad,
+        newProvincia,
         required(request.codigoPostal()),
         normalizeEmail(request.emailContacto()),
         optional(request.telefonoContacto()),
         required(request.personaContacto()),
         request.estado());
+
+    syncOfferLocations(empresa, oldLocalidad, oldProvincia, newLocalidad, newProvincia);
 
     return EmpresaResponse.from(empresa);
   }
@@ -118,6 +129,11 @@ public class EmpresaService {
           "Ya existe una empresa con ese identificador fiscal");
     }
 
+    String oldLocalidad = empresa.getLocalidad();
+    String oldProvincia = empresa.getProvincia();
+    String newLocalidad = required(request.localidad());
+    String newProvincia = required(request.provincia());
+
     empresa.update(
         required(request.nombre()),
         request.tipoIdentificadorFiscal(),
@@ -125,15 +141,34 @@ public class EmpresaService {
         required(request.sector()),
         optional(request.descripcion()),
         required(request.direccion()),
-        required(request.localidad()),
-        required(request.provincia()),
+        newLocalidad,
+        newProvincia,
         required(request.codigoPostal()),
         normalizeEmail(request.emailContacto()),
         optional(request.telefonoContacto()),
         required(request.personaContacto()),
         empresa.getEstado());
 
+    syncOfferLocations(empresa, oldLocalidad, oldProvincia, newLocalidad, newProvincia);
+
     return EmpresaResponse.from(empresa);
+  }
+
+  private void syncOfferLocations(
+      Empresa empresa,
+      String oldLocalidad,
+      String oldProvincia,
+      String newLocalidad,
+      String newProvincia) {
+    if (oldLocalidad.equals(newLocalidad) && oldProvincia.equals(newProvincia)) {
+      return;
+    }
+
+    ofertaFctRepository.updateLocationForCompanyOffersUsingPreviousCompanyLocality(
+        empresa.getId(),
+        oldLocalidad,
+        newLocalidad,
+        newProvincia);
   }
 
   private Empresa currentEmpresa(JwtAuthenticationToken authentication) {

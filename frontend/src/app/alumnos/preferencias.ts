@@ -1,9 +1,10 @@
-import { isPlatformBrowser } from '@angular/common';
+import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  Input,
   OnInit,
   PLATFORM_ID,
   computed,
@@ -24,17 +25,24 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
 
 @Component({
   selector: 'app-preferencias-alumno-page',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [NgTemplateOutlet, ReactiveFormsModule, RouterLink],
   template: `
-    <main class="page-shell route-page preferencias-page">
-      <header class="route-hero">
-        <p class="eyebrow">Alumno</p>
-        <h1>Preferencias y CV</h1>
-        <p>
-          Completa tus preferencias básicas de prácticas FCT y adjunta tu CV actualizado.
-        </p>
-      </header>
+    @if (embedded) {
+      <ng-container [ngTemplateOutlet]="bodyTpl"></ng-container>
+    } @else {
+      <main class="page-shell route-page preferencias-page">
+        <header class="route-hero">
+          <p class="eyebrow">Alumno</p>
+          <h1>Preferencias y CV</h1>
+          <p>
+            Completa tus preferencias básicas de prácticas FCT y adjunta tu CV actualizado.
+          </p>
+        </header>
+        <ng-container [ngTemplateOutlet]="bodyTpl"></ng-container>
+      </main>
+    }
 
+    <ng-template #bodyTpl>
       @if (status() === 'loading') {
         <section class="state-panel" aria-live="polite">
           <p class="eyebrow">Cargando</p>
@@ -54,7 +62,7 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
           <h2>No se pudieron cargar tus preferencias</h2>
           <p>{{ errorMessage() }}</p>
         </section>
-      } @else {
+      } @else if (editing()) {
         <section class="preferences-layout">
           <form class="preferences-form" [formGroup]="form" (ngSubmit)="savePreferences()">
             <div class="section-heading">
@@ -105,15 +113,18 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
               </p>
             }
 
-            @if (saveStatus() === 'saved') {
-              <p class="form-message success" aria-live="polite">Preferencias guardadas.</p>
-            } @else if (saveStatus() === 'error') {
+            @if (saveStatus() === 'error') {
               <p class="form-message error" role="alert">{{ saveError() }}</p>
             }
 
-            <button class="primary-action" type="submit" [disabled]="form.invalid || saveStatus() === 'saving'">
-              {{ saveStatus() === 'saving' ? 'Guardando...' : 'Guardar preferencias' }}
-            </button>
+            <div class="form-actions">
+              <button class="primary-action" type="submit" [disabled]="form.invalid || saveStatus() === 'saving'">
+                {{ saveStatus() === 'saving' ? 'Guardando...' : 'Guardar preferencias' }}
+              </button>
+              <button class="secondary-action" type="button" (click)="cancelEdit()" [disabled]="saveStatus() === 'saving'">
+                Cancelar
+              </button>
+            </div>
           </form>
 
           <aside class="cv-panel" aria-label="CV del alumno">
@@ -156,8 +167,68 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
             </button>
           </aside>
         </section>
+      } @else {
+        <section class="preferences-layout">
+          <article class="profile-view" aria-label="Preferencias guardadas">
+            <div class="section-heading">
+              <p class="eyebrow">Preferencias</p>
+              <h2>Datos básicos para orientar tus prácticas</h2>
+            </div>
+
+            <dl class="profile-view-grid">
+              <div>
+                <dt>Familia profesional</dt>
+                <dd>{{ preferences()?.familiaProfesional || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Ciclo formativo</dt>
+                <dd>{{ preferences()?.cicloFormativo || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Localidad o zona preferida</dt>
+                <dd>{{ preferences()?.localidadPreferida || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Modalidad preferida</dt>
+                <dd>{{ modalidadLabel(preferences()?.modalidadPreferida) }}</dd>
+              </div>
+              <div>
+                <dt>Disponibilidad aproximada</dt>
+                <dd>{{ formatStoredDate(preferences()?.fechaDisponibilidad) }}</dd>
+              </div>
+              <div class="full-row">
+                <dt>Observaciones</dt>
+                <dd>{{ preferences()?.observaciones || '—' }}</dd>
+              </div>
+            </dl>
+
+            @if (saveStatus() === 'saved') {
+              <p class="form-message success" aria-live="polite">Preferencias guardadas.</p>
+            }
+
+            <button class="primary-action" type="button" (click)="enterEdit()">
+              Editar preferencias
+            </button>
+          </article>
+
+          <aside class="cv-panel" aria-label="CV del alumno">
+            <div class="section-heading">
+              <p class="eyebrow">CV</p>
+              <h2>Currículum actualizado</h2>
+            </div>
+
+            @if (preferences()?.hasCv) {
+              <div class="cv-status">
+                <strong>{{ preferences()?.cvFileName }}</strong>
+                <span>{{ cvSummary() }}</span>
+              </div>
+            } @else {
+              <p class="muted">Aún no tienes un CV asociado a tu perfil.</p>
+            }
+          </aside>
+        </section>
       }
-    </main>
+    </ng-template>
   `,
   styles: [
     `
@@ -176,6 +247,7 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
 
       .preferences-form,
       .cv-panel,
+      .profile-view,
       .state-panel {
         display: grid;
         gap: 1rem;
@@ -257,6 +329,51 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
         grid-column: 1 / -1;
       }
 
+      .form-actions {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+      }
+
+      .profile-view {
+        gap: 0.85rem;
+      }
+
+      .profile-view-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin: 0;
+      }
+
+      .profile-view-grid div {
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--line);
+        border-radius: 0.5rem;
+        background: rgba(255, 255, 255, 0.55);
+      }
+
+      .profile-view-grid .full-row {
+        grid-column: 1 / -1;
+      }
+
+      .profile-view-grid dt {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .profile-view-grid dd {
+        margin: 0.3rem 0 0;
+        color: var(--ink);
+        font-weight: 700;
+        line-height: 1.45;
+        white-space: pre-wrap;
+      }
+
       .cv-status {
         display: grid;
         gap: 0.25rem;
@@ -327,6 +444,8 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PreferenciasAlumnoPage implements OnInit {
+  @Input() embedded = false;
+
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly preferenciasService = inject(AlumnoPreferenciasService);
@@ -341,6 +460,7 @@ export class PreferenciasAlumnoPage implements OnInit {
   protected readonly uploadError = signal<string | null>(null);
   protected readonly preferences = signal<AlumnoPreferencias | null>(null);
   protected readonly selectedFile = signal<File | null>(null);
+  protected readonly editing = signal(false);
 
   protected readonly form = this.fb.nonNullable.group({
     familiaProfesional: ['', [Validators.maxLength(150)]],
@@ -410,13 +530,61 @@ export class PreferenciasAlumnoPage implements OnInit {
       .subscribe({
         next: (preferences) => {
           this.preferences.set(preferences);
+          this.patchFormFromPreferences();
           this.saveStatus.set('saved');
+          this.editing.set(false);
         },
         error: (error: unknown) => {
           this.saveError.set(errorMessage(error));
           this.saveStatus.set('error');
         },
       });
+  }
+
+  protected enterEdit(): void {
+    this.patchFormFromPreferences();
+    this.saveStatus.set('idle');
+    this.saveError.set(null);
+    this.selectedFile.set(null);
+    this.uploadStatus.set('idle');
+    this.uploadError.set(null);
+    this.editing.set(true);
+  }
+
+  protected cancelEdit(): void {
+    this.patchFormFromPreferences();
+    this.saveStatus.set('idle');
+    this.saveError.set(null);
+    this.selectedFile.set(null);
+    this.uploadStatus.set('idle');
+    this.uploadError.set(null);
+    this.editing.set(false);
+  }
+
+  protected modalidadLabel(value: string | null | undefined): string {
+    if (!value) {
+      return 'Sin preferencia';
+    }
+    return MODALIDAD_LABELS[value] ?? value;
+  }
+
+  protected formatStoredDate(value: string | null | undefined): string {
+    if (!value) {
+      return '—';
+    }
+    return this.formatDate(value);
+  }
+
+  private patchFormFromPreferences(): void {
+    const preferences = this.preferences();
+    this.form.patchValue({
+      familiaProfesional: preferences?.familiaProfesional ?? '',
+      cicloFormativo: preferences?.cicloFormativo ?? '',
+      localidadPreferida: preferences?.localidadPreferida ?? '',
+      modalidadPreferida: preferences?.modalidadPreferida ?? '',
+      fechaDisponibilidad: preferences?.fechaDisponibilidad ?? '',
+      observaciones: preferences?.observaciones ?? '',
+    });
   }
 
   protected onFileSelected(event: Event): void {
@@ -477,6 +645,12 @@ export class PreferenciasAlumnoPage implements OnInit {
     });
   }
 }
+
+const MODALIDAD_LABELS: Record<string, string> = {
+  PRESENCIAL: 'Presencial',
+  HIBRIDA: 'Híbrida',
+  REMOTA: 'Remota',
+};
 
 function nullable(value: string): string | null {
   return value.trim() === '' ? null : value.trim();

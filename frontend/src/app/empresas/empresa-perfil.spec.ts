@@ -60,7 +60,15 @@ describe('EmpresaPerfilPage', () => {
     fixture = TestBed.createComponent(EmpresaPerfilPage);
   }
 
-  it('should load and render the company profile', async () => {
+  function clickEditar(compiled: HTMLElement): void {
+    const button = Array.from(compiled.querySelectorAll<HTMLButtonElement>('button')).find(
+      (btn) => btn.textContent?.trim() === 'Editar perfil',
+    );
+    button?.click();
+    fixture.detectChanges();
+  }
+
+  it('should load and render the company profile in view mode by default', async () => {
     await configure();
     fixture.detectChanges();
     fixture.detectChanges();
@@ -69,15 +77,32 @@ describe('EmpresaPerfilPage', () => {
     expect(service.getMine).toHaveBeenCalled();
     expect(compiled.textContent).toContain('Perfil de empresa');
     expect(compiled.textContent).toContain('Tech Norte');
+    expect(compiled.textContent).toContain('B12345678');
+    expect(compiled.textContent).toContain('fct@technorte.example');
+    expect(compiled.querySelector('form')).toBeNull();
+  });
+
+  it('should switch to edit mode when the Editar button is clicked', async () => {
+    await configure();
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    clickEditar(compiled);
+
     const nameInput = compiled.querySelector<HTMLInputElement>('input[formControlName="nombre"]');
     expect(nameInput?.value).toBe('Tech Norte');
   });
 
-  it('should save the edited profile', async () => {
+  it('should save the edited profile and return to view mode', async () => {
     await configure();
+    fixture.detectChanges();
     fixture.detectChanges();
 
     const componentInstance = fixture.componentInstance;
+    const compiled = fixture.nativeElement as HTMLElement;
+    clickEditar(compiled);
+
     componentInstance['form'].patchValue({
       nombre: 'Tech Norte Actualizada',
       identificadorFiscal: ' B12345678 ',
@@ -85,6 +110,7 @@ describe('EmpresaPerfilPage', () => {
     });
 
     componentInstance['save']();
+    fixture.detectChanges();
 
     expect(service.updateMine).toHaveBeenCalledWith(
       jasmine.objectContaining({
@@ -93,6 +119,31 @@ describe('EmpresaPerfilPage', () => {
         emailContacto: 'contacto@technorte.example',
       }),
     );
+    expect(compiled.querySelector('form')).toBeNull();
+    expect(compiled.textContent).toContain('Perfil de empresa guardado');
+  });
+
+  it('should revert changes when cancelEdit is clicked', async () => {
+    await configure();
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    clickEditar(compiled);
+
+    const nameInput = compiled.querySelector<HTMLInputElement>('input[formControlName="nombre"]');
+    nameInput!.value = 'Cambiado en memoria';
+    nameInput!.dispatchEvent(new Event('input'));
+
+    const cancelButton = Array.from(compiled.querySelectorAll<HTMLButtonElement>('button')).find(
+      (btn) => btn.textContent?.trim() === 'Cancelar',
+    );
+    cancelButton?.click();
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('form')).toBeNull();
+    expect(compiled.textContent).toContain('Tech Norte');
+    expect(service.updateMine).not.toHaveBeenCalled();
   });
 
   it('should show an authentication message without active session', async () => {
@@ -101,7 +152,7 @@ describe('EmpresaPerfilPage', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(service.getMine).not.toHaveBeenCalled();
-    expect(compiled.textContent).toContain('Inicia sesion como empresa');
+    expect(compiled.textContent).toContain('Inicia sesión como empresa');
   });
 
   it('should show an error state when loading fails', async () => {
