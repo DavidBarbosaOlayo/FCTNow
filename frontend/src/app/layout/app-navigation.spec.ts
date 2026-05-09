@@ -27,7 +27,7 @@ describe('AppNavigation', () => {
     fixture.detectChanges();
     const links = Array.from(fixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
     return {
-      labels: links.map((link) => link.textContent?.trim() ?? ''),
+      labels: links.map((link) => link.textContent?.trim().replace(/\s+/g, ' ') ?? ''),
       hrefs: links.map((link) => link.getAttribute('href') ?? ''),
     };
   }
@@ -145,5 +145,84 @@ describe('AppNavigation', () => {
 
     expect(labels).not.toContain('Asignaciones');
     expect(hrefs).not.toContain('/asignaciones');
+  });
+
+  it('should render an icon for every navigation link', () => {
+    configure(['ALUMNO', 'EMPRESA', 'TUTOR_CENTRO']);
+
+    const fixture = TestBed.createComponent(AppNavigation);
+    fixture.detectChanges();
+
+    const navLinks = Array.from(
+      fixture.nativeElement.querySelectorAll('.app-nav-link'),
+    ) as HTMLElement[];
+
+    expect(navLinks.length).toBeGreaterThan(0);
+    navLinks.forEach((link) => {
+      const icon = link.querySelector('.app-nav-icon svg');
+      const label = link.querySelector('.app-nav-label');
+      expect(icon).withContext('each nav link should expose an inline SVG icon').not.toBeNull();
+      expect(label?.textContent?.trim()).withContext('each nav link should keep a text label').toBeTruthy();
+    });
+  });
+
+  it('should expose a collapsed menu toggle with the expected ARIA attributes', () => {
+    configure(null);
+
+    const fixture = TestBed.createComponent(AppNavigation);
+    fixture.detectChanges();
+
+    const toggle = fixture.nativeElement.querySelector('.app-nav-toggle') as HTMLButtonElement;
+    expect(toggle).not.toBeNull();
+    expect(toggle.getAttribute('aria-controls')).toBe('app-nav');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+
+    toggle.click();
+    fixture.detectChanges();
+
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    const header = fixture.nativeElement.querySelector('.app-header') as HTMLElement;
+    expect(header.classList.contains('is-menu-open')).toBeTrue();
+  });
+
+  it('should close the collapsed menu after activating a navigation link', () => {
+    configure(null);
+
+    const fixture = TestBed.createComponent(AppNavigation);
+    fixture.detectChanges();
+
+    const toggle = fixture.nativeElement.querySelector('.app-nav-toggle') as HTMLButtonElement;
+    toggle.click();
+    fixture.detectChanges();
+
+    const firstNavLink = fixture.nativeElement.querySelector('.app-nav-link') as HTMLAnchorElement;
+    firstNavLink.click();
+    fixture.detectChanges();
+
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    const header = fixture.nativeElement.querySelector('.app-header') as HTMLElement;
+    expect(header.classList.contains('is-menu-open')).toBeFalse();
+  });
+
+  it('should toggle the scrolled class when the window scrolls past the threshold', () => {
+    configure(null);
+
+    const fixture = TestBed.createComponent(AppNavigation);
+    fixture.detectChanges();
+
+    const header = fixture.nativeElement.querySelector('.app-header') as HTMLElement;
+    expect(header.classList.contains('is-scrolled')).toBeFalse();
+
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 240 });
+    window.dispatchEvent(new Event('scroll'));
+    fixture.detectChanges();
+
+    expect(header.classList.contains('is-scrolled')).toBeTrue();
+
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 });
+    window.dispatchEvent(new Event('scroll'));
+    fixture.detectChanges();
+
+    expect(header.classList.contains('is-scrolled')).toBeFalse();
   });
 });
