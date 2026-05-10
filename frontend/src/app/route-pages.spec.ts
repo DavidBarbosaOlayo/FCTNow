@@ -8,7 +8,6 @@ import { AlumnoPage } from './alumnos/alumno';
 import { LoginPage } from './auth/login';
 import { EmpresaPage } from './empresas/empresa';
 import { CoordinadorPage } from './fct/coordinador';
-import { TutorPage } from './fct/tutor';
 import { MensajesPage } from './mensajes/mensajes';
 import { NotificacionesPage } from './notificaciones/notificaciones';
 import { NotFoundPage } from './not-found/not-found';
@@ -29,7 +28,6 @@ describe('route placeholder pages', () => {
     { component: PerfilPage, expectedText: 'Perfil de usuario' },
     { component: AlumnoPage, expectedText: 'Panel inicial del alumno' },
     { component: EmpresaPage, expectedText: 'Panel inicial de empresa' },
-    { component: TutorPage, expectedText: 'Panel inicial del tutor' },
     { component: CoordinadorPage, expectedText: 'Panel inicial de coordinación' },
     { component: AdminPage, expectedText: 'Panel inicial de administración' },
     { component: NotFoundPage, expectedText: 'Página no encontrada' },

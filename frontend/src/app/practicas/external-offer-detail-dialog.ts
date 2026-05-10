@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, Output, signal } from '@angular/core';
+import { TutorAlumno } from '../fct/tutor-alumnos.models';
 import { OfertaExterna } from './ofertas-externas.models';
 import {
   SolicitudExterna,
@@ -99,7 +100,60 @@ import {
           <a class="action-link" [href]="offer.urlAplicacion" target="_blank" rel="noopener noreferrer">
             Ver oferta en Adzuna
           </a>
-          @if (canAnular()) {
+          @if (isCentro) {
+            <div class="recommend-wrap">
+              <button
+                type="button"
+                class="action-link secondary recommend-toggle"
+                (click)="toggleRecommend()"
+                [attr.aria-expanded]="recommendOpen()"
+              >
+                Recomendar
+              </button>
+              @if (recommendOpen()) {
+                <div
+                  class="recommend-panel external-detail-recommend-panel"
+                  role="dialog"
+                  aria-label="Recomendar oferta externa"
+                >
+                  @if (matches.length === 0) {
+                    <p class="recommend-empty">Ningún alumno encaja por familia profesional.</p>
+                  } @else {
+                    <p class="recommend-heading">Alumnos compatibles</p>
+                    <ul class="recommend-list">
+                      @for (alumno of matches; track alumno.id) {
+                        <li>
+                          <button
+                            type="button"
+                            class="recommend-student"
+                            [disabled]="isRecommendationInFlight(alumno) || hasRecommendationSent(alumno)"
+                            (click)="recommend.emit(alumno)"
+                          >
+                            <strong>{{ alumno.displayName }}</strong>
+                            @if (alumno.preferencias?.cicloFormativo) {
+                              <span> · {{ alumno.preferencias?.cicloFormativo }}</span>
+                            }
+                            @if (alumno.preferencias?.localidad) {
+                              <span> · {{ alumno.preferencias?.localidad }}</span>
+                            }
+                            @if (hasRecommendationSent(alumno)) {
+                              <span> · Recomendada</span>
+                            }
+                          </button>
+                        </li>
+                      }
+                    </ul>
+                    @if (recommendationMessage) {
+                      <p class="recommend-feedback success-copy">{{ recommendationMessage }}</p>
+                    }
+                    @if (recommendationError) {
+                      <p class="recommend-feedback error-copy" role="alert">{{ recommendationError }}</p>
+                    }
+                  }
+                </div>
+              }
+            </div>
+          } @else if (canAnular()) {
             <button
               type="button"
               class="action-link tracking"
@@ -248,6 +302,7 @@ import {
         display: flex;
         flex-wrap: wrap;
         gap: 0.5rem;
+        align-items: flex-start;
       }
 
       .action-link {
@@ -305,6 +360,11 @@ import {
       .action-link.tracking:disabled {
         cursor: progress;
         opacity: 0.65;
+      }
+
+      .external-detail-recommend-panel {
+        left: 0;
+        right: auto;
       }
 
       .description {
@@ -369,9 +429,18 @@ export class ExternalOfferDetailDialog {
   @Input({ required: true }) offer!: OfertaExterna;
   @Input() solicitud: SolicitudExterna | null = null;
   @Input() actionInFlight = false;
+  @Input() isCentro = false;
+  @Input() matches: TutorAlumno[] = [];
+  @Input() recommendationInFlight: string | null = null;
+  @Input() recommendationMessage: string | null = null;
+  @Input() recommendationError: string | null = null;
+  @Input() sentRecommendationKeys: ReadonlySet<string> = new Set();
   @Output() readonly closed = new EventEmitter<void>();
   @Output() readonly solicit = new EventEmitter<void>();
   @Output() readonly anular = new EventEmitter<void>();
+  @Output() readonly recommend = new EventEmitter<TutorAlumno>();
+
+  protected readonly recommendOpen = signal(false);
 
   protected get isAdzunaTruncated(): boolean {
     const desc = this.offer.descripcion ?? '';
@@ -381,6 +450,29 @@ export class ExternalOfferDetailDialog {
   protected canAnular(): boolean {
     const estado = this.solicitud?.estado;
     return estado === 'SOLICITADA' || estado === 'ACEPTADA';
+  }
+
+  protected isRecommendationInFlight(alumno: TutorAlumno): boolean {
+    return this.recommendationInFlight === `${alumno.id}:${this.offer.id}`;
+  }
+
+  protected hasRecommendationSent(alumno: TutorAlumno): boolean {
+    return this.sentRecommendationKeys.has(`${alumno.id}:${this.offer.id}`);
+  }
+
+  protected toggleRecommend(): void {
+    this.recommendOpen.update((open) => !open);
+  }
+
+  @HostListener('document:click', ['$event'])
+  protected closeRecommendOnOutsideClick(event: MouseEvent): void {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    if (!target.closest('.recommend-wrap')) {
+      this.recommendOpen.set(false);
+    }
   }
 
   protected estadoLabel(estado: SolicitudExternaEstado): string {

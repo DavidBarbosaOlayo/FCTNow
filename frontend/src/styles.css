@@ -133,6 +133,7 @@ app-root .app-nav-link {
 }
 
 app-root .app-nav-icon {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -143,6 +144,25 @@ app-root .app-nav-icon {
 app-root .app-nav-icon svg {
   width: 100%;
   height: 100%;
+}
+
+app-root .notification-badge {
+  position: absolute;
+  top: -0.45rem;
+  right: -0.55rem;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.25rem;
+  border: 2px solid var(--surface-strong);
+  border-radius: 999px;
+  color: #ffffff;
+  background: #d92d20;
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1;
 }
 
 app-root .app-nav-label {
@@ -840,4 +860,108 @@ app-root .login-submit:disabled {
   app-root .route-hero h1 {
     font-size: clamp(2.35rem, 12vw, 3.5rem);
   }
+}
+
+app-root .recommend-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+app-root .recommend-toggle {
+  cursor: pointer;
+}
+
+app-root .internal-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+app-root .recommend-panel {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  min-width: 16rem;
+  max-width: 22rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.55rem;
+  background: #fffaf3;
+  border: 1px solid var(--line, rgba(15, 95, 89, 0.2));
+  box-shadow: 0 12px 28px rgba(15, 95, 89, 0.18);
+  z-index: 20;
+  display: grid;
+  gap: 0.4rem;
+  text-align: left;
+}
+
+app-root .recommend-heading {
+  margin: 0;
+  font-weight: 800;
+  color: var(--ink);
+  font-size: 0.85rem;
+}
+
+app-root .recommend-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+app-root .recommend-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.35rem;
+  max-height: 14rem;
+  overflow: auto;
+}
+
+app-root .recommend-list li {
+  font-size: 0.86rem;
+  color: var(--ink);
+  line-height: 1.35;
+}
+
+app-root .recommend-list li span {
+  color: var(--muted);
+}
+
+app-root .recommend-student {
+  width: 100%;
+  display: block;
+  padding: 0.35rem 0.45rem;
+  border: 0;
+  border-radius: 0.35rem;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+app-root .recommend-student:hover:not(:disabled),
+app-root .recommend-student:focus-visible:not(:disabled) {
+  background: rgba(15, 118, 110, 0.1);
+  outline: none;
+}
+
+app-root .recommend-student:disabled {
+  cursor: progress;
+  opacity: 0.62;
+}
+
+app-root .recommend-feedback {
+  margin-top: 0.55rem;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+app-root .success-copy {
+  color: #0f766e;
+}
+
+app-root .error-copy {
+  color: #b84f3b;
 }

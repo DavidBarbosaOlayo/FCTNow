@@ -7,6 +7,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fctnow.backend.asignaciones.AsignacionFctRepository;
+import com.fctnow.backend.asignaciones.externas.AsignacionFctExternaRepository;
+import com.fctnow.backend.solicitudes.SolicitudFctRepository;
+import com.fctnow.backend.solicitudes.externas.SolicitudExternaRepository;
 import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
 import com.fctnow.backend.user.UserRole;
@@ -39,8 +43,24 @@ class AuthControllerTest {
   @Autowired
   private UserAccountRepository userAccountRepository;
 
+  @Autowired
+  private AsignacionFctRepository asignacionFctRepository;
+
+  @Autowired
+  private AsignacionFctExternaRepository asignacionFctExternaRepository;
+
+  @Autowired
+  private SolicitudFctRepository solicitudFctRepository;
+
+  @Autowired
+  private SolicitudExternaRepository solicitudExternaRepository;
+
   @BeforeEach
   void setUp() {
+    asignacionFctRepository.deleteAll();
+    asignacionFctExternaRepository.deleteAll();
+    solicitudFctRepository.deleteAll();
+    solicitudExternaRepository.deleteAll();
     userAccountRepository.deleteAll();
     userAccountRepository.save(new UserAccount(
         "alumno@example.com",

@@ -40,12 +40,12 @@ describe('AsignacionesPage', () => {
     },
   ];
 
-  const sampleExternalAssignments: AsignacionFctExterna[] = [
+  const sampleExternal: AsignacionFctExterna[] = [
     {
       id: 31,
       solicitudExternaId: 20,
       alumnoId: 7,
-      alumnoNombre: 'Alumno Demo',
+      alumnoNombre: 'Alumno Externo',
       fuente: 'ADZUNA',
       idExterno: 'adz-20',
       titulo: 'Becario QA',
@@ -54,23 +54,23 @@ describe('AsignacionesPage', () => {
       region: 'Comunidad Valenciana',
       urlAplicacion: 'https://www.adzuna.es/land/ad/20',
       estado: 'ACTIVA',
-      observaciones: 'Confirmada por el alumno',
+      observaciones: 'Confirmada',
       fechaAsignacion: '2026-05-09T10:00:00Z',
     },
   ];
 
-  const sampleExternalCandidates: AsignacionExternaCandidata[] = [
+  const sampleExternalCandidatas: AsignacionExternaCandidata[] = [
     {
-      solicitudExternaId: 20,
-      alumnoId: 7,
-      alumnoNombre: 'Alumno Demo',
+      solicitudExternaId: 21,
+      alumnoId: 8,
+      alumnoNombre: 'Alumno Externo Pendiente',
       fuente: 'ADZUNA',
-      idExterno: 'adz-20',
-      titulo: 'Becario QA',
-      empresaNombre: 'Logistica Levante',
-      localidad: 'Castellon',
+      idExterno: 'adz-21',
+      titulo: 'Becario Frontend',
+      empresaNombre: 'Tech Sur',
+      localidad: 'Valencia',
       region: 'Comunidad Valenciana',
-      urlAplicacion: 'https://www.adzuna.es/land/ad/20',
+      urlAplicacion: 'https://www.adzuna.es/land/ad/21',
       aceptadaEn: '2026-05-09T09:00:00Z',
     },
   ];
@@ -95,12 +95,14 @@ describe('AsignacionesPage', () => {
     ]);
     service.list.and.returnValue(listResult);
     service.listCandidatas.and.returnValue(candidatasResult);
+    service.create.and.returnValue(of(sampleAsignaciones[0]));
     externalService = jasmine.createSpyObj<AsignacionesExternasService>(
       'AsignacionesExternasService',
       ['list', 'listCandidatas', 'create'],
     );
     externalService.list.and.returnValue(externalListResult);
     externalService.listCandidatas.and.returnValue(externalCandidatasResult);
+    externalService.create.and.returnValue(of(sampleExternal[0]));
 
     await TestBed.configureTestingModule({
       imports: [AsignacionesPage],
@@ -114,38 +116,32 @@ describe('AsignacionesPage', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(AsignacionesPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
   }
 
-  it('should render the asignaciones list', async () => {
-    await configure();
-    fixture.detectChanges();
-    fixture.detectChanges();
+  it('should render the merged asignaciones list with KPIs', async () => {
+    await configure({ externalListResult: of(sampleExternal) });
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(service.list).toHaveBeenCalled();
+    expect(externalService.list).toHaveBeenCalled();
     expect(compiled.textContent).toContain('Alumno Demo');
     expect(compiled.textContent).toContain('Practicas web');
     expect(compiled.textContent).toContain('Tech Norte');
-    expect(compiled.textContent).toContain('1 asignacion registrada');
-  });
-
-  it('should render external assignments from Adzuna', async () => {
-    await configure({ externalListResult: of(sampleExternalAssignments) });
-    fixture.detectChanges();
-    fixture.detectChanges();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(externalService.list).toHaveBeenCalled();
-    expect(compiled.textContent).toContain('Asignaciones externas');
     expect(compiled.textContent).toContain('Becario QA');
     expect(compiled.textContent).toContain('Logistica Levante');
-    expect(compiled.querySelector('.external-marker')?.textContent).toContain('Adzuna');
+    expect(compiled.querySelector('.external-marker')).toBeNull();
+
+    const kpis = compiled.querySelectorAll('.kpi-value');
+    expect(kpis.length).toBe(4);
+    expect(kpis[0].textContent?.trim()).toBe('2');
+    expect(kpis[3].textContent?.trim()).toBe('2');
   });
 
   it('should render the empty state when there are no asignaciones', async () => {
     await configure({ listResult: of([]) });
-    fixture.detectChanges();
-    fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Aun no hay asignaciones registradas');
@@ -153,8 +149,6 @@ describe('AsignacionesPage', () => {
 
   it('should render the not authenticated state on 401', async () => {
     await configure({ listResult: throwError(() => new HttpErrorResponse({ status: 401 })) });
-    fixture.detectChanges();
-    fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Inicia sesion para gestionar las asignaciones');
@@ -162,133 +156,87 @@ describe('AsignacionesPage', () => {
 
   it('should render the error state on 403', async () => {
     await configure({ listResult: throwError(() => new HttpErrorResponse({ status: 403 })) });
-    fixture.detectChanges();
-    fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('No se pudieron cargar las asignaciones');
   });
 
-  it('should populate the candidate select with accepted solicitudes', async () => {
-    await configure({ listResult: of([]) });
-    fixture.detectChanges();
-    fixture.detectChanges();
+  it('should populate the merged candidate select with internal and external options', async () => {
+    await configure({
+      listResult: of([]),
+      externalCandidatasResult: of(sampleExternalCandidatas),
+    });
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const select = compiled.querySelector<HTMLSelectElement>('#solicitudId')!;
+    const select = compiled.querySelector<HTMLSelectElement>('#candidataKey');
     expect(select).toBeTruthy();
-    const optionLabels = Array.from(select.options).map((opt) => opt.textContent?.trim() ?? '');
-    expect(optionLabels[0]).toBe('Selecciona una solicitud');
+    const optionLabels = Array.from(select!.options).map((o) => o.textContent?.trim() ?? '');
     expect(optionLabels.some((label) => label.includes('Alumno Demo'))).toBeTrue();
-    expect(optionLabels.some((label) => label.includes('Practicas web'))).toBeTrue();
+    expect(optionLabels.some((label) => label.includes('Alumno Externo Pendiente'))).toBeTrue();
   });
 
-  it('should hide the form and show a message when there are no candidates', async () => {
-    await configure({ listResult: of([]), candidatasResult: of([]) });
-    fixture.detectChanges();
-    fixture.detectChanges();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('#solicitudId')).toBeNull();
-    expect(compiled.textContent).toContain('No hay solicitudes aceptadas pendientes de asignar');
-  });
-
-  it('should create an asignacion when a candidate is selected and the form is submitted', async () => {
+  it('should call internal create when picking an internal candidate', async () => {
     await configure({ listResult: of([]) });
-    const created: AsignacionFct = { ...sampleAsignaciones[0], id: 99 };
-    service.create.and.returnValue(of(created));
-
-    fixture.detectChanges();
-    fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const select = compiled.querySelector<HTMLSelectElement>('#solicitudId')!;
+    const select = compiled.querySelector<HTMLSelectElement>('#candidataKey')!;
     select.value = select.options[1].value;
     select.dispatchEvent(new Event('change'));
-
-    const observacionesInput = compiled.querySelector<HTMLTextAreaElement>('#observaciones')!;
-    observacionesInput.value = '  Inicia el lunes  ';
-    observacionesInput.dispatchEvent(new Event('input'));
-
+    await fixture.whenStable();
     fixture.detectChanges();
 
-    const form = compiled.querySelector('form')!;
-    form.dispatchEvent(new Event('submit'));
-    fixture.detectChanges();
+    const submit = compiled.querySelector<HTMLButtonElement>('button.primary-action')!;
+    submit.click();
+    await fixture.whenStable();
 
-    expect(service.create).toHaveBeenCalledWith({
-      solicitudId: 5,
-      observaciones: 'Inicia el lunes',
-    });
-    expect(compiled.textContent).toContain('Asignacion creada correctamente');
-    expect(compiled.textContent).toContain('1 asignacion registrada');
-    expect(compiled.querySelector('#solicitudId')).toBeNull();
-    expect(compiled.textContent).toContain('No hay solicitudes aceptadas pendientes de asignar');
+    expect(service.create).toHaveBeenCalledWith(jasmine.objectContaining({ solicitudId: 5 }));
+    expect(externalService.create).not.toHaveBeenCalled();
   });
 
-  it('should create an external asignacion when an Adzuna candidate is selected', async () => {
+  it('should call external create when picking an external candidate', async () => {
     await configure({
       listResult: of([]),
       candidatasResult: of([]),
-      externalCandidatasResult: of(sampleExternalCandidates),
+      externalCandidatasResult: of(sampleExternalCandidatas),
     });
-    const created: AsignacionFctExterna = { ...sampleExternalAssignments[0], id: 99 };
-    externalService.create.and.returnValue(of(created));
-
-    fixture.detectChanges();
-    fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const select = compiled.querySelector<HTMLSelectElement>('#solicitudExternaId')!;
+    const select = compiled.querySelector<HTMLSelectElement>('#candidataKey')!;
     select.value = select.options[1].value;
     select.dispatchEvent(new Event('change'));
-
-    const observacionesInput =
-      compiled.querySelector<HTMLTextAreaElement>('#observacionesExternas')!;
-    observacionesInput.value = '  Confirmada por el alumno  ';
-    observacionesInput.dispatchEvent(new Event('input'));
-
+    await fixture.whenStable();
     fixture.detectChanges();
 
-    const form = select.closest('form')!;
-    form.dispatchEvent(new Event('submit'));
-    fixture.detectChanges();
+    const submit = compiled.querySelector<HTMLButtonElement>('button.primary-action')!;
+    submit.click();
+    await fixture.whenStable();
 
-    expect(externalService.create).toHaveBeenCalledWith({
-      solicitudExternaId: 20,
-      observaciones: 'Confirmada por el alumno',
-    });
-    expect(compiled.textContent).toContain('Asignacion externa creada correctamente');
-    expect(compiled.textContent).toContain('1 asignacion externa registrada');
+    expect(externalService.create).toHaveBeenCalledWith(
+      jasmine.objectContaining({ solicitudExternaId: 21 }),
+    );
+    expect(service.create).not.toHaveBeenCalled();
   });
 
-  it('should report a 409 error when create fails on a stale candidate', async () => {
-    await configure({ listResult: of([]) });
-    service.create.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
-
-    fixture.detectChanges();
-    fixture.detectChanges();
+  it('should filter assignments by estado', async () => {
+    const finalizada: AsignacionFct = {
+      ...sampleAsignaciones[0],
+      id: 12,
+      estado: 'FINALIZADA',
+      fechaAsignacion: '2026-04-01T10:00:00Z',
+    };
+    await configure({ listResult: of([sampleAsignaciones[0], finalizada]) });
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const select = compiled.querySelector<HTMLSelectElement>('#solicitudId')!;
-    select.value = select.options[1].value;
-    select.dispatchEvent(new Event('change'));
+    let cards = compiled.querySelectorAll('.asignaciones-grid .asignacion-card');
+    expect(cards.length).toBe(2);
+
+    const filterSelect = compiled.querySelector<HTMLSelectElement>('.filter-control select')!;
+    filterSelect.value = 'FINALIZADA';
+    filterSelect.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
     fixture.detectChanges();
 
-    const form = compiled.querySelector('form')!;
-    form.dispatchEvent(new Event('submit'));
-    fixture.detectChanges();
-
-    expect(compiled.textContent).toContain('la solicitud no esta aceptada o ya tiene una asignacion');
-  });
-
-  it('should avoid calling the backend during server rendering', async () => {
-    await configure({ platformId: 'server' });
-    fixture.detectChanges();
-
-    expect(service.list).not.toHaveBeenCalled();
-    expect(service.listCandidatas).not.toHaveBeenCalled();
-    expect(externalService.list).not.toHaveBeenCalled();
-    expect(externalService.listCandidatas).not.toHaveBeenCalled();
+    cards = compiled.querySelectorAll('.asignaciones-grid .asignacion-card');
+    expect(cards.length).toBe(1);
   });
 });

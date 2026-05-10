@@ -4,6 +4,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
+import { TutorAlumnosService } from '../fct/tutor-alumnos.service';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { OfertaFct } from './ofertas.models';
 import { OfertasService } from './ofertas.service';
 import { OfertaDetailPage } from './oferta-detail';
@@ -85,7 +87,16 @@ describe('OfertaDetailPage', () => {
           useValue: {
             isAuthenticated: signal(authenticated),
             accessToken: () => (authenticated ? 'token' : null),
+            currentUser: () => null,
           },
+        },
+        {
+          provide: TutorAlumnosService,
+          useValue: { list: () => of([]) },
+        },
+        {
+          provide: NotificacionesService,
+          useValue: { recomendar: () => of({}) },
         },
         { provide: PLATFORM_ID, useValue: platformId },
       ],
