@@ -1,9 +1,11 @@
 package com.fctnow.backend.solicitudes.externas;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface SolicitudExternaRepository extends JpaRepository<SolicitudExterna, Long> {
 
@@ -11,6 +13,13 @@ public interface SolicitudExternaRepository extends JpaRepository<SolicitudExter
       Long alumnoId,
       SolicitudExternaFuente fuente,
       String idExterno);
+
+  @Query("""
+      SELECT s
+      FROM SolicitudExterna s
+      WHERE s.alumno.id IN :alumnoIds
+      """)
+  List<SolicitudExterna> findByAlumnoIdIn(@Param("alumnoIds") Collection<Long> alumnoIds);
 
   @Query("""
       SELECT s

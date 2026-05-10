@@ -5,6 +5,8 @@ import { provideRouter } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { AlumnoPreferenciasService } from '../alumnos/preferencias.service';
 import { AuthService } from '../auth/auth.service';
+import { TutorAlumnosService } from '../fct/tutor-alumnos.service';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { OfertaExternaPage } from './ofertas-externas.models';
 import { OfertasExternasService } from './ofertas-externas.service';
 import { OfertaFct } from './ofertas.models';
@@ -93,6 +95,14 @@ describe('PracticasPage', () => {
         {
           provide: AlumnoPreferenciasService,
           useValue: { getMine: () => throwError(() => new Error('not used')) },
+        },
+        {
+          provide: TutorAlumnosService,
+          useValue: { list: () => of([]) },
+        },
+        {
+          provide: NotificacionesService,
+          useValue: { recomendar: () => of({}) },
         },
       ],
     }).compileComponents();

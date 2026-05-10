@@ -1,4 +1,4 @@
-import { isPlatformBrowser } from '@angular/common';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -6,14 +6,19 @@ import {
   DestroyRef,
   OnInit,
   PLATFORM_ID,
+  computed,
   inject,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { fromEvent } from 'rxjs';
 import { AlumnoPreferenciasService } from '../alumnos/preferencias.service';
 import { AuthService } from '../auth/auth.service';
+import { TutorAlumno } from '../fct/tutor-alumnos.models';
+import { TutorAlumnosService } from '../fct/tutor-alumnos.service';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { ExternalOfferDetailDialog } from './external-offer-detail-dialog';
 import { OfertaExterna, OfertaExternaPage } from './ofertas-externas.models';
 import { OfertasExternasService } from './ofertas-externas.service';
@@ -146,7 +151,58 @@ type ModalidadOption = {
                   <div class="external-card-topline">
                     <span class="offer-source-tag" aria-label="Fuente externa">Adzuna</span>
                     <div class="external-tracking-corner" aria-label="Seguimiento de solicitud">
-                      @if (solicitudFor(oferta); as solicitud) {
+                      @if (isCentro()) {
+                        <div class="recommend-wrap">
+                          <button
+                            type="button"
+                            class="tracking-label recommend-toggle"
+                            (click)="toggleRecommend('ext-' + oferta.id)"
+                            [attr.aria-expanded]="recommendOpenFor() === 'ext-' + oferta.id"
+                          >
+                            Recomendar
+                          </button>
+                          @if (recommendOpenFor() === 'ext-' + oferta.id) {
+                            <div class="recommend-panel" role="dialog" aria-label="Alumnos sugeridos">
+                              @if (matchesForExternal(oferta).length === 0) {
+                                <p class="recommend-empty">
+                                  Ningún alumno encaja por familia profesional.
+                                </p>
+                              } @else {
+                                <p class="recommend-heading">Alumnos compatibles</p>
+                                <ul class="recommend-list">
+                                  @for (a of matchesForExternal(oferta); track a.id) {
+                                    <li>
+                                      <button
+                                        type="button"
+                                        class="recommend-student"
+                                        [disabled]="isRecommendationInFlight(a.id, oferta.id) || hasRecommendationSent(a.id, oferta.id)"
+                                        (click)="recommendExternal(a, oferta)"
+                                      >
+                                        <strong>{{ a.displayName }}</strong>
+                                        @if (a.preferencias?.cicloFormativo) {
+                                          <span> · {{ a.preferencias?.cicloFormativo }}</span>
+                                        }
+                                        @if (a.preferencias?.localidad) {
+                                          <span> · {{ a.preferencias?.localidad }}</span>
+                                        }
+                                        @if (hasRecommendationSent(a.id, oferta.id)) {
+                                          <span> · Recomendada</span>
+                                        }
+                                      </button>
+                                    </li>
+                                  }
+                                </ul>
+                                @if (recommendationMessage(); as message) {
+                                  <p class="recommend-feedback success-copy">{{ message }}</p>
+                                }
+                                @if (recommendationError(); as error) {
+                                  <p class="recommend-feedback error-copy" role="alert">{{ error }}</p>
+                                }
+                              }
+                            </div>
+                          }
+                        </div>
+                      } @else if (solicitudFor(oferta); as solicitud) {
                         @if (solicitud.estado === 'SOLICITADA') {
                           <button
                             type="button"
@@ -350,13 +406,67 @@ type ModalidadOption = {
 
                 <p class="offer-tasks">{{ oferta.tareas }}</p>
 
-                <a
-                  class="offer-link"
-                  [routerLink]="['/practicas', oferta.id]"
-                  [attr.aria-label]="'Ver detalle de ' + oferta.titulo"
-                >
-                  Ver detalle
-                </a>
+                <div class="internal-card-actions">
+                  <a
+                    class="offer-link"
+                    [routerLink]="['/practicas', oferta.id]"
+                    [attr.aria-label]="'Ver detalle de ' + oferta.titulo"
+                  >
+                    Ver detalle
+                  </a>
+                  @if (isCentro()) {
+                    <div class="recommend-wrap">
+                      <button
+                        type="button"
+                        class="offer-link secondary recommend-toggle"
+                        (click)="toggleRecommend('int-' + oferta.id)"
+                        [attr.aria-expanded]="recommendOpenFor() === 'int-' + oferta.id"
+                      >
+                        Recomendar
+                      </button>
+                      @if (recommendOpenFor() === 'int-' + oferta.id) {
+                        <div class="recommend-panel" role="dialog" aria-label="Alumnos sugeridos">
+                          @if (matchesForInternal(oferta).length === 0) {
+                            <p class="recommend-empty">
+                              Ningún alumno encaja por familia profesional.
+                            </p>
+                          } @else {
+                              <p class="recommend-heading">Alumnos compatibles</p>
+                              <ul class="recommend-list">
+                                @for (a of matchesForInternal(oferta); track a.id) {
+                                  <li>
+                                    <button
+                                      type="button"
+                                      class="recommend-student"
+                                      [disabled]="isRecommendationInFlight(a.id, oferta.id) || hasRecommendationSent(a.id, oferta.id)"
+                                      (click)="recommendInternal(a, oferta)"
+                                    >
+                                      <strong>{{ a.displayName }}</strong>
+                                      @if (a.preferencias?.cicloFormativo) {
+                                        <span> · {{ a.preferencias?.cicloFormativo }}</span>
+                                      }
+                                      @if (a.preferencias?.localidad) {
+                                        <span> · {{ a.preferencias?.localidad }}</span>
+                                      }
+                                      @if (hasRecommendationSent(a.id, oferta.id)) {
+                                        <span> · Recomendada</span>
+                                      }
+                                    </button>
+                                  </li>
+                                }
+                              </ul>
+                              @if (recommendationMessage(); as message) {
+                                <p class="recommend-feedback success-copy">{{ message }}</p>
+                              }
+                              @if (recommendationError(); as error) {
+                                <p class="recommend-feedback error-copy" role="alert">{{ error }}</p>
+                              }
+                            }
+                          </div>
+                        }
+                    </div>
+                  }
+                </div>
               </article>
             }
           </div>
@@ -368,9 +478,16 @@ type ModalidadOption = {
           [offer]="detail"
           [solicitud]="solicitudFor(detail)"
           [actionInFlight]="isExternalActionInFlight(detail)"
+          [isCentro]="isCentro()"
+          [matches]="matchesForExternal(detail)"
+          [recommendationInFlight]="recommendationInFlight()"
+          [recommendationMessage]="recommendationMessage()"
+          [recommendationError]="recommendationError()"
+          [sentRecommendationKeys]="sentRecommendationKeys()"
           (closed)="closeExternalDetail()"
           (solicit)="markAsSolicitada(detail)"
           (anular)="anularSolicitud(detail)"
+          (recommend)="recommendExternal($event, detail)"
         />
       }
     </main>
@@ -766,31 +883,6 @@ type ModalidadOption = {
         opacity: 0.65;
       }
 
-      .external-status-tag {
-        align-self: start;
-        display: inline-flex;
-        align-items: center;
-        padding: 0.2rem 0.6rem;
-        border-radius: 999px;
-        font-size: 0.74rem;
-        font-weight: 800;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        background: rgba(15, 118, 110, 0.16);
-        color: var(--accent);
-      }
-
-      .external-status-tag.is-estado-aceptada {
-        background: rgba(15, 118, 110, 0.22);
-        color: #0b5f59;
-      }
-
-      .external-status-tag.is-estado-rechazada,
-      .external-status-tag.is-estado-retirada {
-        background: rgba(184, 79, 59, 0.16);
-        color: #b8423b;
-      }
-
       .tracking-toggle {
         max-width: 12rem;
         min-height: 1.85rem;
@@ -857,45 +949,6 @@ type ModalidadOption = {
         opacity: 0.65;
       }
 
-      .tracking-action {
-        min-height: 2.3rem;
-        padding: 0 0.85rem;
-        border-radius: 0.45rem;
-        font: inherit;
-        font-size: 0.84rem;
-        font-weight: 800;
-        cursor: pointer;
-      }
-
-      .tracking-action.primary {
-        border: 0;
-        color: #f7fbf8;
-        background: var(--accent);
-      }
-
-      .tracking-action.primary:hover:not(:disabled),
-      .tracking-action.primary:focus-visible:not(:disabled) {
-        background: #0b5f59;
-        outline: none;
-      }
-
-      .tracking-action.secondary {
-        border: 1px solid var(--line);
-        color: var(--ink);
-        background: rgba(255, 255, 255, 0.6);
-      }
-
-      .tracking-action.secondary:hover:not(:disabled),
-      .tracking-action.secondary:focus-visible:not(:disabled) {
-        border-color: rgba(15, 118, 110, 0.36);
-        outline: none;
-      }
-
-      .tracking-action:disabled {
-        cursor: progress;
-        opacity: 0.65;
-      }
-
       .adzuna-attribution {
         margin: 0.2rem 0 0;
         color: var(--muted);
@@ -950,9 +1003,23 @@ export class PracticasPage implements OnInit {
   private readonly solicitudesExternasService = inject(SolicitudesExternasService);
   private readonly preferenciasService = inject(AlumnoPreferenciasService);
   private readonly authService = inject(AuthService);
+  private readonly tutorAlumnosService = inject(TutorAlumnosService);
+  private readonly notificacionesService = inject(NotificacionesService);
   private readonly cache = inject(PracticasCacheService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly document = inject(DOCUMENT);
+
+  protected readonly isCentro = computed(() => {
+    const roles = this.authService.currentUser()?.roles ?? [];
+    return roles.includes('TUTOR_CENTRO') || roles.includes('COORDINADOR');
+  });
+  protected readonly tutorAlumnos = signal<TutorAlumno[]>([]);
+  protected readonly recommendOpenFor = signal<string | null>(null);
+  protected readonly recommendationInFlight = signal<string | null>(null);
+  protected readonly recommendationMessage = signal<string | null>(null);
+  protected readonly recommendationError = signal<string | null>(null);
+  protected readonly sentRecommendationKeys = signal<Set<string>>(new Set());
 
   protected readonly status = signal<CatalogStatus>('loading');
   protected readonly ofertas = signal<OfertaFct[]>([]);
@@ -998,6 +1065,150 @@ export class PracticasPage implements OnInit {
 
     this.applyAlumnoPreferencesToFilters();
     this.loadMineExternas();
+    this.loadTutorAlumnos();
+    this.closeRecommendOnOutsideClick();
+  }
+
+  private loadTutorAlumnos(): void {
+    if (!this.isCentro() || !this.authService.accessToken()) {
+      return;
+    }
+    this.tutorAlumnosService
+      .list()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => this.tutorAlumnos.set(data),
+        error: () => this.tutorAlumnos.set([]),
+      });
+  }
+
+  protected toggleRecommend(key: string): void {
+    this.recommendOpenFor.update((current) => (current === key ? null : key));
+    this.recommendationMessage.set(null);
+    this.recommendationError.set(null);
+  }
+
+  protected matchesForInternal(oferta: OfertaFct): TutorAlumno[] {
+    const familia = oferta.familiaProfesional?.trim().toLowerCase() ?? '';
+    return this.tutorAlumnos().filter((a) => {
+      const af = a.preferencias?.familiaProfesional?.trim().toLowerCase() ?? '';
+      return familia !== '' && af === familia;
+    });
+  }
+
+  protected matchesForExternal(oferta: OfertaExterna): TutorAlumno[] {
+    const familia = this.externalFamilyForRecommendation(oferta).trim().toLowerCase();
+    return this.tutorAlumnos().filter((a) => {
+      const af = a.preferencias?.familiaProfesional?.trim().toLowerCase() ?? '';
+      return familia !== '' && af === familia;
+    });
+  }
+
+  private externalFamilyForRecommendation(oferta: OfertaExterna): string {
+    const filtersFamilia = this.currentFilters().familiaProfesional ?? '';
+    if (filtersFamilia) {
+      return filtersFamilia;
+    }
+    const categoria = oferta.categoria?.trim();
+    return this.familiaOptions.find((option) => option.adzunaCategory === categoria)?.value ?? '';
+  }
+
+  protected isRecommendationInFlight(alumnoId: number, offerKey: string | number): boolean {
+    return this.recommendationInFlight() === `${alumnoId}:${offerKey}`;
+  }
+
+  protected hasRecommendationSent(alumnoId: number, offerKey: string | number): boolean {
+    return this.sentRecommendationKeys().has(this.recommendationKey(alumnoId, offerKey));
+  }
+
+  protected recommendInternal(alumno: TutorAlumno, oferta: OfertaFct): void {
+    const key = `${alumno.id}:${oferta.id}`;
+    if (this.recommendationInFlight() !== null) {
+      return;
+    }
+    this.recommendationInFlight.set(key);
+    this.recommendationMessage.set(null);
+    this.recommendationError.set(null);
+    this.notificacionesService
+      .recomendar({ alumnoId: alumno.id, ofertaId: oferta.id })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.recommendationInFlight.set(null);
+          this.markRecommendationSent(alumno.id, oferta.id);
+          this.recommendationMessage.set(`Recomendación enviada a ${alumno.displayName}.`);
+        },
+        error: (error: unknown) => {
+          this.recommendationInFlight.set(null);
+          if (isRecommendationConflict(error)) {
+            this.markRecommendationSent(alumno.id, oferta.id);
+          }
+          this.recommendationError.set(recommendationErrorMessage(error));
+        },
+      });
+  }
+
+  protected recommendExternal(alumno: TutorAlumno, oferta: OfertaExterna): void {
+    const key = `${alumno.id}:${oferta.id}`;
+    if (this.recommendationInFlight() !== null) {
+      return;
+    }
+    this.recommendationInFlight.set(key);
+    this.recommendationMessage.set(null);
+    this.recommendationError.set(null);
+    this.notificacionesService
+      .recomendar({
+        alumnoId: alumno.id,
+        ofertaExterna: {
+          titulo: oferta.titulo,
+          empresa: oferta.empresaNombre ?? null,
+          url: oferta.urlAplicacion,
+          localidad: oferta.localidad ?? oferta.region ?? null,
+        },
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.recommendationInFlight.set(null);
+          this.markRecommendationSent(alumno.id, oferta.id);
+          this.recommendationMessage.set(`Recomendación enviada a ${alumno.displayName}.`);
+        },
+        error: (error: unknown) => {
+          this.recommendationInFlight.set(null);
+          if (isRecommendationConflict(error)) {
+            this.markRecommendationSent(alumno.id, oferta.id);
+          }
+          this.recommendationError.set(recommendationErrorMessage(error));
+        },
+      });
+  }
+
+  private closeRecommendOnOutsideClick(): void {
+    const root = this.document;
+    fromEvent<MouseEvent>(root, 'click')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) {
+          return;
+        }
+        if (!target.closest('.recommend-wrap')) {
+          this.recommendOpenFor.set(null);
+        }
+      });
+  }
+
+  private markRecommendationSent(alumnoId: number, offerKey: string | number): void {
+    const key = this.recommendationKey(alumnoId, offerKey);
+    this.sentRecommendationKeys.update((current) => {
+      const next = new Set(current);
+      next.add(key);
+      return next;
+    });
+  }
+
+  private recommendationKey(alumnoId: number, offerKey: string | number): string {
+    return `${alumnoId}:${offerKey}`;
   }
 
   private applyAlumnoPreferencesToFilters(): void {
@@ -1147,17 +1358,6 @@ export class PracticasPage implements OnInit {
     }
   }
 
-  protected estadoModifierClass(estado: SolicitudExternaEstado): string {
-    return `is-estado-${estado.toLowerCase()}`;
-  }
-
-  protected canMarkAsSolicitada(oferta: OfertaExterna): boolean {
-    const current = this.solicitudFor(oferta);
-    return current === null
-      || current.estado === 'RETIRADA'
-      || current.estado === 'RECHAZADA';
-  }
-
   protected markAsSolicitada(oferta: OfertaExterna): void {
     if (this.isExternalActionInFlight(oferta)) {
       return;
@@ -1183,17 +1383,6 @@ export class PracticasPage implements OnInit {
     this.runExternalAction(
       oferta,
       this.solicitudesExternasService.changeEstado(current.id, 'ACEPTADA'),
-    );
-  }
-
-  protected retirarSolicitud(oferta: OfertaExterna): void {
-    const current = this.solicitudFor(oferta);
-    if (!current || this.isExternalActionInFlight(oferta)) {
-      return;
-    }
-    this.runExternalAction(
-      oferta,
-      this.solicitudesExternasService.changeEstado(current.id, 'RETIRADA'),
     );
   }
 
@@ -1468,6 +1657,31 @@ function externalCatalogErrorMessage(error: unknown): string {
   }
 
   return 'No se pudieron obtener ofertas externas. Inténtalo de nuevo más tarde.';
+}
+
+function recommendationErrorMessage(error: unknown): string {
+  if (error instanceof HttpErrorResponse) {
+    if (error.status === 401) {
+      return 'Inicia sesión para recomendar ofertas.';
+    }
+    if (error.status === 403) {
+      return 'Solo tutores y coordinadores pueden recomendar ofertas.';
+    }
+    if (error.status === 404) {
+      return 'No se encontró el alumno o la oferta seleccionada.';
+    }
+    if (error.status === 409) {
+      return 'Esta oferta ya se ha recomendado a ese alumno.';
+    }
+    if (error.status === 0) {
+      return 'No se pudo contactar con el backend para enviar la recomendación.';
+    }
+  }
+  return 'No se pudo enviar la recomendación. Inténtalo de nuevo.';
+}
+
+function isRecommendationConflict(error: unknown): boolean {
+  return error instanceof HttpErrorResponse && error.status === 409;
 }
 
 function normalizeText(value: string | null | undefined): string {

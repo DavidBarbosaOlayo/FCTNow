@@ -4,6 +4,7 @@ import {
   Component,
   PLATFORM_ID,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -12,6 +13,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/ro
 import { filter, fromEvent } from 'rxjs';
 import { UserRole } from '../auth/auth.models';
 import { AuthService } from '../auth/auth.service';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
 
 type NavigationIconKey =
   | 'home'
@@ -142,6 +144,11 @@ const MOBILE_BREAKPOINT_PX = 560;
                     <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2H4.5z" />
                     <path d="M10 20a2 2 0 0 0 4 0" />
                   </svg>
+                  @if (notificationBadge(item); as count) {
+                    <span class="notification-badge" aria-label="Notificaciones sin leer">
+                      {{ count }}
+                    </span>
+                  }
                 }
                 @case ('user') {
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
@@ -162,6 +169,7 @@ const MOBILE_BREAKPOINT_PX = 560;
 })
 export class AppNavigation {
   private readonly authService = inject(AuthService);
+  private readonly notificacionesService = inject(NotificacionesService);
   private readonly currentUser = this.authService.currentUser;
   private readonly platformId = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
@@ -169,6 +177,7 @@ export class AppNavigation {
 
   protected readonly isScrolled = signal(false);
   protected readonly isMenuOpen = signal(false);
+  protected readonly unreadNotifications = this.notificacionesService.unreadCount;
 
   private readonly navigationItems: NavigationItem[] = [
     { label: 'Inicio', path: '/', exact: true, icon: 'home' },
@@ -193,6 +202,13 @@ export class AppNavigation {
       exact: true,
       icon: 'inbox',
       requireRole: 'EMPRESA',
+    },
+    {
+      label: 'Panel tutor',
+      path: '/tutor',
+      exact: true,
+      icon: 'clipboard',
+      requireRole: ['TUTOR_CENTRO', 'COORDINADOR'],
     },
     {
       label: 'Asignaciones',
@@ -224,6 +240,15 @@ export class AppNavigation {
   });
 
   constructor() {
+    effect(() => {
+      const roles = this.currentUser()?.roles ?? [];
+      if (roles.includes('ALUMNO')) {
+        this.notificacionesService.refreshMine();
+      } else {
+        this.notificacionesService.clearMine();
+      }
+    });
+
     this.router.events
       .pipe(
         filter((event) => event instanceof NavigationEnd),
@@ -263,6 +288,21 @@ export class AppNavigation {
     if (this.isMenuOpen()) {
       this.isMenuOpen.set(false);
     }
+  }
+
+  protected notificationBadge(item: NavigationItem): string | null {
+    if (item.path !== '/notificaciones') {
+      return null;
+    }
+    const roles = this.currentUser()?.roles ?? [];
+    if (!roles.includes('ALUMNO')) {
+      return null;
+    }
+    const count = this.unreadNotifications();
+    if (count <= 0) {
+      return null;
+    }
+    return count > 99 ? '99+' : String(count);
   }
 
   private updateScrolled(scrollY: number): void {

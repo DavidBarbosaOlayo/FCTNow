@@ -1,4 +1,7 @@
 import { Routes } from '@angular/router';
+import { roleGuard } from './core/auth/role.guard';
+
+const TUTOR_O_COORDINADOR = roleGuard(['TUTOR_CENTRO', 'COORDINADOR']);
 
 export const routes: Routes = [
   {
@@ -90,17 +93,20 @@ export const routes: Routes = [
   {
     path: 'asignaciones',
     title: 'Asignaciones FCT | FCTNow',
+    canActivate: [TUTOR_O_COORDINADOR],
     loadComponent: () =>
       import('./asignaciones/asignaciones').then((m) => m.AsignacionesPage),
   },
   {
     path: 'tutor',
     title: 'Tutor centro | FCTNow',
+    canActivate: [TUTOR_O_COORDINADOR],
     loadComponent: () => import('./fct/tutor').then((m) => m.TutorPage),
   },
   {
     path: 'coordinador',
     title: 'Coordinador | FCTNow',
+    canActivate: [TUTOR_O_COORDINADOR],
     loadComponent: () => import('./fct/coordinador').then((m) => m.CoordinadorPage),
   },
   {

@@ -6,6 +6,7 @@ import {
   DestroyRef,
   OnInit,
   PLATFORM_ID,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -17,11 +18,47 @@ import {
   AsignacionFctExterna,
 } from './asignaciones-externas.models';
 import { AsignacionesExternasService } from './asignaciones-externas.service';
-import { AsignacionCandidata, AsignacionEstado, AsignacionFct } from './asignaciones.models';
+import {
+  AsignacionCandidata,
+  AsignacionEstado,
+  AsignacionFct,
+} from './asignaciones.models';
 import { AsignacionesService } from './asignaciones.service';
 
 type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated';
 type SaveStatus = 'idle' | 'saving';
+type EstadoFilter = 'TODAS' | AsignacionEstado;
+type Origen = 'INTERNA' | 'EXTERNA';
+
+type AsignacionItem = {
+  key: string;
+  origen: Origen;
+  id: number;
+  estado: AsignacionEstado;
+  fechaAsignacion: string;
+  observaciones: string | null;
+  alumnoNombre: string;
+  alumnoEmail: string | null;
+  oferta: string;
+  empresa: string;
+};
+
+type CandidataItem = {
+  key: string;
+  origen: Origen;
+  solicitudInternaId: number | null;
+  solicitudExternaId: number | null;
+  alumnoNombre: string;
+  alumnoEmail: string | null;
+  titulo: string;
+  empresa: string;
+  fecha: string;
+};
+
+const ESTADO_LABEL: Record<AsignacionEstado, string> = {
+  ACTIVA: 'Activa',
+  FINALIZADA: 'Finalizada',
+};
 
 @Component({
   selector: 'app-asignaciones-page',
@@ -32,118 +69,10 @@ type SaveStatus = 'idle' | 'saving';
         <p class="eyebrow">Centro</p>
         <h1>Asignaciones FCT</h1>
         <p>
-          Registra el vinculo entre alumno, oferta y empresa cuando una solicitud queda aceptada,
-          y consulta el listado de asignaciones activas.
+          Gestiona el ciclo de las asignaciones del centro: solicitudes aceptadas pendientes,
+          alta de nuevas asignaciones y seguimiento del estado.
         </p>
       </header>
-
-      <section class="create-panel" aria-label="Crear asignacion">
-        <p class="eyebrow">Nueva asignacion</p>
-        <h2>Asignar desde solicitud aceptada</h2>
-        @if (candidatasStatus() === 'loading') {
-          <p class="muted">Cargando solicitudes pendientes de asignar...</p>
-        } @else if (candidatas().length === 0) {
-          <p class="muted">
-            No hay solicitudes aceptadas pendientes de asignar. Cuando una empresa acepte una
-            solicitud nueva, aparecera aqui para que la oficialices.
-          </p>
-        } @else {
-          <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-            <div class="form-row">
-              <label for="solicitudId">Solicitud aceptada</label>
-              <select id="solicitudId" formControlName="solicitudId">
-                <option [ngValue]="null">Selecciona una solicitud</option>
-                @for (candidata of candidatas(); track candidata.solicitudId) {
-                  <option [ngValue]="candidata.solicitudId">
-                    {{ candidata.alumno.displayName }} — {{ candidata.oferta.titulo }} ({{
-                      candidata.empresa.nombre
-                    }})
-                  </option>
-                }
-              </select>
-            </div>
-            <div class="form-row">
-              <label for="observaciones">Observaciones (opcional)</label>
-              <textarea
-                id="observaciones"
-                rows="3"
-                maxlength="2000"
-                formControlName="observaciones"
-              ></textarea>
-            </div>
-            <div class="form-actions">
-              <button
-                type="submit"
-                class="primary-action"
-                [disabled]="saveStatus() === 'saving' || form.invalid"
-              >
-                @if (saveStatus() === 'saving') {
-                  Guardando...
-                } @else {
-                  Crear asignacion
-                }
-              </button>
-            </div>
-          </form>
-        }
-        @if (createMessage(); as msg) {
-          <p class="action-feedback" role="status">{{ msg }}</p>
-        }
-      </section>
-
-      <section class="create-panel external-create-panel" aria-label="Crear asignacion externa">
-        <p class="eyebrow">Ofertas externas · Adzuna</p>
-        <h2>Asignar solicitud externa aceptada</h2>
-        @if (candidatasExternasStatus() === 'loading') {
-          <p class="muted">Cargando solicitudes externas aceptadas...</p>
-        } @else if (candidatasExternas().length === 0) {
-          <p class="muted">
-            No hay solicitudes externas aceptadas pendientes de asignar. Cuando un alumno marque
-            una oferta de Adzuna como aceptada, aparecera aqui.
-          </p>
-        } @else {
-          <form [formGroup]="externalForm" (ngSubmit)="submitExternal()" novalidate>
-            <div class="form-row">
-              <label for="solicitudExternaId">Solicitud externa aceptada</label>
-              <select id="solicitudExternaId" formControlName="solicitudExternaId">
-                <option [ngValue]="null">Selecciona una solicitud externa</option>
-                @for (candidata of candidatasExternas(); track candidata.solicitudExternaId) {
-                  <option [ngValue]="candidata.solicitudExternaId">
-                    {{ candidata.alumnoNombre }} — {{ candidata.titulo }} ({{
-                      candidata.empresaNombre || 'Empresa externa'
-                    }})
-                  </option>
-                }
-              </select>
-            </div>
-            <div class="form-row">
-              <label for="observacionesExternas">Observaciones (opcional)</label>
-              <textarea
-                id="observacionesExternas"
-                rows="3"
-                maxlength="2000"
-                formControlName="observaciones"
-              ></textarea>
-            </div>
-            <div class="form-actions">
-              <button
-                type="submit"
-                class="primary-action"
-                [disabled]="saveExternalStatus() === 'saving' || externalForm.invalid"
-              >
-                @if (saveExternalStatus() === 'saving') {
-                  Guardando...
-                } @else {
-                  Crear asignacion externa
-                }
-              </button>
-            </div>
-          </form>
-        }
-        @if (externalCreateMessage(); as msg) {
-          <p class="action-feedback" role="status">{{ msg }}</p>
-        }
-      </section>
 
       @if (status() === 'loading') {
         <section class="state-panel" aria-live="polite">
@@ -163,141 +92,223 @@ type SaveStatus = 'idle' | 'saving';
           <h2>No se pudieron cargar las asignaciones</h2>
           <p>{{ errorMessage() }}</p>
         </section>
-      } @else if (status() === 'empty') {
-        <section class="state-panel">
-          <p class="eyebrow">Sin asignaciones</p>
-          <h2>Aun no hay asignaciones registradas</h2>
-          <p>Cuando una empresa acepte una solicitud, podras registrarla desde el formulario.</p>
-        </section>
       } @else {
-        <section class="asignaciones-results" aria-live="polite" aria-label="Asignaciones FCT">
-          <div class="results-heading">
-            <p class="eyebrow">Asignaciones</p>
-            <h2>{{ resultsTitle() }}</h2>
-          </div>
-
-          <div class="asignaciones-grid">
-            @for (asignacion of asignaciones(); track asignacion.id) {
-              <article class="asignacion-card">
-                <div class="asignacion-card-heading">
-                  <span class="estado-pill" [attr.data-estado]="asignacion.estado">
-                    {{ estadoLabel(asignacion.estado) }}
-                  </span>
-                  <h3>{{ asignacion.alumno.displayName }}</h3>
-                  <p class="asignacion-email">{{ asignacion.alumno.email }}</p>
-                </div>
-
-                <dl class="asignacion-details" aria-label="Datos de la asignacion">
-                  <div>
-                    <dt>Oferta</dt>
-                    <dd>{{ asignacion.oferta.titulo }}</dd>
-                  </div>
-                  <div>
-                    <dt>Empresa</dt>
-                    <dd>{{ asignacion.empresa.nombre }}</dd>
-                  </div>
-                  <div>
-                    <dt>Fecha</dt>
-                    <dd>{{ formatFecha(asignacion.fechaAsignacion) }}</dd>
-                  </div>
-                  <div>
-                    <dt>Solicitud</dt>
-                    <dd>#{{ asignacion.solicitudId }}</dd>
-                  </div>
-                </dl>
-
-                @if (asignacion.observaciones) {
-                  <p class="asignacion-observaciones">{{ asignacion.observaciones }}</p>
-                }
-              </article>
-            }
-          </div>
+        <section class="kpi-grid" aria-label="Resumen de asignaciones">
+          <article class="kpi-card">
+            <p class="eyebrow">Activas</p>
+            <p class="kpi-value">{{ totalActivas() }}</p>
+          </article>
+          <article class="kpi-card">
+            <p class="eyebrow">Finalizadas</p>
+            <p class="kpi-value">{{ totalFinalizadas() }}</p>
+          </article>
+          <article class="kpi-card kpi-warn">
+            <p class="eyebrow">Pendientes</p>
+            <p class="kpi-value">{{ totalCandidatas() }}</p>
+          </article>
+          <article class="kpi-card">
+            <p class="eyebrow">Total</p>
+            <p class="kpi-value">{{ totalAsignaciones() }}</p>
+          </article>
         </section>
-      }
 
-      @if (asignacionesExternas().length > 0) {
-        <section
-          class="asignaciones-results external-results"
-          aria-live="polite"
-          aria-label="Asignaciones FCT externas"
-        >
-          <div class="results-heading">
-            <p class="eyebrow">Asignaciones externas · Adzuna</p>
-            <h2>{{ externalResultsTitle() }}</h2>
-          </div>
-
-          <div class="asignaciones-grid">
-            @for (asignacion of asignacionesExternas(); track asignacion.id) {
-              <article class="asignacion-card external-assignment-card">
-                <div class="asignacion-card-heading">
-                  <span class="estado-pill" [attr.data-estado]="asignacion.estado">
-                    {{ estadoLabel(asignacion.estado) }}
-                  </span>
-                  <span class="external-marker">Adzuna</span>
-                  <h3>{{ asignacion.alumnoNombre }}</h3>
-                </div>
-
-                <dl class="asignacion-details" aria-label="Datos de la asignacion externa">
-                  <div>
-                    <dt>Oferta</dt>
-                    <dd>{{ asignacion.titulo }}</dd>
-                  </div>
-                  <div>
-                    <dt>Empresa</dt>
-                    <dd>{{ asignacion.empresaNombre || 'Empresa externa' }}</dd>
-                  </div>
-                  <div>
-                    <dt>Fecha</dt>
-                    <dd>{{ formatFecha(asignacion.fechaAsignacion) }}</dd>
-                  </div>
-                  <div>
-                    <dt>Solicitud externa</dt>
-                    <dd>#{{ asignacion.solicitudExternaId }}</dd>
-                  </div>
-                </dl>
-
-                <a
-                  class="external-link"
-                  [href]="asignacion.urlAplicacion"
-                  target="_blank"
-                  rel="noopener noreferrer"
+        <section class="create-panel" aria-label="Crear asignacion">
+          <p class="eyebrow">Nueva asignacion</p>
+          <h2>Asignar desde solicitud aceptada</h2>
+          @if (candidatasStatus() === 'loading') {
+            <p class="muted">Cargando solicitudes pendientes de asignar...</p>
+          } @else if (candidatas().length === 0) {
+            <p class="muted">
+              No hay solicitudes aceptadas pendientes de asignar. Cuando una empresa acepte una
+              solicitud, aparecera aqui para que la oficialices.
+            </p>
+          } @else {
+            <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+              <div class="form-row">
+                <label for="candidataKey">Solicitud aceptada</label>
+                <select id="candidataKey" formControlName="candidataKey">
+                  <option [ngValue]="null">Selecciona una solicitud</option>
+                  @for (c of candidatas(); track c.key) {
+                    <option [ngValue]="c.key">
+                      {{ c.alumnoNombre }} — {{ c.titulo }} ({{ c.empresa }})
+                    </option>
+                  }
+                </select>
+              </div>
+              <div class="form-row">
+                <label for="observaciones">Observaciones (opcional)</label>
+                <textarea
+                  id="observaciones"
+                  rows="3"
+                  maxlength="2000"
+                  formControlName="observaciones"
+                ></textarea>
+              </div>
+              <div class="form-actions">
+                <button
+                  type="submit"
+                  class="primary-action"
+                  [disabled]="saveStatus() === 'saving' || form.invalid"
                 >
-                  Abrir oferta original
-                </a>
+                  @if (saveStatus() === 'saving') {
+                    Guardando...
+                  } @else {
+                    Crear asignacion
+                  }
+                </button>
+              </div>
+            </form>
+          }
+          @if (createMessage(); as msg) {
+            <p class="action-feedback" role="status">{{ msg }}</p>
+          }
+        </section>
 
-                @if (asignacion.observaciones) {
-                  <p class="asignacion-observaciones">{{ asignacion.observaciones }}</p>
+        <section class="filters-panel" aria-label="Filtros de asignaciones">
+          <p class="eyebrow">Asignaciones del centro</p>
+          <div class="filters-row">
+            <label class="filter-control">
+              <span>Estado</span>
+              <select [formControl]="estadoFilter">
+                <option value="TODAS">Todas</option>
+                <option value="ACTIVA">Activas</option>
+                <option value="FINALIZADA">Finalizadas</option>
+              </select>
+            </label>
+            <label class="filter-control">
+              <span>Empresa</span>
+              <select [formControl]="empresaFilter">
+                <option value="">Todas las empresas</option>
+                @for (empresa of empresaOptions(); track empresa) {
+                  <option [value]="empresa">{{ empresa }}</option>
                 }
-              </article>
-            }
+              </select>
+            </label>
+            <p class="filter-summary">
+              {{ filteredCount() }} de {{ totalAsignaciones() }} asignaciones
+            </p>
           </div>
         </section>
+
+        @if (totalAsignaciones() === 0) {
+          <section class="state-panel">
+            <p class="eyebrow">Sin asignaciones</p>
+            <h2>Aun no hay asignaciones registradas</h2>
+            <p>Cuando una empresa acepte una solicitud, podras registrarla desde el formulario.</p>
+          </section>
+        } @else if (filteredCount() === 0) {
+          <section class="state-panel">
+            <p class="eyebrow">Sin coincidencias</p>
+            <h2>No hay asignaciones con esos filtros</h2>
+            <p>Ajusta los filtros para ver el resto de asignaciones.</p>
+          </section>
+        } @else {
+          <section class="asignaciones-results" aria-live="polite" aria-label="Asignaciones FCT">
+            <div class="results-heading">
+              <p class="eyebrow">Asignaciones</p>
+              <h2>{{ resultsTitle() }}</h2>
+            </div>
+
+            <div class="asignaciones-grid">
+              @for (item of filteredItems(); track item.key) {
+                <article class="asignacion-card">
+                  <div class="asignacion-card-heading">
+                    <span class="estado-pill" [attr.data-estado]="item.estado">
+                      {{ estadoLabel(item.estado) }}
+                    </span>
+                    <h3>{{ item.alumnoNombre }}</h3>
+                    @if (item.alumnoEmail) {
+                      <p class="asignacion-email">{{ item.alumnoEmail }}</p>
+                    }
+                  </div>
+
+                  <dl class="asignacion-details" aria-label="Datos de la asignacion">
+                    <div>
+                      <dt>Oferta</dt>
+                      <dd>{{ item.oferta }}</dd>
+                    </div>
+                    <div>
+                      <dt>Empresa</dt>
+                      <dd>{{ item.empresa }}</dd>
+                    </div>
+                    <div>
+                      <dt>Fecha</dt>
+                      <dd>{{ formatFecha(item.fechaAsignacion) }}</dd>
+                    </div>
+                    <div>
+                      <dt>Asignacion</dt>
+                      <dd>#{{ item.id }}</dd>
+                    </div>
+                  </dl>
+
+                  @if (item.observaciones) {
+                    <p class="asignacion-observaciones">{{ item.observaciones }}</p>
+                  }
+                </article>
+              }
+            </div>
+          </section>
+        }
       }
     </main>
   `,
   styles: [
     `
       .asignaciones-page {
-        align-content: start;
-        gap: 1rem;
+        display: grid;
+        gap: 1.4rem;
         padding-top: 2rem;
       }
 
-      .create-panel,
-      .state-panel {
-        max-width: 46rem;
-        padding: 1.2rem;
+      .kpi-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      }
+
+      .kpi-card {
+        padding: 1rem 1.1rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: 0.6rem;
         background: var(--surface);
         box-shadow: var(--shadow-soft);
-        backdrop-filter: blur(14px);
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .kpi-card.kpi-warn {
+        border-color: rgba(199, 101, 59, 0.45);
+        background: rgba(255, 244, 230, 0.7);
+      }
+
+      .kpi-value {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1;
+        color: var(--ink);
+      }
+
+      .create-panel,
+      .filters-panel,
+      .state-panel {
+        padding: 1.2rem;
+        border: 1px solid var(--line);
+        border-radius: 0.55rem;
+        background: var(--surface);
+        box-shadow: var(--shadow-soft);
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .state-panel.alert {
+        border-color: rgba(184, 79, 59, 0.28);
+        background: rgba(255, 246, 241, 0.9);
       }
 
       .create-panel form {
         display: grid;
         gap: 0.85rem;
-        margin-top: 0.6rem;
       }
 
       .form-row {
@@ -308,39 +319,48 @@ type SaveStatus = 'idle' | 'saving';
       .form-row label {
         font-size: 0.85rem;
         font-weight: 700;
-        color: var(--ink);
       }
 
-      .form-row input,
+      .form-row select,
       .form-row textarea {
         padding: 0.55rem 0.7rem;
         border: 1px solid var(--line);
         border-radius: 0.4rem;
-        font: inherit;
         background: rgba(255, 251, 245, 0.8);
+        font: inherit;
       }
 
       .form-row textarea {
         resize: vertical;
       }
 
-      .form-actions {
+      .filters-row {
         display: flex;
-        justify-content: flex-start;
+        flex-wrap: wrap;
+        align-items: end;
+        gap: 1rem;
       }
 
-      .state-panel.alert {
-        border-color: rgba(184, 79, 59, 0.28);
-        background: rgba(255, 246, 241, 0.9);
+      .filter-control {
+        display: grid;
+        gap: 0.3rem;
+        font-size: 0.85rem;
+        color: var(--muted);
       }
 
-      .state-panel h2,
-      .results-heading h2,
-      .create-panel h2 {
+      .filter-control select {
+        min-height: 2.4rem;
+        padding: 0 0.6rem;
+        border-radius: 0.45rem;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        font: inherit;
+      }
+
+      .filter-summary {
         margin: 0;
-        font-family: inherit;
-        font-size: 1.45rem;
-        line-height: 1.2;
+        color: var(--muted);
+        font-size: 0.85rem;
       }
 
       .results-heading {
@@ -348,20 +368,15 @@ type SaveStatus = 'idle' | 'saving';
         gap: 0.35rem;
       }
 
-      .asignaciones-results {
-        display: grid;
-        gap: 1rem;
-      }
-
       .asignaciones-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
         gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
       }
 
       .asignacion-card {
         display: grid;
-        gap: 0.85rem;
+        gap: 0.7rem;
         padding: 1rem;
         border: 1px solid var(--line);
         border-radius: 0.5rem;
@@ -369,37 +384,30 @@ type SaveStatus = 'idle' | 'saving';
         box-shadow: var(--shadow-soft);
       }
 
-      .external-create-panel,
-      .external-assignment-card {
-        border-color: rgba(199, 101, 59, 0.28);
-        background: rgba(244, 236, 223, 0.72);
-      }
-
       .asignacion-card-heading {
         display: grid;
-        gap: 0.45rem;
+        gap: 0.4rem;
       }
 
       .asignacion-card h3 {
         margin: 0;
-        font-family: inherit;
-        font-size: 1.15rem;
+        font-size: 1.1rem;
       }
 
       .asignacion-email {
         margin: 0;
         color: var(--muted);
-        font-size: 0.92rem;
+        font-size: 0.9rem;
       }
 
       .estado-pill {
         align-self: start;
         display: inline-flex;
         align-items: center;
-        min-height: 1.85rem;
+        min-height: 1.8rem;
         padding: 0 0.7rem;
         border-radius: 999px;
-        font-size: 0.78rem;
+        font-size: 0.76rem;
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 0.06em;
@@ -415,59 +423,32 @@ type SaveStatus = 'idle' | 'saving';
         color: #0b5f59;
       }
 
-      .external-marker {
-        justify-self: start;
-        display: inline-flex;
-        padding: 0.2rem 0.55rem;
-        border-radius: 999px;
-        background: rgba(199, 101, 59, 0.18);
-        color: var(--accent-warm);
-        font-size: 0.72rem;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-
       .asignacion-details {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.65rem;
+        gap: 0.55rem;
         margin: 0;
       }
 
       .asignacion-details dt {
-        color: var(--muted);
-        font-size: 0.78rem;
+        margin: 0;
+        font-size: 0.74rem;
         font-weight: 800;
+        color: var(--muted);
         text-transform: uppercase;
         letter-spacing: 0.06em;
       }
 
       .asignacion-details dd {
-        margin: 0.2rem 0 0;
-        color: var(--ink);
+        margin: 0.15rem 0 0;
         font-weight: 700;
-        line-height: 1.35;
       }
 
       .asignacion-observaciones {
         margin: 0;
-        color: var(--muted);
         font-style: italic;
-        line-height: 1.5;
-      }
-
-      .external-link {
-        justify-self: start;
-        color: var(--accent);
-        font-weight: 800;
-        text-decoration: none;
-      }
-
-      .external-link:hover,
-      .external-link:focus-visible {
-        text-decoration: underline;
-        outline: none;
+        color: var(--muted);
+        line-height: 1.45;
       }
 
       .primary-action,
@@ -500,41 +481,13 @@ type SaveStatus = 'idle' | 'saving';
         cursor: not-allowed;
       }
 
-      .back-link {
-        margin-top: 0.4rem;
-        border: 1px solid var(--line);
-        color: var(--ink);
-        background: rgba(255, 255, 255, 0.62);
-      }
-
       .action-feedback {
         margin: 0;
-        color: var(--muted);
-        font-style: italic;
+        font-weight: 700;
       }
 
       .muted {
-        margin: 0.5rem 0 0;
         color: var(--muted);
-        line-height: 1.55;
-      }
-
-      .form-row select {
-        padding: 0.55rem 0.7rem;
-        border: 1px solid var(--line);
-        border-radius: 0.4rem;
-        font: inherit;
-        background: rgba(255, 251, 245, 0.8);
-      }
-
-      @media (max-width: 620px) {
-        .asignaciones-page {
-          padding-top: 1rem;
-        }
-
-        .asignacion-details {
-          grid-template-columns: 1fr;
-        }
       }
     `,
   ],
@@ -542,61 +495,150 @@ type SaveStatus = 'idle' | 'saving';
 })
 export class AsignacionesPage implements OnInit {
   private readonly asignacionesService = inject(AsignacionesService);
-  private readonly asignacionesExternasService = inject(AsignacionesExternasService);
+  private readonly externasService = inject(AsignacionesExternasService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly fb = inject(FormBuilder);
 
   protected readonly status = signal<ListStatus>('loading');
-  protected readonly asignaciones = signal<AsignacionFct[]>([]);
-  protected readonly candidatas = signal<AsignacionCandidata[]>([]);
-  protected readonly candidatasStatus = signal<'loading' | 'loaded' | 'error'>('loading');
-  protected readonly asignacionesExternas = signal<AsignacionFctExterna[]>([]);
-  protected readonly candidatasExternas = signal<AsignacionExternaCandidata[]>([]);
-  protected readonly candidatasExternasStatus = signal<'loading' | 'loaded' | 'error'>('loading');
-  protected readonly errorMessage = signal<string | null>(null);
-  protected readonly createMessage = signal<string | null>(null);
-  protected readonly externalCreateMessage = signal<string | null>(null);
+  protected readonly errorMessage = signal<string>('');
+  protected readonly candidatasStatus = signal<'loading' | 'loaded'>('loading');
   protected readonly saveStatus = signal<SaveStatus>('idle');
-  protected readonly saveExternalStatus = signal<SaveStatus>('idle');
+  protected readonly createMessage = signal<string>('');
 
-  protected readonly form = this.fb.nonNullable.group({
-    solicitudId: this.fb.nonNullable.control<number | null>(null, {
-      validators: [Validators.required],
-    }),
-    observaciones: this.fb.nonNullable.control<string>(''),
+  private readonly internas = signal<AsignacionFct[]>([]);
+  private readonly externas = signal<AsignacionFctExterna[]>([]);
+  private readonly candidatasInternas = signal<AsignacionCandidata[]>([]);
+  private readonly candidatasExternas = signal<AsignacionExternaCandidata[]>([]);
+
+  protected readonly form = this.fb.group({
+    candidataKey: this.fb.control<string | null>(null, { validators: [Validators.required] }),
+    observaciones: this.fb.control<string>('', { nonNullable: true }),
   });
 
-  protected readonly externalForm = this.fb.nonNullable.group({
-    solicitudExternaId: this.fb.nonNullable.control<number | null>(null, {
-      validators: [Validators.required],
-    }),
-    observaciones: this.fb.nonNullable.control<string>(''),
+  protected readonly estadoFilter = this.fb.control<EstadoFilter>('TODAS', { nonNullable: true });
+  protected readonly empresaFilter = this.fb.control<string>('', { nonNullable: true });
+  private readonly estadoFilterValue = signal<EstadoFilter>('TODAS');
+  private readonly empresaFilterValue = signal<string>('');
+
+  protected readonly asignaciones = computed<AsignacionItem[]>(() => {
+    const out: AsignacionItem[] = [];
+    for (const a of this.internas()) {
+      out.push({
+        key: `int-${a.id}`,
+        origen: 'INTERNA',
+        id: a.id,
+        estado: a.estado,
+        fechaAsignacion: a.fechaAsignacion,
+        observaciones: a.observaciones,
+        alumnoNombre: a.alumno.displayName,
+        alumnoEmail: a.alumno.email,
+        oferta: a.oferta.titulo,
+        empresa: a.empresa.nombre,
+      });
+    }
+    for (const a of this.externas()) {
+      out.push({
+        key: `ext-${a.id}`,
+        origen: 'EXTERNA',
+        id: a.id,
+        estado: a.estado,
+        fechaAsignacion: a.fechaAsignacion,
+        observaciones: a.observaciones,
+        alumnoNombre: a.alumnoNombre,
+        alumnoEmail: null,
+        oferta: a.titulo,
+        empresa: a.empresaNombre || 'Empresa externa',
+      });
+    }
+    return out.sort((a, b) => b.fechaAsignacion.localeCompare(a.fechaAsignacion));
+  });
+
+  protected readonly candidatas = computed<CandidataItem[]>(() => {
+    const out: CandidataItem[] = [];
+    for (const c of this.candidatasInternas()) {
+      out.push({
+        key: `int-${c.solicitudId}`,
+        origen: 'INTERNA',
+        solicitudInternaId: c.solicitudId,
+        solicitudExternaId: null,
+        alumnoNombre: c.alumno.displayName,
+        alumnoEmail: c.alumno.email,
+        titulo: c.oferta.titulo,
+        empresa: c.empresa.nombre,
+        fecha: c.solicitadaEn,
+      });
+    }
+    for (const c of this.candidatasExternas()) {
+      out.push({
+        key: `ext-${c.solicitudExternaId}`,
+        origen: 'EXTERNA',
+        solicitudInternaId: null,
+        solicitudExternaId: c.solicitudExternaId,
+        alumnoNombre: c.alumnoNombre,
+        alumnoEmail: null,
+        titulo: c.titulo,
+        empresa: c.empresaNombre || 'Empresa externa',
+        fecha: c.aceptadaEn,
+      });
+    }
+    return out.sort((a, b) => b.fecha.localeCompare(a.fecha));
+  });
+
+  protected readonly totalActivas = computed(
+    () => this.asignaciones().filter((a) => a.estado === 'ACTIVA').length,
+  );
+  protected readonly totalFinalizadas = computed(
+    () => this.asignaciones().filter((a) => a.estado === 'FINALIZADA').length,
+  );
+  protected readonly totalAsignaciones = computed(() => this.asignaciones().length);
+  protected readonly totalCandidatas = computed(() => this.candidatas().length);
+
+  protected readonly empresaOptions = computed(() => {
+    const set = new Set<string>();
+    for (const a of this.asignaciones()) {
+      if (a.empresa) set.add(a.empresa);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'));
+  });
+
+  protected readonly filteredItems = computed(() => {
+    const estado = this.estadoFilterValue();
+    const empresa = this.empresaFilterValue();
+    return this.asignaciones()
+      .filter((item) => (estado === 'TODAS' ? true : item.estado === estado))
+      .filter((item) => (empresa ? item.empresa === empresa : true));
+  });
+
+  protected readonly filteredCount = computed(() => this.filteredItems().length);
+
+  protected readonly resultsTitle = computed(() => {
+    const total = this.filteredCount();
+    return total === 1 ? '1 asignacion encontrada' : `${total} asignaciones encontradas`;
   });
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) {
-      this.status.set('not-authenticated');
       return;
     }
-    this.loadAsignaciones();
-    this.loadCandidatas();
-    this.loadAsignacionesExternas();
-    this.loadCandidatasExternas();
+    this.estadoFilter.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => this.estadoFilterValue.set(value ?? 'TODAS'));
+    this.empresaFilter.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => this.empresaFilterValue.set(value ?? ''));
+
+    this.loadAll();
   }
 
   protected estadoLabel(estado: AsignacionEstado): string {
-    return ESTADO_LABELS[estado] ?? estado;
+    return ESTADO_LABEL[estado];
   }
 
   protected formatFecha(value: string): string {
-    if (!isPlatformBrowser(this.platformId)) {
-      return value;
-    }
+    if (!value) return '';
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return value;
-    }
+    if (Number.isNaN(date.getTime())) return value;
     return date.toLocaleDateString('es-ES', {
       day: '2-digit',
       month: '2-digit',
@@ -604,198 +646,139 @@ export class AsignacionesPage implements OnInit {
     });
   }
 
-  protected resultsTitle(): string {
-    const count = this.asignaciones().length;
-    return count === 1 ? '1 asignacion registrada' : `${count} asignaciones registradas`;
-  }
-
-  protected externalResultsTitle(): string {
-    const count = this.asignacionesExternas().length;
-    return count === 1
-      ? '1 asignacion externa registrada'
-      : `${count} asignaciones externas registradas`;
-  }
-
   protected submit(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
+    if (this.form.invalid || this.saveStatus() === 'saving') {
       return;
     }
-    const { solicitudId, observaciones } = this.form.getRawValue();
-    if (solicitudId === null) {
+    const key = this.form.value.candidataKey ?? null;
+    if (!key) return;
+    const candidata = this.candidatas().find((c) => c.key === key);
+    if (!candidata) {
+      this.createMessage.set('La solicitud seleccionada ya no esta disponible.');
       return;
     }
+    const observaciones = (this.form.value.observaciones ?? '').trim() || undefined;
 
-    const trimmed = (observaciones ?? '').trim();
     this.saveStatus.set('saving');
-    this.createMessage.set(null);
+    this.createMessage.set('');
 
-    this.asignacionesService
-      .create({ solicitudId, observaciones: trimmed.length === 0 ? undefined : trimmed })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (asignacion) => {
-          this.asignaciones.update((current) => [asignacion, ...current]);
-          this.candidatas.update((current) =>
-            current.filter((item) => item.solicitudId !== asignacion.solicitudId),
-          );
-          this.status.set('loaded');
-          this.createMessage.set('Asignacion creada correctamente.');
-          this.saveStatus.set('idle');
-          this.form.reset({ solicitudId: null, observaciones: '' });
-        },
-        error: (error: unknown) => {
-          this.createMessage.set(createErrorMessage(error));
-          this.saveStatus.set('idle');
-        },
-      });
-  }
-
-  protected submitExternal(): void {
-    if (this.externalForm.invalid) {
-      this.externalForm.markAllAsTouched();
-      return;
+    if (candidata.origen === 'INTERNA' && candidata.solicitudInternaId !== null) {
+      this.asignacionesService
+        .create({ solicitudId: candidata.solicitudInternaId, observaciones })
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => this.handleCreateSuccess(),
+          error: (err) => this.handleCreateError(err),
+        });
+    } else if (candidata.origen === 'EXTERNA' && candidata.solicitudExternaId !== null) {
+      this.externasService
+        .create({ solicitudExternaId: candidata.solicitudExternaId, observaciones })
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => this.handleCreateSuccess(),
+          error: (err) => this.handleCreateError(err),
+        });
+    } else {
+      this.saveStatus.set('idle');
     }
-    const { solicitudExternaId, observaciones } = this.externalForm.getRawValue();
-    if (solicitudExternaId === null) {
-      return;
-    }
-
-    const trimmed = (observaciones ?? '').trim();
-    this.saveExternalStatus.set('saving');
-    this.externalCreateMessage.set(null);
-
-    this.asignacionesExternasService
-      .create({
-        solicitudExternaId,
-        observaciones: trimmed.length === 0 ? undefined : trimmed,
-      })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (asignacion) => {
-          this.asignacionesExternas.update((current) => [asignacion, ...current]);
-          this.candidatasExternas.update((current) =>
-            current.filter((item) => item.solicitudExternaId !== asignacion.solicitudExternaId),
-          );
-          this.externalCreateMessage.set('Asignacion externa creada correctamente.');
-          this.saveExternalStatus.set('idle');
-          this.externalForm.reset({ solicitudExternaId: null, observaciones: '' });
-        },
-        error: (error: unknown) => {
-          this.externalCreateMessage.set(createErrorMessage(error));
-          this.saveExternalStatus.set('idle');
-        },
-      });
   }
 
-  private loadCandidatas(): void {
-    this.candidatasStatus.set('loading');
-    this.asignacionesService
-      .listCandidatas()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (candidatas) => {
-          this.candidatas.set(candidatas);
-          this.candidatasStatus.set('loaded');
-        },
-        error: () => {
-          this.candidatas.set([]);
-          this.candidatasStatus.set('error');
-        },
-      });
+  private handleCreateSuccess(): void {
+    this.saveStatus.set('idle');
+    this.createMessage.set('Asignacion creada correctamente.');
+    this.form.reset({ candidataKey: null, observaciones: '' });
+    this.loadAll();
   }
 
-  private loadCandidatasExternas(): void {
-    this.candidatasExternasStatus.set('loading');
-    this.asignacionesExternasService
-      .listCandidatas()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (candidatas) => {
-          this.candidatasExternas.set(candidatas);
-          this.candidatasExternasStatus.set('loaded');
-        },
-        error: () => {
-          this.candidatasExternas.set([]);
-          this.candidatasExternasStatus.set('error');
-        },
-      });
+  private handleCreateError(err: unknown): void {
+    this.saveStatus.set('idle');
+    this.createMessage.set(this.describeError(err));
   }
 
-  private loadAsignaciones(): void {
+  private loadAll(): void {
     this.status.set('loading');
-    this.errorMessage.set(null);
+    this.candidatasStatus.set('loading');
+    this.errorMessage.set('');
+
+    let pending = 4;
+    let failed = false;
+    const onDone = () => {
+      pending -= 1;
+      if (pending === 0 && !failed) {
+        this.status.set(this.asignaciones().length === 0 ? 'empty' : 'loaded');
+        if (this.status() === 'empty') this.status.set('loaded');
+      }
+    };
+    const onError = (err: unknown) => {
+      if (failed) return;
+      failed = true;
+      if (err instanceof HttpErrorResponse && err.status === 401) {
+        this.status.set('not-authenticated');
+        return;
+      }
+      this.status.set('error');
+      this.errorMessage.set(this.describeError(err));
+    };
 
     this.asignacionesService
       .list()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (asignaciones) => {
-          this.asignaciones.set(asignaciones);
-          this.status.set(asignaciones.length === 0 ? 'empty' : 'loaded');
+        next: (data) => {
+          this.internas.set(data);
+          onDone();
         },
-        error: (error: unknown) => {
-          this.asignaciones.set([]);
-          if (isUnauthorized(error)) {
-            this.status.set('not-authenticated');
-            return;
-          }
-          this.errorMessage.set(listErrorMessage(error));
-          this.status.set('error');
-        },
+        error: onError,
       });
-  }
 
-  private loadAsignacionesExternas(): void {
-    this.asignacionesExternasService
+    this.asignacionesService
+      .listCandidatas()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => {
+          this.candidatasInternas.set(data);
+          this.candidatasStatus.set('loaded');
+          onDone();
+        },
+        error: onError,
+      });
+
+    this.externasService
       .list()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (asignaciones) => {
-          this.asignacionesExternas.set(asignaciones);
+        next: (data) => {
+          this.externas.set(data);
+          onDone();
         },
-        error: () => {
-          this.asignacionesExternas.set([]);
+        error: onError,
+      });
+
+    this.externasService
+      .listCandidatas()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => {
+          this.candidatasExternas.set(data);
+          onDone();
         },
+        error: onError,
       });
   }
-}
 
-const ESTADO_LABELS: Record<AsignacionEstado, string> = {
-  ACTIVA: 'Activa',
-  FINALIZADA: 'Finalizada',
-};
-
-function isUnauthorized(error: unknown): boolean {
-  return error instanceof HttpErrorResponse && error.status === 401;
-}
-
-function listErrorMessage(error: unknown): string {
-  if (error instanceof HttpErrorResponse) {
-    if (error.status === 0) {
-      return 'No se pudo contactar con el servidor. Comprueba que el backend este disponible.';
+  private describeError(err: unknown): string {
+    if (err instanceof HttpErrorResponse) {
+      if (err.status === 401 || err.status === 403) {
+        return 'Tu sesion no tiene permisos de tutor o coordinador.';
+      }
+      if (err.status === 0) {
+        return 'No se pudo contactar con el servidor.';
+      }
+      return `Error ${err.status} al cargar datos.`;
     }
-    if (error.status === 403) {
-      return 'No tienes permisos para gestionar asignaciones.';
+    if (err instanceof Error) {
+      return err.message;
     }
+    return 'Error desconocido al cargar datos.';
   }
-  return 'No se pudieron cargar las asignaciones. Intentalo de nuevo.';
-}
-
-function createErrorMessage(error: unknown): string {
-  if (error instanceof HttpErrorResponse) {
-    if (error.status === 404) {
-      return 'No se ha encontrado la solicitud indicada.';
-    }
-    if (error.status === 409) {
-      return 'No se puede asignar: la solicitud no esta aceptada o ya tiene una asignacion.';
-    }
-    if (error.status === 403) {
-      return 'No tienes permisos para crear asignaciones.';
-    }
-    if (error.status === 400) {
-      return 'Revisa los datos del formulario antes de continuar.';
-    }
-  }
-  return 'No se pudo crear la asignacion. Intentalo de nuevo.';
 }

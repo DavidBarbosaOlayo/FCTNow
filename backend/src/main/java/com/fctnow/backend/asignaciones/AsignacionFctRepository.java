@@ -27,4 +27,16 @@ public interface AsignacionFctRepository extends JpaRepository<AsignacionFct, Lo
       where a.solicitud.id in :solicitudIds
       """)
   List<AsignacionFct> findBySolicitudIdIn(@Param("solicitudIds") Collection<Long> solicitudIds);
+
+  @Query("""
+      select a
+      from AsignacionFct a
+      join fetch a.solicitud
+      join fetch a.alumno
+      join fetch a.oferta
+      join fetch a.empresa
+      where a.alumno.id in :alumnoIds
+      order by a.fechaAsignacion desc, a.id desc
+      """)
+  List<AsignacionFct> findByAlumnoIdInWithDetails(@Param("alumnoIds") Collection<Long> alumnoIds);
 }

@@ -1,4 +1,4 @@
-import { isPlatformBrowser } from '@angular/common';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -6,12 +6,17 @@ import {
   DestroyRef,
   OnInit,
   PLATFORM_ID,
+  computed,
   inject,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { fromEvent } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
+import { TutorAlumno } from '../fct/tutor-alumnos.models';
+import { TutorAlumnosService } from '../fct/tutor-alumnos.service';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { OfertaFct, OfertaModalidad } from './ofertas.models';
 import { OfertasService } from './ofertas.service';
 import { SolicitudesService } from './solicitudes.service';
@@ -117,38 +122,93 @@ type ModalidadOption = {
           </section>
 
           <section class="detail-panel application-panel" aria-labelledby="oferta-solicitud">
-            <h2 id="oferta-solicitud">Solicitud</h2>
-
-            @if (!isAuthenticated()) {
-              <p>Inicia sesion con tu cuenta de alumno para solicitar esta oferta FCT.</p>
-              <a class="primary-action" routerLink="/login">Iniciar sesion</a>
-            } @else if (applicationStatus() === 'checking') {
-              <p aria-live="polite">Comprobando si ya has solicitado esta oferta.</p>
-            } @else if (applicationStatus() === 'requested') {
-              <p class="success-copy" aria-live="polite">
-                Ya has solicitado esta oferta. Puedes seguir consultando el detalle mientras el
-                centro revisa las solicitudes.
-              </p>
-            } @else {
-              <p>
-                Solicita esta oferta si encaja con tus preferencias de FCT. El centro podra
-                revisar tu interes en fases posteriores.
-              </p>
-              <button
-                type="button"
-                class="primary-action"
-                [disabled]="applicationStatus() === 'submitting'"
-                (click)="requestOffer(oferta.id)"
-              >
-                @if (applicationStatus() === 'submitting') {
-                  Enviando solicitud
-                } @else {
-                  Solicitar oferta
+            @if (isCentro()) {
+              <h2 id="oferta-solicitud">Recomendar a alumnado</h2>
+              <p>Busca alumnado de la misma familia profesional y envía una recomendación.</p>
+              <div class="recommend-wrap">
+                <button
+                  type="button"
+                  class="primary-action recommend-toggle"
+                  (click)="toggleRecommend()"
+                  [attr.aria-expanded]="recommendOpen()"
+                >
+                  Recomendar
+                </button>
+                @if (recommendOpen()) {
+                  <div class="recommend-panel detail-recommend-panel" role="dialog" aria-label="Alumnos sugeridos">
+                    @if (matchesForInternal(oferta).length === 0) {
+                      <p class="recommend-empty">
+                        Ningún alumno encaja por familia profesional.
+                      </p>
+                    } @else {
+                      <p class="recommend-heading">Alumnos compatibles</p>
+                      <ul class="recommend-list">
+                        @for (a of matchesForInternal(oferta); track a.id) {
+                          <li>
+                            <button
+                              type="button"
+                              class="recommend-student"
+                              [disabled]="isRecommendationInFlight(a.id, oferta.id) || hasRecommendationSent(a.id, oferta.id)"
+                              (click)="recommendInternal(a, oferta)"
+                            >
+                              <strong>{{ a.displayName }}</strong>
+                              @if (a.preferencias?.cicloFormativo) {
+                                <span> · {{ a.preferencias?.cicloFormativo }}</span>
+                              }
+                              @if (a.preferencias?.localidad) {
+                                <span> · {{ a.preferencias?.localidad }}</span>
+                              }
+                              @if (hasRecommendationSent(a.id, oferta.id)) {
+                                <span> · Recomendada</span>
+                              }
+                            </button>
+                          </li>
+                        }
+                      </ul>
+                      @if (recommendationMessage(); as message) {
+                        <p class="recommend-feedback success-copy" aria-live="polite">{{ message }}</p>
+                      }
+                      @if (recommendationError(); as error) {
+                        <p class="recommend-feedback error-copy" role="alert">{{ error }}</p>
+                      }
+                    }
+                  </div>
                 }
-              </button>
+              </div>
+            } @else {
+              <h2 id="oferta-solicitud">Solicitud</h2>
 
-              @if (applicationStatus() === 'error') {
-                <p class="error-copy" role="alert">{{ applicationMessage() }}</p>
+              @if (!isAuthenticated()) {
+                <p>Inicia sesion con tu cuenta de alumno para solicitar esta oferta FCT.</p>
+                <a class="primary-action" routerLink="/login">Iniciar sesion</a>
+              } @else if (applicationStatus() === 'checking') {
+                <p aria-live="polite">Comprobando si ya has solicitado esta oferta.</p>
+              } @else if (applicationStatus() === 'requested') {
+                <p class="success-copy" aria-live="polite">
+                  Ya has solicitado esta oferta. Puedes seguir consultando el detalle mientras el
+                  centro revisa las solicitudes.
+                </p>
+              } @else {
+                <p>
+                  Solicita esta oferta si encaja con tus preferencias de FCT. El centro podra
+                  revisar tu interes en fases posteriores.
+                </p>
+                <button
+                  type="button"
+                  class="primary-action"
+                  [disabled]="applicationStatus() === 'submitting'"
+                  (click)="requestOffer(oferta.id)"
+                >
+                  @if (applicationStatus() === 'submitting') {
+                    Enviando solicitud
+                  } @else {
+                    Solicitar oferta
+                  }
+                </button>
+
+                @if (applicationStatus() === 'error') {
+                  <p class="error-copy" role="alert">{{ applicationMessage() }}</p>
+                }
               }
             }
           </section>
@@ -355,6 +415,11 @@ type ModalidadOption = {
         font-weight: 800;
       }
 
+      .detail-recommend-panel {
+        left: 0;
+        right: auto;
+      }
+
       .state-panel {
         max-width: 44rem;
         padding: 1.2rem;
@@ -399,8 +464,11 @@ export class OfertaDetailPage implements OnInit {
   private readonly ofertasService = inject(OfertasService);
   private readonly solicitudesService = inject(SolicitudesService);
   private readonly authService = inject(AuthService);
+  private readonly tutorAlumnosService = inject(TutorAlumnosService);
+  private readonly notificacionesService = inject(NotificacionesService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly document = inject(DOCUMENT);
 
   protected readonly status = signal<DetailStatus>('loading');
   protected readonly oferta = signal<OfertaFct | null>(null);
@@ -408,6 +476,16 @@ export class OfertaDetailPage implements OnInit {
   protected readonly applicationStatus = signal<ApplicationStatus>('idle');
   protected readonly applicationMessage = signal<string | null>(null);
   protected readonly isAuthenticated = this.authService.isAuthenticated;
+  protected readonly isCentro = computed(() => {
+    const roles = this.authService.currentUser()?.roles ?? [];
+    return roles.includes('TUTOR_CENTRO') || roles.includes('COORDINADOR');
+  });
+  protected readonly tutorAlumnos = signal<TutorAlumno[]>([]);
+  protected readonly recommendOpen = signal(false);
+  protected readonly recommendationInFlight = signal<string | null>(null);
+  protected readonly recommendationMessage = signal<string | null>(null);
+  protected readonly recommendationError = signal<string | null>(null);
+  protected readonly sentRecommendationKeys = signal<Set<string>>(new Set());
 
   private readonly modalidadOptions: ModalidadOption[] = [
     { value: 'PRESENCIAL', label: 'Presencial' },
@@ -416,6 +494,9 @@ export class OfertaDetailPage implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.loadTutorAlumnos();
+    this.closeRecommendOnOutsideClick();
+
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const offerId = parseOfferId(params.get('id'));
 
@@ -440,6 +521,97 @@ export class OfertaDetailPage implements OnInit {
 
   protected modalidadLabel(modalidad: OfertaModalidad): string {
     return this.modalidadOptions.find((option) => option.value === modalidad)?.label ?? modalidad;
+  }
+
+  protected matchesForInternal(oferta: OfertaFct): TutorAlumno[] {
+    const familia = oferta.familiaProfesional?.trim().toLowerCase() ?? '';
+    return this.tutorAlumnos().filter((a) => {
+      const af = a.preferencias?.familiaProfesional?.trim().toLowerCase() ?? '';
+      return familia !== '' && af === familia;
+    });
+  }
+
+  protected toggleRecommend(): void {
+    this.recommendOpen.update((open) => !open);
+    this.recommendationMessage.set(null);
+    this.recommendationError.set(null);
+  }
+
+  protected isRecommendationInFlight(alumnoId: number, ofertaId: number): boolean {
+    return this.recommendationInFlight() === `${alumnoId}:${ofertaId}`;
+  }
+
+  protected hasRecommendationSent(alumnoId: number, ofertaId: number): boolean {
+    return this.sentRecommendationKeys().has(this.recommendationKey(alumnoId, ofertaId));
+  }
+
+  protected recommendInternal(alumno: TutorAlumno, oferta: OfertaFct): void {
+    if (this.recommendationInFlight() !== null) {
+      return;
+    }
+    this.recommendationInFlight.set(`${alumno.id}:${oferta.id}`);
+    this.recommendationMessage.set(null);
+    this.recommendationError.set(null);
+    this.notificacionesService
+      .recomendar({ alumnoId: alumno.id, ofertaId: oferta.id })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.recommendationInFlight.set(null);
+          this.markRecommendationSent(alumno.id, oferta.id);
+          this.recommendationMessage.set(`Recomendación enviada a ${alumno.displayName}.`);
+        },
+        error: (error: unknown) => {
+          this.recommendationInFlight.set(null);
+          if (isRecommendationConflict(error)) {
+            this.markRecommendationSent(alumno.id, oferta.id);
+          }
+          this.recommendationError.set(recommendationErrorMessage(error));
+        },
+      });
+  }
+
+  private closeRecommendOnOutsideClick(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+    fromEvent<MouseEvent>(this.document, 'click')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) {
+          return;
+        }
+        if (!target.closest('.recommend-wrap')) {
+          this.recommendOpen.set(false);
+        }
+      });
+  }
+
+  private markRecommendationSent(alumnoId: number, ofertaId: number): void {
+    const key = this.recommendationKey(alumnoId, ofertaId);
+    this.sentRecommendationKeys.update((current) => {
+      const next = new Set(current);
+      next.add(key);
+      return next;
+    });
+  }
+
+  private recommendationKey(alumnoId: number, ofertaId: number): string {
+    return `${alumnoId}:${ofertaId}`;
+  }
+
+  private loadTutorAlumnos(): void {
+    if (!this.isCentro() || !this.authService.accessToken()) {
+      return;
+    }
+    this.tutorAlumnosService
+      .list()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => this.tutorAlumnos.set(data),
+        error: () => this.tutorAlumnos.set([]),
+      });
   }
 
   private loadOffer(offerId: number): void {
@@ -571,4 +743,34 @@ function applicationErrorMessage(error: unknown): string {
   }
 
   return 'No se pudo enviar la solicitud. Intentalo de nuevo.';
+}
+
+function recommendationErrorMessage(error: unknown): string {
+  if (error instanceof HttpErrorResponse) {
+    if (error.status === 401) {
+      return 'Inicia sesión para recomendar ofertas.';
+    }
+
+    if (error.status === 403) {
+      return 'Solo tutores y coordinadores pueden recomendar ofertas.';
+    }
+
+    if (error.status === 404) {
+      return 'No se encontró el alumno o la oferta seleccionada.';
+    }
+
+    if (error.status === 409) {
+      return 'Esta oferta ya se ha recomendado a ese alumno.';
+    }
+
+    if (error.status === 0) {
+      return 'No se pudo contactar con el backend para enviar la recomendación.';
+    }
+  }
+
+  return 'No se pudo enviar la recomendación. Inténtalo de nuevo.';
+}
+
+function isRecommendationConflict(error: unknown): boolean {
+  return error instanceof HttpErrorResponse && error.status === 409;
 }

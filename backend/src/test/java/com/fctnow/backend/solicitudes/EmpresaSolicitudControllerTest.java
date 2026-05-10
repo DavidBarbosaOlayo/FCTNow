@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fctnow.backend.asignaciones.AsignacionFctRepository;
+import com.fctnow.backend.asignaciones.externas.AsignacionFctExternaRepository;
 import com.fctnow.backend.auth.LoginRequest;
 import com.fctnow.backend.empresas.Empresa;
 import com.fctnow.backend.empresas.EmpresaEstado;
@@ -16,6 +18,7 @@ import com.fctnow.backend.ofertas.OfertaEstado;
 import com.fctnow.backend.ofertas.OfertaFct;
 import com.fctnow.backend.ofertas.OfertaFctRepository;
 import com.fctnow.backend.ofertas.OfertaModalidad;
+import com.fctnow.backend.solicitudes.externas.SolicitudExternaRepository;
 import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
 import com.fctnow.backend.user.UserRole;
@@ -58,13 +61,25 @@ class EmpresaSolicitudControllerTest {
   @Autowired
   private SolicitudFctRepository solicitudFctRepository;
 
+  @Autowired
+  private SolicitudExternaRepository solicitudExternaRepository;
+
+  @Autowired
+  private AsignacionFctRepository asignacionFctRepository;
+
+  @Autowired
+  private AsignacionFctExternaRepository asignacionFctExternaRepository;
+
   private Long ofertaEmpresaAId;
   private Long solicitudEmpresaAFromAlumnoAId;
   private Long solicitudEmpresaBId;
 
   @BeforeEach
   void setUp() {
+    asignacionFctRepository.deleteAll();
+    asignacionFctExternaRepository.deleteAll();
     solicitudFctRepository.deleteAll();
+    solicitudExternaRepository.deleteAll();
     ofertaFctRepository.deleteAll();
     userAccountRepository.deleteAll();
     empresaRepository.deleteAll();

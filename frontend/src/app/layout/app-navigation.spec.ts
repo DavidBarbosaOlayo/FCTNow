@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AuthenticatedUser, UserRole } from '../auth/auth.models';
 import { AuthService } from '../auth/auth.service';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { AppNavigation } from './app-navigation';
 
 describe('AppNavigation', () => {
@@ -18,6 +19,14 @@ describe('AppNavigation', () => {
         provideZonelessChangeDetection(),
         provideRouter([]),
         { provide: AuthService, useValue: { currentUser } },
+        {
+          provide: NotificacionesService,
+          useValue: {
+            unreadCount: signal(0).asReadonly(),
+            refreshMine: () => undefined,
+            clearMine: () => undefined,
+          },
+        },
       ],
     });
   }
@@ -129,6 +138,33 @@ describe('AppNavigation', () => {
     expect(hrefs).toContain('/asignaciones');
   });
 
+  it('should expose the tutor panel link for tutor centro', () => {
+    configure(['TUTOR_CENTRO']);
+
+    const { labels, hrefs } = renderLabels();
+
+    expect(labels).toContain('Panel tutor');
+    expect(hrefs).toContain('/tutor');
+  });
+
+  it('should expose the tutor panel link for coordinador', () => {
+    configure(['COORDINADOR']);
+
+    const { labels, hrefs } = renderLabels();
+
+    expect(labels).toContain('Panel tutor');
+    expect(hrefs).toContain('/tutor');
+  });
+
+  it('should hide the tutor panel link for users without centro roles', () => {
+    configure(['ALUMNO']);
+
+    const { labels, hrefs } = renderLabels();
+
+    expect(labels).not.toContain('Panel tutor');
+    expect(hrefs).not.toContain('/tutor');
+  });
+
   it('should expose the asignaciones link for coordinador', () => {
     configure(['COORDINADOR']);
 
@@ -164,6 +200,72 @@ describe('AppNavigation', () => {
       expect(icon).withContext('each nav link should expose an inline SVG icon').not.toBeNull();
       expect(label?.textContent?.trim()).withContext('each nav link should keep a text label').toBeTruthy();
     });
+  });
+
+  it('should render a notification badge when there are unread notifications', () => {
+    const currentUser = signal<AuthenticatedUser | null>({
+      id: 1,
+      email: 'alumno@example.com',
+      displayName: 'Alumno',
+      roles: ['ALUMNO'],
+    } as AuthenticatedUser);
+    const unreadCount = signal(3);
+
+    TestBed.configureTestingModule({
+      imports: [AppNavigation],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        { provide: AuthService, useValue: { currentUser } },
+        {
+          provide: NotificacionesService,
+          useValue: {
+            unreadCount: unreadCount.asReadonly(),
+            refreshMine: () => undefined,
+            clearMine: () => undefined,
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(AppNavigation);
+    fixture.detectChanges();
+
+    const badge = fixture.nativeElement.querySelector('.notification-badge') as HTMLElement;
+    expect(badge).not.toBeNull();
+    expect(badge.textContent?.trim()).toBe('3');
+  });
+
+  it('should not render the notification badge for non alumno users', () => {
+    const currentUser = signal<AuthenticatedUser | null>({
+      id: 2,
+      email: 'tutor@example.com',
+      displayName: 'Tutor',
+      roles: ['TUTOR_CENTRO'],
+    } as AuthenticatedUser);
+    const unreadCount = signal(3);
+
+    TestBed.configureTestingModule({
+      imports: [AppNavigation],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        { provide: AuthService, useValue: { currentUser } },
+        {
+          provide: NotificacionesService,
+          useValue: {
+            unreadCount: unreadCount.asReadonly(),
+            refreshMine: () => undefined,
+            clearMine: () => undefined,
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(AppNavigation);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.notification-badge')).toBeNull();
   });
 
   it('should expose a collapsed menu toggle with the expected ARIA attributes', () => {
