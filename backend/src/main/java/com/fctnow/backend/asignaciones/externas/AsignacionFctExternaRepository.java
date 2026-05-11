@@ -1,5 +1,6 @@
 package com.fctnow.backend.asignaciones.externas;
 
+import com.fctnow.backend.asignaciones.AsignacionEstado;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 public interface AsignacionFctExternaRepository extends JpaRepository<AsignacionFctExterna, Long> {
 
   boolean existsBySolicitudId(Long solicitudId);
+
+  boolean existsByAlumnoIdAndEstado(Long alumnoId, AsignacionEstado estado);
 
   @Query("""
       SELECT a

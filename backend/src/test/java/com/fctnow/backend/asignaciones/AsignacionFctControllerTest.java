@@ -64,6 +64,7 @@ class AsignacionFctControllerTest {
   private AsignacionFctRepository asignacionFctRepository;
 
   private Long solicitudAceptadaId;
+  private Long segundaSolicitudAceptadaMismoAlumnoId;
   private Long solicitudPendienteId;
   private Long solicitudRechazadaId;
 
@@ -146,6 +147,26 @@ class AsignacionFctControllerTest {
     SolicitudFct aceptada = new SolicitudFct(alumno, oferta);
     aceptada.changeEstado(SolicitudEstado.ACEPTADA);
     solicitudAceptadaId = solicitudFctRepository.save(aceptada).getId();
+
+    OfertaFct segundaOferta = ofertaFctRepository.save(new OfertaFct(
+        empresa,
+        "Practicas soporte",
+        "Descripcion de la segunda oferta.",
+        "Informatica y comunicaciones",
+        "Administracion de Sistemas",
+        "Valencia",
+        "Valencia",
+        OfertaModalidad.PRESENCIAL,
+        LocalDate.of(2026, 10, 1),
+        LocalDate.of(2026, 12, 20),
+        1,
+        null,
+        "Soporte tecnico.",
+        OfertaEstado.PUBLICADA));
+
+    SolicitudFct segundaAceptada = new SolicitudFct(alumno, segundaOferta);
+    segundaAceptada.changeEstado(SolicitudEstado.ACEPTADA);
+    segundaSolicitudAceptadaMismoAlumnoId = solicitudFctRepository.save(segundaAceptada).getId();
 
     solicitudPendienteId = solicitudFctRepository.save(new SolicitudFct(alumnoB, oferta)).getId();
 
@@ -253,6 +274,21 @@ class AsignacionFctControllerTest {
   }
 
   @Test
+  void createDuplicateActiveAssignmentForSameAlumnoIsConflict() throws Exception {
+    mockMvc.perform(post("/api/asignaciones")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"solicitudId\":" + solicitudAceptadaId + "}"))
+        .andExpect(status().isCreated());
+
+    mockMvc.perform(post("/api/asignaciones")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"solicitudId\":" + segundaSolicitudAceptadaMismoAlumnoId + "}"))
+        .andExpect(status().isConflict());
+  }
+
+  @Test
   void createWithUnknownSolicitudIsNotFound() throws Exception {
     mockMvc.perform(post("/api/asignaciones")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
@@ -290,11 +326,11 @@ class AsignacionFctControllerTest {
     mockMvc.perform(get("/api/asignaciones/candidatas")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com")))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.length()").value(1))
-        .andExpect(jsonPath("$[0].solicitudId").value(solicitudAceptadaId.intValue()))
-        .andExpect(jsonPath("$[0].alumno.email").value("alumno-a@example.com"))
-        .andExpect(jsonPath("$[0].oferta.titulo").value("Practicas DAW"))
-        .andExpect(jsonPath("$[0].empresa.nombre").value("Tech Norte Formacion"));
+        .andExpect(jsonPath("$.length()").value(2))
+        .andExpect(jsonPath("$[1].solicitudId").value(solicitudAceptadaId.intValue()))
+        .andExpect(jsonPath("$[1].alumno.email").value("alumno-a@example.com"))
+        .andExpect(jsonPath("$[1].oferta.titulo").value("Practicas DAW"))
+        .andExpect(jsonPath("$[1].empresa.nombre").value("Tech Norte Formacion"));
   }
 
   @Test

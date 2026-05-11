@@ -19,14 +19,6 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
   imports: [RouterLink],
   template: `
     <main class="page-shell route-page notificaciones-page">
-      <header class="route-hero">
-        <p class="eyebrow">Notificaciones</p>
-        <h1>Centro de notificaciones</h1>
-        <p>
-          Revisa recomendaciones y avisos del centro para decidir tus siguientes solicitudes FCT.
-        </p>
-      </header>
-
       @if (status() === 'loading') {
         <section class="route-panel" aria-live="polite">
           <p class="eyebrow">Cargando</p>

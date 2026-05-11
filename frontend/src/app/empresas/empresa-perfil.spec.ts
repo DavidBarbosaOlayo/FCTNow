@@ -75,7 +75,7 @@ describe('EmpresaPerfilPage', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(service.getMine).toHaveBeenCalled();
-    expect(compiled.textContent).toContain('Perfil de empresa');
+    expect(compiled.querySelector('.route-hero')).toBeNull();
     expect(compiled.textContent).toContain('Tech Norte');
     expect(compiled.textContent).toContain('B12345678');
     expect(compiled.textContent).toContain('fct@technorte.example');

@@ -65,15 +65,6 @@ const ESTADO_LABEL: Record<AsignacionEstado, string> = {
   imports: [ReactiveFormsModule, RouterLink],
   template: `
     <main class="page-shell route-page asignaciones-page">
-      <header class="route-hero">
-        <p class="eyebrow">Centro</p>
-        <h1>Asignaciones FCT</h1>
-        <p>
-          Gestiona el ciclo de las asignaciones del centro: solicitudes aceptadas pendientes,
-          alta de nuevas asignaciones y seguimiento del estado.
-        </p>
-      </header>
-
       @if (status() === 'loading') {
         <section class="state-panel" aria-live="polite">
           <p class="eyebrow">Cargando</p>

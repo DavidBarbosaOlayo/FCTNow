@@ -6,6 +6,7 @@ export type TutorAlumnoPreferencias = {
   localidad: string | null;
   modalidad: string | null;
   fechaDisponibilidad: string | null;
+  observaciones: string | null;
 };
 
 export type TutorAlumnoSolicitudes = {
@@ -24,12 +25,29 @@ export type TutorAlumnoAsignacion = {
   observaciones: string | null;
 };
 
+export type TutorAlumnoAsignacionPendiente = {
+  tipo: 'INTERNA' | 'EXTERNA';
+  solicitudId: number;
+  aceptadaEn: string;
+  oferta: string;
+  empresa: string;
+  localidad: string | null;
+  urlAplicacion: string | null;
+};
+
 export type TutorAlumno = {
   id: number;
   email: string;
   displayName: string;
   enabled: boolean;
+  photoDataUrl: string | null;
+  hasCv: boolean;
+  cvFileName: string | null;
+  cvContentType: string | null;
+  cvSize: number | null;
+  cvUpdatedAt: string | null;
   preferencias: TutorAlumnoPreferencias | null;
   solicitudes: TutorAlumnoSolicitudes;
   asignacionActual: TutorAlumnoAsignacion | null;
+  asignacionPendiente: TutorAlumnoAsignacionPendiente | null;
 };

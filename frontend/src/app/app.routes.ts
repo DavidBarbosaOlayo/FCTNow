@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { roleGuard } from './core/auth/role.guard';
 
 const TUTOR_O_COORDINADOR = roleGuard(['TUTOR_CENTRO', 'COORDINADOR']);
+const SOLO_COORDINADOR = roleGuard(['COORDINADOR']);
 
 export const routes: Routes = [
   {
@@ -93,7 +94,7 @@ export const routes: Routes = [
   {
     path: 'asignaciones',
     title: 'Asignaciones FCT | FCTNow',
-    canActivate: [TUTOR_O_COORDINADOR],
+    canActivate: [SOLO_COORDINADOR],
     loadComponent: () =>
       import('./asignaciones/asignaciones').then((m) => m.AsignacionesPage),
   },

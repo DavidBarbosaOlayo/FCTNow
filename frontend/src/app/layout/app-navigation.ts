@@ -37,6 +37,7 @@ type NavigationItem = {
 
 const SCROLL_THRESHOLD_PX = 12;
 const MOBILE_BREAKPOINT_PX = 560;
+const ANONYMOUS_NAVIGATION_PATHS = new Set(['/', '/practicas', '/perfil']);
 
 @Component({
   selector: 'app-navigation',
@@ -215,7 +216,7 @@ export class AppNavigation {
       path: '/asignaciones',
       exact: true,
       icon: 'clipboard',
-      requireRole: ['TUTOR_CENTRO', 'COORDINADOR'],
+      requireRole: 'COORDINADOR',
     },
     { label: 'Mensajes', path: '/mensajes', exact: true, icon: 'message' },
     { label: 'Notificaciones', path: '/notificaciones', exact: true, icon: 'bell' },
@@ -223,8 +224,12 @@ export class AppNavigation {
   ];
 
   protected readonly visibleItems = computed<NavigationItem[]>(() => {
-    const roles = this.currentUser()?.roles ?? [];
+    const user = this.currentUser();
+    const roles = user?.roles ?? [];
     return this.navigationItems.filter((item) => {
+      if (!user && !ANONYMOUS_NAVIGATION_PATHS.has(item.path)) {
+        return false;
+      }
       if (item.hideForRole) {
         const hidden = Array.isArray(item.hideForRole) ? item.hideForRole : [item.hideForRole];
         if (hidden.some((role) => roles.includes(role))) {

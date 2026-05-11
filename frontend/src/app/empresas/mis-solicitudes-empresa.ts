@@ -22,15 +22,6 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
   imports: [RouterLink],
   template: `
     <main class="page-shell route-page mis-solicitudes-empresa-page">
-      <header class="route-hero">
-        <p class="eyebrow">Empresa</p>
-        <h1>Solicitudes recibidas</h1>
-        <p>
-          Revisa las solicitudes que han enviado los alumnos a tus ofertas FCT y decide cuales
-          aceptas o rechazas.
-        </p>
-      </header>
-
       @if (status() === 'loading') {
         <section class="state-panel" aria-live="polite">
           <p class="eyebrow">Cargando</p>

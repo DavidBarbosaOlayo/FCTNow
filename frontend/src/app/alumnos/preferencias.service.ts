@@ -32,6 +32,15 @@ export class AlumnoPreferenciasService {
     );
   }
 
+  uploadPhoto(file: File): Observable<AlumnoPreferencias> {
+    const body = new FormData();
+    body.append('file', file);
+
+    return this.withAuth((headers) =>
+      this.http.put<AlumnoPreferencias>(`${this.baseUrl()}/foto`, body, { headers }),
+    );
+  }
+
   downloadCv(): Observable<Blob> {
     return this.withAuth((headers) =>
       this.http.get(`${this.baseUrl()}/cv`, { headers, responseType: 'blob' }),

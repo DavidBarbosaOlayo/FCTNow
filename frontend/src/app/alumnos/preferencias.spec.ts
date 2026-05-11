@@ -25,6 +25,11 @@ describe('PreferenciasAlumnoPage', () => {
     cvContentType: 'application/pdf',
     cvSize: 2048,
     cvUpdatedAt: '2026-05-07T12:00:00Z',
+    hasPhoto: true,
+    photoDataUrl: 'data:image/png;base64,aW1n',
+    photoContentType: 'image/png',
+    photoSize: 1024,
+    photoUpdatedAt: '2026-05-08T12:00:00Z',
   };
 
   async function configure({
@@ -41,11 +46,12 @@ describe('PreferenciasAlumnoPage', () => {
 
     preferenciasService = jasmine.createSpyObj<AlumnoPreferenciasService>(
       'AlumnoPreferenciasService',
-      ['getMine', 'updateMine', 'uploadCv', 'downloadCv'],
+      ['getMine', 'updateMine', 'uploadCv', 'uploadPhoto', 'downloadCv'],
     );
     preferenciasService.getMine.and.returnValue(result);
     preferenciasService.updateMine.and.returnValue(of(samplePreferences));
     preferenciasService.uploadCv.and.returnValue(of(samplePreferences));
+    preferenciasService.uploadPhoto.and.returnValue(of(samplePreferences));
 
     await TestBed.configureTestingModule({
       imports: [PreferenciasAlumnoPage],
@@ -77,7 +83,7 @@ describe('PreferenciasAlumnoPage', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(preferenciasService.getMine).toHaveBeenCalled();
-    expect(compiled.textContent).toContain('Preferencias y CV');
+    expect(compiled.querySelector('.route-hero')).toBeNull();
     expect(compiled.textContent).toContain('Informática y comunicaciones');
     expect(compiled.textContent).toContain('Desarrollo de Aplicaciones Web');
     expect(compiled.textContent).toContain('Híbrida');
@@ -165,7 +171,7 @@ describe('PreferenciasAlumnoPage', () => {
     clickEditar(compiled);
 
     const file = new File(['pdf'], 'nuevo-cv.pdf', { type: 'application/pdf' });
-    const input = compiled.querySelector<HTMLInputElement>('input[type="file"]')!;
+    const input = compiled.querySelector<HTMLInputElement>('input[accept="application/pdf,.pdf"]')!;
     Object.defineProperty(input, 'files', {
       value: {
         0: file,

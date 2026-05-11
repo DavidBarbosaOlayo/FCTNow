@@ -22,6 +22,11 @@ describe('AlumnoPreferenciasService', () => {
     cvContentType: 'application/pdf',
     cvSize: 1234,
     cvUpdatedAt: '2026-05-07T12:00:00Z',
+    hasPhoto: true,
+    photoDataUrl: 'data:image/png;base64,aW1n',
+    photoContentType: 'image/png',
+    photoSize: 321,
+    photoUpdatedAt: '2026-05-08T12:00:00Z',
   };
 
   const requestBody: AlumnoPreferenciasRequest = {
@@ -83,6 +88,17 @@ describe('AlumnoPreferenciasService', () => {
     service.uploadCv(file).subscribe();
 
     const request = httpTesting.expectOne('/api/alumnos/me/cv');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body instanceof FormData).toBeTrue();
+    request.flush(samplePreferences);
+  });
+
+  it('should upload a profile photo as multipart form data', () => {
+    const service = configure();
+    const file = new File(['img'], 'foto.png', { type: 'image/png' });
+    service.uploadPhoto(file).subscribe();
+
+    const request = httpTesting.expectOne('/api/alumnos/me/foto');
     expect(request.request.method).toBe('PUT');
     expect(request.request.body instanceof FormData).toBeTrue();
     request.flush(samplePreferences);

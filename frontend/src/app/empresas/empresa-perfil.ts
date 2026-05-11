@@ -29,13 +29,6 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
       <ng-container [ngTemplateOutlet]="bodyTpl"></ng-container>
     } @else {
       <main class="page-shell route-page empresa-perfil-page">
-        <header class="route-hero">
-          <p class="eyebrow">Empresa</p>
-          <h1>Perfil de empresa</h1>
-          <p>
-            Revisa y actualiza los datos básicos de contacto de tu empresa para las prácticas FCT.
-          </p>
-        </header>
         <ng-container [ngTemplateOutlet]="bodyTpl"></ng-container>
       </main>
     }

@@ -101,7 +101,7 @@ describe('MisSolicitudesPage', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(solicitudesService.mine).toHaveBeenCalled();
-    expect(compiled.textContent).toContain('Mis solicitudes');
+    expect(compiled.querySelector('.route-hero')).toBeNull();
     expect(compiled.textContent).toContain('Practicas de desarrollo web');
     expect(compiled.textContent).toContain('Tech Norte Formacion');
     expect(compiled.textContent).toContain('Solicitada');

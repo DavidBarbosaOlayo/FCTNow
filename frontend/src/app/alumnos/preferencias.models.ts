@@ -12,6 +12,11 @@ export type AlumnoPreferencias = {
   cvContentType: string | null;
   cvSize: number | null;
   cvUpdatedAt: string | null;
+  hasPhoto: boolean;
+  photoDataUrl: string | null;
+  photoContentType: string | null;
+  photoSize: number | null;
+  photoUpdatedAt: string | null;
 };
 
 export type AlumnoPreferenciasRequest = {

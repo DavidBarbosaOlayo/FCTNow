@@ -4,15 +4,6 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   selector: 'app-coordinador-page',
   template: `
     <main class="page-shell route-page">
-      <header class="route-hero">
-        <p class="eyebrow">Coordinador</p>
-        <h1>Panel inicial de coordinación</h1>
-        <p>
-          Punto de partida para tener una visión global de empresas, ofertas, solicitudes,
-          asignaciones y bloqueos del ciclo FCT.
-        </p>
-      </header>
-
       <section class="route-panel" aria-label="Próximas áreas de coordinación">
         <h2>Áreas previstas</h2>
         <ul class="route-list">

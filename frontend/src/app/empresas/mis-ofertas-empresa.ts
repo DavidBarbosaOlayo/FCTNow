@@ -21,15 +21,6 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
   imports: [RouterLink],
   template: `
     <main class="page-shell route-page mis-ofertas-page">
-      <header class="route-hero">
-        <p class="eyebrow">Empresa</p>
-        <h1>Mis ofertas</h1>
-        <p>
-          Gestiona las ofertas FCT publicadas por tu empresa: crea borradores, publicalos cuando
-          esten listos y cierra los procesos finalizados.
-        </p>
-      </header>
-
       <div class="actions-row">
         <a class="primary-action" routerLink="/empresa/ofertas/nueva">Crear oferta</a>
       </div>

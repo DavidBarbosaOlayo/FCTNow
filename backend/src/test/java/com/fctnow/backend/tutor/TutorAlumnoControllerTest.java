@@ -118,6 +118,12 @@ class TutorAlumnoControllerTest {
         "Alumno Vacio",
         Set.of(UserRole.ALUMNO)));
 
+    UserAccount alumnoPendiente = userAccountRepository.save(new UserAccount(
+        "alumno-pendiente@example.com",
+        passwordEncoder.encode("CorrectPassword123!"),
+        "Alumno Pendiente",
+        Set.of(UserRole.ALUMNO)));
+
     AlumnoPreferencias prefs = new AlumnoPreferencias(alumnoActivo);
     prefs.update(
         "Informatica y comunicaciones",
@@ -126,6 +132,7 @@ class TutorAlumnoControllerTest {
         OfertaModalidad.PRESENCIAL,
         LocalDate.of(2026, 9, 1),
         "Disponibilidad inmediata");
+    prefs.updatePhoto("foto-alumno.png", "image/png", "png-demo".getBytes());
     preferenciasRepository.save(prefs);
 
     OfertaFct oferta = ofertaFctRepository.save(new OfertaFct(
@@ -169,6 +176,10 @@ class TutorAlumnoControllerTest {
     SolicitudFct rechazada = new SolicitudFct(alumnoActivo, oferta2);
     rechazada.changeEstado(SolicitudEstado.RECHAZADA);
     solicitudFctRepository.save(rechazada);
+
+    SolicitudFct pendienteAsignar = new SolicitudFct(alumnoPendiente, oferta2);
+    pendienteAsignar.changeEstado(SolicitudEstado.ACEPTADA);
+    solicitudFctRepository.save(pendienteAsignar);
   }
 
   @Test
@@ -191,19 +202,24 @@ class TutorAlumnoControllerTest {
     mockMvc.perform(get("/api/tutor/alumnos")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com")))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.length()").value(2))
-        .andExpect(jsonPath("$[0].displayName").value("Alumno Activo"))
-        .andExpect(jsonPath("$[0].email").value("alumno-activo@example.com"))
-        .andExpect(jsonPath("$[0].preferencias.cicloFormativo").value("Desarrollo de Aplicaciones Web"))
-        .andExpect(jsonPath("$[0].solicitudes.total").value(2))
-        .andExpect(jsonPath("$[0].solicitudes.aceptadas").value(1))
-        .andExpect(jsonPath("$[0].solicitudes.rechazadas").value(1))
-        .andExpect(jsonPath("$[0].asignacionActual.empresa").value("Tech Norte Formacion"))
-        .andExpect(jsonPath("$[0].asignacionActual.oferta").value("Practicas DAW"))
+        .andExpect(jsonPath("$.length()").value(3))
+        .andExpect(jsonPath("$[0].displayName").value("Alumno Pendiente"))
+        .andExpect(jsonPath("$[0].asignacionPendiente.tipo").value("INTERNA"))
+        .andExpect(jsonPath("$[0].asignacionPendiente.oferta").value("Practicas Sistemas"))
         .andExpect(jsonPath("$[1].displayName").value("Alumno Vacio"))
         .andExpect(jsonPath("$[1].preferencias").doesNotExist())
         .andExpect(jsonPath("$[1].solicitudes.total").value(0))
-        .andExpect(jsonPath("$[1].asignacionActual").doesNotExist());
+        .andExpect(jsonPath("$[1].asignacionActual").doesNotExist())
+        .andExpect(jsonPath("$[2].displayName").value("Alumno Activo"))
+        .andExpect(jsonPath("$[2].email").value("alumno-activo@example.com"))
+        .andExpect(jsonPath("$[2].photoDataUrl").value("data:image/png;base64,cG5nLWRlbW8="))
+        .andExpect(jsonPath("$[2].preferencias.cicloFormativo").value("Desarrollo de Aplicaciones Web"))
+        .andExpect(jsonPath("$[2].solicitudes.total").value(2))
+        .andExpect(jsonPath("$[2].solicitudes.aceptadas").value(1))
+        .andExpect(jsonPath("$[2].solicitudes.rechazadas").value(1))
+        .andExpect(jsonPath("$[2].asignacionActual.empresa").value("Tech Norte Formacion"))
+        .andExpect(jsonPath("$[2].asignacionActual.oferta").value("Practicas DAW"))
+        .andExpect(jsonPath("$[2].asignacionPendiente").doesNotExist());
   }
 
   @Test
@@ -211,7 +227,7 @@ class TutorAlumnoControllerTest {
     mockMvc.perform(get("/api/tutor/alumnos")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("coordinador@example.com")))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.length()").value(2));
+        .andExpect(jsonPath("$.length()").value(3));
   }
 
   private String accessToken(String email) throws Exception {

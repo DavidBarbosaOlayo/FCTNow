@@ -9,16 +9,24 @@ public record TutorAlumnoResponse(
     String email,
     String displayName,
     boolean enabled,
+    String photoDataUrl,
+    boolean hasCv,
+    String cvFileName,
+    String cvContentType,
+    Long cvSize,
+    Instant cvUpdatedAt,
     Preferencias preferencias,
     SolicitudesResumen solicitudes,
-    AsignacionActual asignacionActual) {
+    AsignacionActual asignacionActual,
+    AsignacionPendiente asignacionPendiente) {
 
   public record Preferencias(
       String familiaProfesional,
       String cicloFormativo,
       String localidad,
       String modalidad,
-      LocalDate fechaDisponibilidad) {
+      LocalDate fechaDisponibilidad,
+      String observaciones) {
   }
 
   public record SolicitudesResumen(
@@ -35,5 +43,15 @@ public record TutorAlumnoResponse(
       String oferta,
       String empresa,
       String observaciones) {
+  }
+
+  public record AsignacionPendiente(
+      String tipo,
+      Long solicitudId,
+      Instant aceptadaEn,
+      String oferta,
+      String empresa,
+      String localidad,
+      String urlAplicacion) {
   }
 }

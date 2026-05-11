@@ -139,7 +139,8 @@ describe('PracticasPage', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Búsqueda de prácticas');
+    expect(compiled.querySelector('.route-hero')).toBeNull();
+    expect(compiled.querySelector('.catalog-toolbar')).not.toBeNull();
     expect(compiled.textContent).toContain('Tech Norte Formacion');
     expect(compiled.textContent).toContain('Practicas de desarrollo web');
     expect(compiled.textContent).toContain('1 oferta disponible');

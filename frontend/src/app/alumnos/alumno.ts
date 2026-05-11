@@ -4,15 +4,6 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   selector: 'app-alumno-page',
   template: `
     <main class="page-shell route-page">
-      <header class="route-hero">
-        <p class="eyebrow">Alumno</p>
-        <h1>Panel inicial del alumno</h1>
-        <p>
-          Espacio reservado para consultar ofertas FCT, completar preferencias y revisar el estado
-          de las solicitudes.
-        </p>
-      </header>
-
       <section class="route-panel" aria-label="Próximas áreas del alumno">
         <h2>Áreas previstas</h2>
         <ul class="route-list">

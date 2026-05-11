@@ -44,15 +44,6 @@ type ModalidadOption = {
   imports: [ReactiveFormsModule, RouterLink, ExternalOfferDetailDialog],
   template: `
     <main class="page-shell route-page practicas-page">
-      <header class="route-hero practicas-hero">
-        <p class="eyebrow">Prácticas</p>
-        <h1>Búsqueda de prácticas</h1>
-        <p>
-          Consulta ofertas FCT publicadas por empresas colaboradoras y filtra por familia
-          profesional, localidad o modalidad.
-        </p>
-      </header>
-
       <section class="catalog-toolbar" aria-label="Filtros de ofertas FCT">
         <form class="filters-form" [formGroup]="filtersForm" (ngSubmit)="search()" novalidate>
           <div class="filter-field wide">
@@ -498,14 +489,6 @@ type ModalidadOption = {
         align-content: start;
         gap: 1.1rem;
         padding-top: 2rem;
-      }
-
-      .practicas-hero {
-        max-width: 68rem;
-      }
-
-      .practicas-hero h1 {
-        max-width: 18ch;
       }
 
       .catalog-toolbar,
