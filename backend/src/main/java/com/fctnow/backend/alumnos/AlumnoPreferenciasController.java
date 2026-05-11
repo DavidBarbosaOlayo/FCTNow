@@ -53,6 +53,15 @@ public class AlumnoPreferenciasController {
     return alumnoPreferenciasService.uploadCv(file, authentication);
   }
 
+  @PutMapping(value = "/foto", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @Operation(summary = "Upload or replace the authenticated student's profile photo")
+  @SecurityRequirement(name = "bearerAuth")
+  public AlumnoPreferenciasResponse uploadPhoto(
+      @RequestPart("file") MultipartFile file,
+      JwtAuthenticationToken authentication) {
+    return alumnoPreferenciasService.uploadPhoto(file, authentication);
+  }
+
   @GetMapping("/cv")
   @Operation(summary = "Download the authenticated student's CV")
   @SecurityRequirement(name = "bearerAuth")

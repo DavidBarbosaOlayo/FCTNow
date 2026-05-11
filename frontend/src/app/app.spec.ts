@@ -31,6 +31,6 @@ describe('App', () => {
 
     expect(compiled.querySelector('app-navigation')).toBeTruthy();
     expect(compiled.textContent).toContain('FCTNow');
-    expect(compiled.textContent).toContain('Notificaciones');
+    expect(compiled.textContent).toContain('Prácticas');
   });
 });

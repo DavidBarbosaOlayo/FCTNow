@@ -78,7 +78,8 @@ class AlumnoPreferenciasControllerTest {
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("alumno@example.com")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.familiaProfesional").doesNotExist())
-        .andExpect(jsonPath("$.hasCv").value(false));
+        .andExpect(jsonPath("$.hasCv").value(false))
+        .andExpect(jsonPath("$.hasPhoto").value(false));
   }
 
   @Test
@@ -93,7 +94,8 @@ class AlumnoPreferenciasControllerTest {
         .andExpect(jsonPath("$.localidadPreferida").value("Valencia"))
         .andExpect(jsonPath("$.modalidadPreferida").value("HIBRIDA"))
         .andExpect(jsonPath("$.fechaDisponibilidad").value("2026-09-15"))
-        .andExpect(jsonPath("$.hasCv").value(false));
+        .andExpect(jsonPath("$.hasCv").value(false))
+        .andExpect(jsonPath("$.hasPhoto").value(false));
   }
 
   @Test
@@ -136,6 +138,37 @@ class AlumnoPreferenciasControllerTest {
 
     mockMvc.perform(multipartPut("/api/alumnos/me/cv")
             .file(cv)
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("alumno@example.com")))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void alumnoCanUploadPhoto() throws Exception {
+    MockMultipartFile photo = new MockMultipartFile(
+        "file",
+        "foto-alumno.png",
+        "image/png",
+        "png-demo".getBytes());
+
+    mockMvc.perform(multipartPut("/api/alumnos/me/foto")
+            .file(photo)
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("alumno@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.hasPhoto").value(true))
+        .andExpect(jsonPath("$.photoContentType").value("image/png"))
+        .andExpect(jsonPath("$.photoDataUrl").value("data:image/png;base64,cG5nLWRlbW8="));
+  }
+
+  @Test
+  void uploadPhotoRejectsNonImageFiles() throws Exception {
+    MockMultipartFile photo = new MockMultipartFile(
+        "file",
+        "foto-alumno.txt",
+        "text/plain",
+        "no image".getBytes());
+
+    mockMvc.perform(multipartPut("/api/alumnos/me/foto")
+            .file(photo)
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("alumno@example.com")))
         .andExpect(status().isBadRequest());
   }

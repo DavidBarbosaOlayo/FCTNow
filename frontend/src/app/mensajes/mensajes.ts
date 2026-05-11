@@ -4,15 +4,6 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   selector: 'app-mensajes-page',
   template: `
     <main class="page-shell route-page">
-      <header class="route-hero">
-        <p class="eyebrow">Mensajes</p>
-        <h1>Mensajería de FCTNow</h1>
-        <p>
-          Espacio reservado para centralizar conversaciones entre alumnado, empresas, tutores y
-          coordinación sin implementar todavía comunicación real.
-        </p>
-      </header>
-
       <section class="route-panel" aria-label="Estructura prevista para mensajes">
         <h2>Estructura prevista</h2>
         <ul class="route-list">

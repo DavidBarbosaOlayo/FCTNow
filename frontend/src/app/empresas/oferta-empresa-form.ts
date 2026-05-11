@@ -28,15 +28,6 @@ type ModalidadOption = {
   imports: [ReactiveFormsModule, RouterLink],
   template: `
     <main class="page-shell route-page form-page">
-      <header class="route-hero">
-        <p class="eyebrow">Empresa</p>
-        <h1>{{ isEditMode() ? 'Editar oferta FCT' : 'Crear oferta FCT' }}</h1>
-        <p>
-          Define la informacion principal de la oferta. Las ofertas se crean en estado borrador y
-          pueden publicarse desde el listado cuando esten listas.
-        </p>
-      </header>
-
       @if (status() === 'loading') {
         <section class="state-panel" aria-live="polite">
           <p class="eyebrow">Cargando</p>

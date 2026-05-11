@@ -62,6 +62,21 @@ public class AlumnoPreferencias {
   @Column(name = "cv_updated_at")
   private Instant cvUpdatedAt;
 
+  @Column(name = "foto_file_name")
+  private String fotoFileName;
+
+  @Column(name = "foto_content_type", length = 100)
+  private String fotoContentType;
+
+  @Column(name = "foto_size")
+  private Long fotoSize;
+
+  @Column(name = "foto_content")
+  private byte[] fotoContent;
+
+  @Column(name = "foto_updated_at")
+  private Instant fotoUpdatedAt;
+
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;
 
@@ -100,6 +115,15 @@ public class AlumnoPreferencias {
     this.cvContent = content;
     this.cvUpdatedAt = Instant.now();
     this.updatedAt = this.cvUpdatedAt;
+  }
+
+  public void updatePhoto(String fileName, String contentType, byte[] content) {
+    this.fotoFileName = fileName;
+    this.fotoContentType = contentType;
+    this.fotoSize = (long) content.length;
+    this.fotoContent = content;
+    this.fotoUpdatedAt = Instant.now();
+    this.updatedAt = this.fotoUpdatedAt;
   }
 
   public Long getId() {
@@ -152,6 +176,26 @@ public class AlumnoPreferencias {
 
   public Instant getCvUpdatedAt() {
     return cvUpdatedAt;
+  }
+
+  public String getFotoFileName() {
+    return fotoFileName;
+  }
+
+  public String getFotoContentType() {
+    return fotoContentType;
+  }
+
+  public Long getFotoSize() {
+    return fotoSize;
+  }
+
+  public byte[] getFotoContent() {
+    return fotoContent;
+  }
+
+  public Instant getFotoUpdatedAt() {
+    return fotoUpdatedAt;
   }
 
   public Instant getCreatedAt() {

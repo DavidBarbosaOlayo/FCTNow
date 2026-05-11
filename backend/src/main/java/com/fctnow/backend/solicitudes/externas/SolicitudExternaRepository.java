@@ -37,6 +37,16 @@ public interface SolicitudExternaRepository extends JpaRepository<SolicitudExter
         AND NOT EXISTS (
           SELECT 1 FROM AsignacionFctExterna a WHERE a.solicitud.id = s.id
         )
+        AND NOT EXISTS (
+          SELECT 1 FROM AsignacionFctExterna a
+          WHERE a.alumno = s.alumno
+            AND a.estado = com.fctnow.backend.asignaciones.AsignacionEstado.ACTIVA
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM com.fctnow.backend.asignaciones.AsignacionFct a
+          WHERE a.alumno = s.alumno
+            AND a.estado = com.fctnow.backend.asignaciones.AsignacionEstado.ACTIVA
+        )
       ORDER BY s.updatedAt DESC""")
   List<SolicitudExterna> findAceptadasSinAsignacion();
 }

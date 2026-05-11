@@ -34,13 +34,6 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
       <ng-container [ngTemplateOutlet]="bodyTpl"></ng-container>
     } @else {
       <main class="page-shell route-page preferencias-page">
-        <header class="route-hero">
-          <p class="eyebrow">Alumno</p>
-          <h1>Preferencias y CV</h1>
-          <p>
-            Completa tus preferencias básicas de prácticas FCT y adjunta tu CV actualizado.
-          </p>
-        </header>
         <ng-container [ngTemplateOutlet]="bodyTpl"></ng-container>
       </main>
     }
@@ -152,6 +145,46 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
           </form>
 
           <aside class="cv-panel" aria-label="CV del alumno">
+            <div class="photo-block">
+              <span class="profile-photo" [class.has-photo]="!!preferences()?.photoDataUrl">
+                @if (preferences()?.photoDataUrl) {
+                  <img [src]="preferences()?.photoDataUrl" alt="Foto identificativa del alumno" />
+                } @else {
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M12 12c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4Zm0 2c-3.4 0-6.4 1.7-8 4.4.8 1 3.4 1.6 8 1.6s7.2-.6 8-1.6c-1.6-2.7-4.6-4.4-8-4.4Z" />
+                  </svg>
+                }
+              </span>
+              <div class="photo-copy">
+                <strong>Foto identificativa</strong>
+                <span>{{ preferences()?.hasPhoto ? 'Foto asociada al perfil.' : 'Sin foto asociada.' }}</span>
+              </div>
+            </div>
+
+            <label class="file-control">
+              <span>Seleccionar imagen</span>
+              <input type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" (change)="onPhotoSelected($event)" />
+            </label>
+
+            @if (selectedPhoto()) {
+              <p class="muted">Imagen seleccionada: {{ selectedPhoto()?.name }}</p>
+            }
+
+            @if (photoUploadStatus() === 'saved') {
+              <p class="form-message success" aria-live="polite">Foto actualizada.</p>
+            } @else if (photoUploadStatus() === 'error') {
+              <p class="form-message error" role="alert">{{ photoUploadError() }}</p>
+            }
+
+            <button
+              class="secondary-action"
+              type="button"
+              [disabled]="!selectedPhoto() || photoUploadStatus() === 'uploading'"
+              (click)="uploadPhoto()"
+            >
+              {{ photoUploadStatus() === 'uploading' ? 'Subiendo...' : 'Subir foto' }}
+            </button>
+
             <div class="section-heading">
               <p class="eyebrow">CV</p>
               <h2>Currículum actualizado</h2>
@@ -236,6 +269,22 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
           </article>
 
           <aside class="cv-panel" aria-label="CV del alumno">
+            <div class="photo-block">
+              <span class="profile-photo" [class.has-photo]="!!preferences()?.photoDataUrl">
+                @if (preferences()?.photoDataUrl) {
+                  <img [src]="preferences()?.photoDataUrl" alt="Foto identificativa del alumno" />
+                } @else {
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M12 12c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4Zm0 2c-3.4 0-6.4 1.7-8 4.4.8 1 3.4 1.6 8 1.6s7.2-.6 8-1.6c-1.6-2.7-4.6-4.4-8-4.4Z" />
+                  </svg>
+                }
+              </span>
+              <div class="photo-copy">
+                <strong>Foto identificativa</strong>
+                <span>{{ preferences()?.hasPhoto ? 'Foto asociada al perfil.' : 'Sin foto asociada.' }}</span>
+              </div>
+            </div>
+
             <div class="section-heading">
               <p class="eyebrow">CV</p>
               <h2>Currículum actualizado</h2>
@@ -412,6 +461,47 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
         font-size: 0.92rem;
       }
 
+      .photo-block {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .profile-photo {
+        width: 4rem;
+        height: 4rem;
+        border-radius: 999px;
+        background: rgba(15, 95, 89, 0.08);
+        color: var(--muted);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        overflow: hidden;
+      }
+
+      .profile-photo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .profile-photo svg {
+        width: 2.4rem;
+        height: 2.4rem;
+        fill: currentColor;
+      }
+
+      .photo-copy {
+        display: grid;
+        gap: 0.2rem;
+      }
+
+      .photo-copy span {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
       .primary-action,
       .secondary-action,
       .text-link {
@@ -479,11 +569,14 @@ export class PreferenciasAlumnoPage implements OnInit {
   protected readonly status = signal<PageStatus>('loading');
   protected readonly saveStatus = signal<SaveStatus>('idle');
   protected readonly uploadStatus = signal<UploadStatus>('idle');
+  protected readonly photoUploadStatus = signal<UploadStatus>('idle');
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly saveError = signal<string | null>(null);
   protected readonly uploadError = signal<string | null>(null);
+  protected readonly photoUploadError = signal<string | null>(null);
   protected readonly preferences = signal<AlumnoPreferencias | null>(null);
   protected readonly selectedFile = signal<File | null>(null);
+  protected readonly selectedPhoto = signal<File | null>(null);
   protected readonly editing = signal(false);
 
   protected readonly form = this.fb.nonNullable.group({
@@ -617,8 +710,11 @@ export class PreferenciasAlumnoPage implements OnInit {
     this.saveStatus.set('idle');
     this.saveError.set(null);
     this.selectedFile.set(null);
+    this.selectedPhoto.set(null);
     this.uploadStatus.set('idle');
     this.uploadError.set(null);
+    this.photoUploadStatus.set('idle');
+    this.photoUploadError.set(null);
     this.editing.set(true);
   }
 
@@ -627,8 +723,11 @@ export class PreferenciasAlumnoPage implements OnInit {
     this.saveStatus.set('idle');
     this.saveError.set(null);
     this.selectedFile.set(null);
+    this.selectedPhoto.set(null);
     this.uploadStatus.set('idle');
     this.uploadError.set(null);
+    this.photoUploadStatus.set('idle');
+    this.photoUploadError.set(null);
     this.editing.set(false);
   }
 
@@ -686,6 +785,14 @@ export class PreferenciasAlumnoPage implements OnInit {
     this.uploadError.set(null);
   }
 
+  protected onPhotoSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.item(0) ?? null;
+    this.selectedPhoto.set(file);
+    this.photoUploadStatus.set('idle');
+    this.photoUploadError.set(null);
+  }
+
   protected uploadCv(): void {
     const file = this.selectedFile();
     if (!file || this.uploadStatus() === 'uploading') {
@@ -707,6 +814,31 @@ export class PreferenciasAlumnoPage implements OnInit {
         error: (error: unknown) => {
           this.uploadError.set(errorMessage(error));
           this.uploadStatus.set('error');
+        },
+      });
+  }
+
+  protected uploadPhoto(): void {
+    const file = this.selectedPhoto();
+    if (!file || this.photoUploadStatus() === 'uploading') {
+      return;
+    }
+
+    this.photoUploadStatus.set('uploading');
+    this.photoUploadError.set(null);
+
+    this.preferenciasService
+      .uploadPhoto(file)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (preferences) => {
+          this.preferences.set(preferences);
+          this.selectedPhoto.set(null);
+          this.photoUploadStatus.set('saved');
+        },
+        error: (error: unknown) => {
+          this.photoUploadError.set(errorMessage(error));
+          this.photoUploadStatus.set('error');
         },
       });
   }
@@ -757,8 +889,8 @@ function errorMessage(error: unknown): string {
   }
 
   if (error instanceof HttpErrorResponse && error.status === 400) {
-    return 'Revisa los datos enviados. El CV debe ser un PDF válido y no superar el tamaño permitido.';
+    return 'Revisa los datos enviados. El CV o la foto no tienen un formato válido o superan el tamaño permitido.';
   }
 
-  return 'No se pudo completar la operación. Inténtalo de nuevo.';
+    return 'No se pudo completar la operación. Inténtalo de nuevo.';
 }

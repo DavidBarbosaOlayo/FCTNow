@@ -62,6 +62,16 @@ public interface SolicitudFctRepository extends JpaRepository<SolicitudFct, Long
           select 1 from com.fctnow.backend.asignaciones.AsignacionFct a
           where a.solicitud = s
         )
+        and not exists (
+          select 1 from com.fctnow.backend.asignaciones.AsignacionFct a
+          where a.alumno = s.alumno
+            and a.estado = com.fctnow.backend.asignaciones.AsignacionEstado.ACTIVA
+        )
+        and not exists (
+          select 1 from com.fctnow.backend.asignaciones.externas.AsignacionFctExterna a
+          where a.alumno = s.alumno
+            and a.estado = com.fctnow.backend.asignaciones.AsignacionEstado.ACTIVA
+        )
       order by s.createdAt desc, s.id desc
       """)
   List<SolicitudFct> findAceptadasSinAsignacion();

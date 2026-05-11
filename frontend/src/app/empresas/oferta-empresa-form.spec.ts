@@ -75,21 +75,23 @@ describe('OfertaEmpresaFormPage', () => {
     fixture = TestBed.createComponent(OfertaEmpresaFormPage);
   }
 
-  it('should render the create heading when no id is provided', async () => {
+  it('should render the create form when no id is provided', async () => {
     await configure();
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Crear oferta FCT');
+    expect(compiled.querySelector('.route-hero')).toBeNull();
+    expect(compiled.textContent).toContain('Crear oferta');
   });
 
-  it('should render the edit heading and prefill the form when editing', async () => {
+  it('should render the edit form and prefill it when editing', async () => {
     await configure({ routeId: '7', detail: of(sampleOferta) });
     fixture.detectChanges();
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Editar oferta FCT');
+    expect(compiled.querySelector('.route-hero')).toBeNull();
+    expect(compiled.textContent).toContain('Guardar cambios');
     const titleInput = compiled.querySelector<HTMLInputElement>('input[formControlName="titulo"]');
     expect(titleInput?.value).toBe('Practicas web');
   });

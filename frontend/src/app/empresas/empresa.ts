@@ -4,15 +4,6 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   selector: 'app-empresa-page',
   template: `
     <main class="page-shell route-page">
-      <header class="route-hero">
-        <p class="eyebrow">Empresa</p>
-        <h1>Panel inicial de empresa</h1>
-        <p>
-          Base para que las empresas colaboradoras gestionen datos de contacto, plazas de FCT y
-          observaciones de seguimiento.
-        </p>
-      </header>
-
       <section class="route-panel" aria-label="Próximas áreas de empresa">
         <h2>Áreas previstas</h2>
         <ul class="route-list">

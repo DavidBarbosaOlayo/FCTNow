@@ -12,13 +12,26 @@ export class TutorAlumnosService {
   private readonly apiBaseUrl = withoutTrailingSlash(inject(API_BASE_URL));
 
   list(): Observable<TutorAlumno[]> {
+    return this.withAuth((headers) =>
+      this.http.get<TutorAlumno[]>(`${this.apiBaseUrl}/tutor/alumnos`, { headers }),
+    );
+  }
+
+  downloadCv(alumnoId: number): Observable<Blob> {
+    return this.withAuth((headers) =>
+      this.http.get(`${this.apiBaseUrl}/tutor/alumnos/${alumnoId}/cv`, {
+        headers,
+        responseType: 'blob',
+      }),
+    );
+  }
+
+  private withAuth<T>(builder: (headers: HttpHeaders) => Observable<T>): Observable<T> {
     const token = this.authService.accessToken();
     if (!token) {
       return throwError(() => new Error('No hay una sesion activa.'));
     }
-    return this.http.get<TutorAlumno[]>(`${this.apiBaseUrl}/tutor/alumnos`, {
-      headers: new HttpHeaders({ Authorization: `Bearer ${token}` }),
-    });
+    return builder(new HttpHeaders({ Authorization: `Bearer ${token}` }));
   }
 }
 

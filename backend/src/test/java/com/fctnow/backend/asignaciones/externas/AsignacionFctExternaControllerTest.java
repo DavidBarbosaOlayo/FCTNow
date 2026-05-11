@@ -113,6 +113,13 @@ class AsignacionFctExternaControllerTest {
             .content(body))
         .andExpect(status().isConflict());
 
+    Long segundaSolicitudId = createAndAccept(alumnoToken, "ext-10", "Becario datos");
+    mockMvc.perform(post("/api/asignaciones/externas")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + tutorToken)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"solicitudExternaId\":" + segundaSolicitudId + "}"))
+        .andExpect(status().isConflict());
+
     mockMvc.perform(get("/api/asignaciones/externas/candidatas")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + tutorToken))
         .andExpect(jsonPath("$.length()").value(0));

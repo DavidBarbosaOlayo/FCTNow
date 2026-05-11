@@ -16,25 +16,24 @@ import { PracticasPage } from './practicas/practicas';
 
 type RoutePageCase = {
   component: Type<unknown>;
-  expectedText: string;
 };
 
 describe('route placeholder pages', () => {
   const pageCases: RoutePageCase[] = [
-    { component: LoginPage, expectedText: 'Entrada a FCTNow' },
-    { component: PracticasPage, expectedText: 'Búsqueda de prácticas' },
-    { component: MensajesPage, expectedText: 'Mensajería de FCTNow' },
-    { component: NotificacionesPage, expectedText: 'Centro de notificaciones' },
-    { component: PerfilPage, expectedText: 'Perfil de usuario' },
-    { component: AlumnoPage, expectedText: 'Panel inicial del alumno' },
-    { component: EmpresaPage, expectedText: 'Panel inicial de empresa' },
-    { component: CoordinadorPage, expectedText: 'Panel inicial de coordinación' },
-    { component: AdminPage, expectedText: 'Panel inicial de administración' },
-    { component: NotFoundPage, expectedText: 'Página no encontrada' },
+    { component: LoginPage },
+    { component: PracticasPage },
+    { component: MensajesPage },
+    { component: NotificacionesPage },
+    { component: PerfilPage },
+    { component: AlumnoPage },
+    { component: EmpresaPage },
+    { component: CoordinadorPage },
+    { component: AdminPage },
+    { component: NotFoundPage },
   ];
 
   for (const pageCase of pageCases) {
-    it(`should render ${pageCase.expectedText}`, async () => {
+    it(`should render ${pageCase.component.name} without a route hero header`, async () => {
       await TestBed.configureTestingModule({
         imports: [pageCase.component],
         providers: [
@@ -70,7 +69,8 @@ describe('route placeholder pages', () => {
       httpTesting.verify();
       const compiled = fixture.nativeElement as HTMLElement;
 
-      expect(compiled.textContent).toContain(pageCase.expectedText);
+      expect(compiled.querySelector('main.route-page')).not.toBeNull();
+      expect(compiled.querySelector('.route-hero')).toBeNull();
     });
   }
 });

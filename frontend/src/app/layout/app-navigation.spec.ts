@@ -50,16 +50,12 @@ describe('AppNavigation', () => {
       'FCTNow',
       'Inicio',
       'Prácticas',
-      'Mensajes',
-      'Notificaciones',
       'Perfil',
     ]);
     expect(hrefs).toEqual([
       '/',
       '/',
       '/practicas',
-      '/mensajes',
-      '/notificaciones',
       '/perfil',
     ]);
   });
@@ -129,13 +125,13 @@ describe('AppNavigation', () => {
     expect(hrefs).not.toContain('/empresa/solicitudes');
   });
 
-  it('should expose the asignaciones link for tutor centro', () => {
+  it('should hide the asignaciones link for tutor centro', () => {
     configure(['TUTOR_CENTRO']);
 
     const { labels, hrefs } = renderLabels();
 
-    expect(labels).toContain('Asignaciones');
-    expect(hrefs).toContain('/asignaciones');
+    expect(labels).not.toContain('Asignaciones');
+    expect(hrefs).not.toContain('/asignaciones');
   });
 
   it('should expose the tutor panel link for tutor centro', () => {

@@ -1,5 +1,7 @@
 package com.fctnow.backend.asignaciones.externas;
 
+import com.fctnow.backend.asignaciones.AsignacionEstado;
+import com.fctnow.backend.asignaciones.AsignacionFctRepository;
 import com.fctnow.backend.solicitudes.externas.SolicitudExterna;
 import com.fctnow.backend.solicitudes.externas.SolicitudExternaEstado;
 import com.fctnow.backend.solicitudes.externas.SolicitudExternaRepository;
@@ -22,14 +24,17 @@ public class AsignacionFctExternaService {
       EnumSet.of(UserRole.TUTOR_CENTRO, UserRole.COORDINADOR);
 
   private final AsignacionFctExternaRepository repository;
+  private final AsignacionFctRepository asignacionFctRepository;
   private final SolicitudExternaRepository solicitudRepository;
   private final UserAccountRepository userAccountRepository;
 
   public AsignacionFctExternaService(
       AsignacionFctExternaRepository repository,
+      AsignacionFctRepository asignacionFctRepository,
       SolicitudExternaRepository solicitudRepository,
       UserAccountRepository userAccountRepository) {
     this.repository = repository;
+    this.asignacionFctRepository = asignacionFctRepository;
     this.solicitudRepository = solicitudRepository;
     this.userAccountRepository = userAccountRepository;
   }
@@ -71,6 +76,14 @@ public class AsignacionFctExternaService {
       throw new ResponseStatusException(
           HttpStatus.CONFLICT,
           "Ya existe una asignacion para esta solicitud externa");
+    }
+
+    Long alumnoId = solicitud.getAlumno().getId();
+    if (repository.existsByAlumnoIdAndEstado(alumnoId, AsignacionEstado.ACTIVA)
+        || asignacionFctRepository.existsByAlumnoIdAndEstado(alumnoId, AsignacionEstado.ACTIVA)) {
+      throw new ResponseStatusException(
+          HttpStatus.CONFLICT,
+          "El alumno ya tiene una asignacion activa");
     }
 
     AsignacionFctExterna asignacion =

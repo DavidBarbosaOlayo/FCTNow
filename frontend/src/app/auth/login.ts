@@ -10,15 +10,6 @@ import { AuthService } from './auth.service';
   imports: [ReactiveFormsModule],
   template: `
     <main class="page-shell route-page login-page">
-      <header class="route-hero login-hero">
-        <p class="eyebrow">Acceso</p>
-        <h1>Entrada a FCTNow</h1>
-        <p>
-          Inicia sesión con tu cuenta de alumno, empresa, tutor de centro, coordinación o
-          administración.
-        </p>
-      </header>
-
       <section class="route-panel login-panel" aria-labelledby="login-title">
         <div class="login-copy">
           <p class="eyebrow">Credenciales</p>

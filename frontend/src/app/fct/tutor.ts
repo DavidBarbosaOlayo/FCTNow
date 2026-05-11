@@ -10,30 +10,23 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Observable } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
+import { AsignacionesExternasService } from '../asignaciones/asignaciones-externas.service';
+import { AsignacionesService } from '../asignaciones/asignaciones.service';
 import { TutorAlumno } from './tutor-alumnos.models';
 import { TutorAlumnosService } from './tutor-alumnos.service';
 
 type LoadStatus = 'loading' | 'loaded' | 'error';
+type AssignStatus = 'idle' | 'assigning' | 'error' | 'success';
+type CvActionStatus = 'idle' | 'loading' | 'error';
+type ViewMode = 'list' | 'cards';
 
 @Component({
   selector: 'app-tutor-page',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule],
   template: `
     <main class="page-shell route-page tutor-page">
-      <header class="route-hero">
-        <p class="eyebrow">Tutor centro</p>
-        <h1>Alumnado del centro</h1>
-        <p>
-          Listado completo del alumnado con datos personales, preferencias, actividad de
-          solicitudes y asignación actual si la tiene.
-        </p>
-        @if (currentUserName(); as nombre) {
-          <p class="muted welcome-line">Sesión activa como <strong>{{ nombre }}</strong>.</p>
-        }
-      </header>
-
       <section class="kpi-grid" aria-label="Resumen del alumnado">
         <article class="kpi-card">
           <p class="eyebrow">Alumnos</p>
@@ -75,10 +68,50 @@ type LoadStatus = 'loading' | 'loaded' | 'error';
               <option value="SIN_ASIGNAR">Sin asignación</option>
             </select>
           </label>
-          <p class="filter-summary">
-            {{ filteredAlumnos().length }} de {{ alumnos().length }} alumnos
-          </p>
-          <a class="ghost-action" routerLink="/asignaciones">Ir a asignaciones</a>
+          <label class="filter-control">
+            <span>Familia profesional</span>
+            <select [formControl]="familiaFilter">
+              <option value="TODAS">Todas</option>
+              @for (familia of familiasDisponibles(); track familia) {
+                <option [value]="familia">{{ familia }}</option>
+              }
+            </select>
+          </label>
+          <label class="filter-control">
+            <span>Ciclo formativo</span>
+            <select [formControl]="cicloFilter">
+              <option value="TODOS">Todos</option>
+              @for (ciclo of ciclosDisponibles(); track ciclo) {
+                <option [value]="ciclo">{{ ciclo }}</option>
+              }
+            </select>
+          </label>
+          <button
+            type="button"
+            class="clear-filters-button"
+            [disabled]="!hasActiveFilters()"
+            (click)="clearFilters()"
+          >
+            Limpiar
+          </button>
+          <div class="view-toggle" role="group" aria-label="Formato de visualización">
+            <button
+              type="button"
+              [class.is-active]="viewMode() === 'list'"
+              [attr.aria-pressed]="viewMode() === 'list'"
+              (click)="setViewMode('list')"
+            >
+              Listado
+            </button>
+            <button
+              type="button"
+              [class.is-active]="viewMode() === 'cards'"
+              [attr.aria-pressed]="viewMode() === 'cards'"
+              (click)="setViewMode('cards')"
+            >
+              Cards
+            </button>
+          </div>
         </div>
       </section>
 
@@ -98,15 +131,124 @@ type LoadStatus = 'loading' | 'loaded' | 'error';
           <p class="eyebrow">Sin coincidencias</p>
           <h2>No hay alumnos con esos filtros</h2>
         </section>
+      } @else if (viewMode() === 'list') {
+        <section
+          class="alumno-list"
+          aria-label="Listado detallado de alumnos"
+        >
+          @for (a of filteredAlumnos(); track a.id) {
+            <article class="alumno-row" [class.is-assigned]="!!a.asignacionActual">
+              <div class="row-main">
+                <button
+                  type="button"
+                  class="student-cell student-identity-button"
+                  (click)="openAlumnoDetail(a)"
+                >
+                  <span class="student-avatar" [class.has-photo]="!!a.photoDataUrl">
+                    @if (a.photoDataUrl) {
+                      <img [src]="a.photoDataUrl" [alt]="'Foto de ' + a.displayName" />
+                    } @else {
+                      <svg aria-hidden="true" viewBox="0 0 24 24">
+                        <path d="M12 12c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4Zm0 2c-3.4 0-6.4 1.7-8 4.4.8 1 3.4 1.6 8 1.6s7.2-.6 8-1.6c-1.6-2.7-4.6-4.4-8-4.4Z" />
+                      </svg>
+                    }
+                  </span>
+                  <div class="student-copy">
+                    <h3 [attr.title]="a.displayName">{{ a.displayName }}</h3>
+                    <p class="alumno-email" [attr.title]="a.email">{{ a.email }}</p>
+                  </div>
+                </button>
+                <div class="status-cell">
+                  @if (a.asignacionActual) {
+                    <span class="estado-pill" [attr.data-estado]="a.asignacionActual.estado">
+                      {{ estadoLabel(a.asignacionActual.estado) }}
+                    </span>
+                  } @else {
+                    <span class="estado-pill estado-sin">Sin asignación</span>
+                  }
+                </div>
+                <dl class="row-details" aria-label="Datos académicos">
+                  <div>
+                    <dt>Familia</dt>
+                    <dd [attr.title]="a.preferencias?.familiaProfesional || null">
+                      {{ a.preferencias?.familiaProfesional || '—' }}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Ciclo</dt>
+                    <dd [attr.title]="a.preferencias?.cicloFormativo || null">
+                      {{ a.preferencias?.cicloFormativo || '—' }}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Localidad</dt>
+                    <dd [attr.title]="a.preferencias?.localidad || null">
+                      {{ a.preferencias?.localidad || '—' }}
+                    </dd>
+                  </div>
+                </dl>
+                <div class="row-counters" aria-label="Resumen de solicitudes">
+                  <span title="Total">{{ a.solicitudes.total }}</span>
+                  <span title="Pendientes">{{ a.solicitudes.solicitadas }}</span>
+                  <span title="Aceptadas">{{ a.solicitudes.aceptadas }}</span>
+                  <span title="Rechazadas">{{ a.solicitudes.rechazadas }}</span>
+                </div>
+              </div>
+
+              @if (a.asignacionActual) {
+                <div class="row-assignment">
+                  <span>Asignación</span>
+                  <strong [attr.title]="a.asignacionActual.empresa">
+                    {{ a.asignacionActual.empresa }}
+                  </strong>
+                  <span [attr.title]="a.asignacionActual.oferta">
+                    {{ a.asignacionActual.oferta }}
+                  </span>
+                  <span [attr.title]="'Desde ' + formatFecha(a.asignacionActual.fechaAsignacion)">
+                    Desde {{ formatFecha(a.asignacionActual.fechaAsignacion) }}
+                  </span>
+                </div>
+              } @else if (a.asignacionPendiente) {
+                <div class="row-assignment is-pending">
+                  <span>Lista para asignar</span>
+                  <strong [attr.title]="a.asignacionPendiente.empresa">
+                    {{ a.asignacionPendiente.empresa }}
+                  </strong>
+                  <span [attr.title]="a.asignacionPendiente.oferta">
+                    {{ a.asignacionPendiente.oferta }}
+                  </span>
+                  <button type="button" class="assign-button" (click)="openAssignModal(a)">
+                    Asignar
+                  </button>
+                </div>
+              }
+            </article>
+          }
+        </section>
       } @else {
         <section class="alumno-grid" aria-label="Listado detallado de alumnos">
           @for (a of filteredAlumnos(); track a.id) {
-            <article class="alumno-card">
+            <article class="alumno-card" [class.is-assigned]="!!a.asignacionActual">
               <header class="alumno-card-heading">
-                <div>
-                  <h3>{{ a.displayName }}</h3>
-                  <p class="alumno-email">{{ a.email }}</p>
-                </div>
+                <button
+                  type="button"
+                  class="student-cell card-student-cell student-identity-button"
+                  (click)="openAlumnoDetail(a)"
+                >
+                  <span class="student-avatar" [class.has-photo]="!!a.photoDataUrl">
+                    @if (a.photoDataUrl) {
+                      <img [src]="a.photoDataUrl" [alt]="'Foto de ' + a.displayName" />
+                    } @else {
+                      <svg aria-hidden="true" viewBox="0 0 24 24">
+                        <path d="M12 12c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4Zm0 2c-3.4 0-6.4 1.7-8 4.4.8 1 3.4 1.6 8 1.6s7.2-.6 8-1.6c-1.6-2.7-4.6-4.4-8-4.4Z" />
+                      </svg>
+                    }
+                  </span>
+                  <div class="student-copy">
+                    <h3>{{ a.displayName }}</h3>
+                    <p class="alumno-email">{{ a.email }}</p>
+                  </div>
+                </button>
                 @if (a.asignacionActual) {
                   <span class="estado-pill" [attr.data-estado]="a.asignacionActual.estado">
                     {{ estadoLabel(a.asignacionActual.estado) }}
@@ -167,19 +309,222 @@ type LoadStatus = 'loading' | 'loaded' | 'error';
                   <p class="muted">
                     Desde {{ formatFecha(a.asignacionActual.fechaAsignacion) }}
                   </p>
-                  @if (a.asignacionActual.observaciones) {
-                    <p class="muted observaciones">{{ a.asignacionActual.observaciones }}</p>
-                  }
                 </section>
-              } @else if (a.solicitudes.aceptadas > 0) {
-                <p class="hint">
-                  Tiene {{ a.solicitudes.aceptadas }} solicitud(es) aceptadas pendientes de
-                  oficializar.
-                  <a routerLink="/asignaciones">Crear asignación</a>
-                </p>
+              } @else if (a.asignacionPendiente) {
+                <section class="asignacion-pendiente" aria-label="Asignación pendiente">
+                  <div>
+                    <p class="eyebrow">Lista para asignar</p>
+                    <p class="asignacion-line">
+                      <strong>{{ a.asignacionPendiente.empresa }}</strong> ·
+                      {{ a.asignacionPendiente.oferta }}
+                    </p>
+                    <p class="muted">
+                      Aceptada el {{ formatFecha(a.asignacionPendiente.aceptadaEn) }}
+                    </p>
+                  </div>
+                  <button type="button" class="assign-button" (click)="openAssignModal(a)">
+                    Asignar
+                  </button>
+                </section>
               }
             </article>
           }
+        </section>
+      }
+      @if (selectedDetailAlumno(); as alumno) {
+        <section class="modal-backdrop" role="presentation" (click)="closeAlumnoDetail()">
+          <article
+            class="confirm-modal detail-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="student-detail-title"
+            (click)="$event.stopPropagation()"
+          >
+            <header class="student-detail-header">
+              <span class="student-avatar detail-avatar" [class.has-photo]="!!alumno.photoDataUrl">
+                @if (alumno.photoDataUrl) {
+                  <img [src]="alumno.photoDataUrl" [alt]="'Foto de ' + alumno.displayName" />
+                } @else {
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M12 12c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4Zm0 2c-3.4 0-6.4 1.7-8 4.4.8 1 3.4 1.6 8 1.6s7.2-.6 8-1.6c-1.6-2.7-4.6-4.4-8-4.4Z" />
+                  </svg>
+                }
+              </span>
+              <div>
+                <h2 id="student-detail-title">{{ alumno.displayName }}</h2>
+                <p class="alumno-email">{{ alumno.email }}</p>
+              </div>
+            </header>
+
+            <dl class="detail-grid">
+              <div>
+                <dt>Estado de cuenta</dt>
+                <dd>{{ alumno.enabled ? 'Activa' : 'Deshabilitada' }}</dd>
+              </div>
+              <div>
+                <dt>Estado FCT</dt>
+                <dd>{{ alumno.asignacionActual ? estadoLabel(alumno.asignacionActual.estado) : 'Sin asignación' }}</dd>
+              </div>
+              <div>
+                <dt>Familia profesional</dt>
+                <dd>{{ alumno.preferencias?.familiaProfesional || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Ciclo formativo</dt>
+                <dd>{{ alumno.preferencias?.cicloFormativo || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Localidad preferida</dt>
+                <dd>{{ alumno.preferencias?.localidad || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Modalidad preferida</dt>
+                <dd>{{ modalidadLabel(alumno.preferencias?.modalidad) }}</dd>
+              </div>
+              <div>
+                <dt>Disponibilidad</dt>
+                <dd>{{ formatFecha(alumno.preferencias?.fechaDisponibilidad) || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Solicitudes</dt>
+                <dd>
+                  {{ alumno.solicitudes.total }} total ·
+                  {{ alumno.solicitudes.solicitadas }} pendientes ·
+                  {{ alumno.solicitudes.aceptadas }} aceptadas ·
+                  {{ alumno.solicitudes.rechazadas }} rechazadas
+                </dd>
+              </div>
+              <div class="detail-full">
+                <dt>Observaciones del alumno</dt>
+                <dd>{{ alumno.preferencias?.observaciones || '—' }}</dd>
+              </div>
+              @if (alumno.asignacionActual) {
+                <div class="detail-full">
+                  <dt>Asignación actual</dt>
+                  <dd>
+                    {{ alumno.asignacionActual.empresa }} · {{ alumno.asignacionActual.oferta }}
+                    · Desde {{ formatFecha(alumno.asignacionActual.fechaAsignacion) }}
+                  </dd>
+                </div>
+              } @else if (alumno.asignacionPendiente) {
+                <div class="detail-full">
+                  <dt>Asignación pendiente</dt>
+                  <dd>
+                    {{ alumno.asignacionPendiente.empresa }} · {{ alumno.asignacionPendiente.oferta }}
+                    · {{ alumno.asignacionPendiente.tipo === 'INTERNA' ? 'Oferta interna' : 'Oferta externa' }}
+                  </dd>
+                </div>
+              }
+            </dl>
+
+            <section class="cv-detail-panel" aria-label="CV del alumno">
+              <div>
+                <p class="eyebrow">CV</p>
+                @if (alumno.hasCv) {
+                  <p class="cv-detail-title">{{ alumno.cvFileName || 'CV del alumno' }}</p>
+                  <p class="muted">{{ cvSummary(alumno) }}</p>
+                } @else {
+                  <p class="muted">El alumno aún no ha subido CV.</p>
+                }
+              </div>
+              @if (alumno.hasCv) {
+                <div class="cv-detail-actions">
+                  <button
+                    type="button"
+                    class="secondary-button"
+                    [disabled]="cvActionStatus() === 'loading'"
+                    (click)="previewCv(alumno)"
+                  >
+                    Previsualizar
+                  </button>
+                  <button
+                    type="button"
+                    class="primary-button"
+                    [disabled]="cvActionStatus() === 'loading'"
+                    (click)="downloadCv(alumno)"
+                  >
+                    Descargar
+                  </button>
+                </div>
+              }
+            </section>
+
+            @if (cvActionStatus() === 'error') {
+              <p class="modal-error" role="alert">{{ cvActionError() }}</p>
+            }
+
+            <div class="modal-actions">
+              <button type="button" class="secondary-button" (click)="closeAlumnoDetail()">
+                Cerrar
+              </button>
+            </div>
+          </article>
+        </section>
+      }
+
+      @if (selectedAlumno(); as alumno) {
+        <section class="modal-backdrop" role="presentation" (click)="closeAssignModal()">
+          <article
+            class="confirm-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="assign-modal-title"
+            (click)="$event.stopPropagation()"
+          >
+            <p class="eyebrow">Confirmar asignación</p>
+            <h2 id="assign-modal-title">Asignar empresa de prácticas</h2>
+            @if (alumno.asignacionPendiente; as pendiente) {
+              <dl class="confirm-details">
+                <div>
+                  <dt>Alumno</dt>
+                  <dd>{{ alumno.displayName }} · {{ alumno.email }}</dd>
+                </div>
+                <div>
+                  <dt>Oferta</dt>
+                  <dd>{{ pendiente.oferta }}</dd>
+                </div>
+                <div>
+                  <dt>Empresa</dt>
+                  <dd>{{ pendiente.empresa }}</dd>
+                </div>
+                <div>
+                  <dt>Tipo</dt>
+                  <dd>{{ pendiente.tipo === 'INTERNA' ? 'Oferta interna' : 'Oferta externa' }}</dd>
+                </div>
+                @if (pendiente.localidad) {
+                  <div>
+                    <dt>Localidad</dt>
+                    <dd>{{ pendiente.localidad }}</dd>
+                  </div>
+                }
+              </dl>
+              <p class="modal-note">
+                Al confirmar, este alumno quedará marcado como asignado y no podrá recibir otra
+                empresa mientras exista esta asignación activa.
+              </p>
+            }
+            @if (assignStatus() === 'error') {
+              <p class="modal-error" role="alert">{{ assignError() }}</p>
+            }
+            <div class="modal-actions">
+              <button
+                type="button"
+                class="secondary-button"
+                [disabled]="assignStatus() === 'assigning'"
+                (click)="closeAssignModal()"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                class="primary-button"
+                [disabled]="assignStatus() === 'assigning'"
+                (click)="confirmAssign(alumno)"
+              >
+                {{ assignStatus() === 'assigning' ? 'Asignando...' : 'Confirmar asignación' }}
+              </button>
+            </div>
+          </article>
         </section>
       }
     </main>
@@ -188,11 +533,8 @@ type LoadStatus = 'loading' | 'loaded' | 'error';
     `
       .tutor-page {
         display: grid;
+        align-content: start;
         gap: 1.4rem;
-      }
-
-      .welcome-line {
-        margin-top: 0.4rem;
       }
 
       .kpi-grid {
@@ -245,8 +587,14 @@ type LoadStatus = 'loading' | 'loaded' | 'error';
       }
 
       .filters-row {
-        display: flex;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns:
+          minmax(12rem, 1fr)
+          minmax(9rem, 0.8fr)
+          minmax(13rem, 1fr)
+          minmax(13rem, 1fr)
+          auto
+          10.75rem;
         align-items: end;
         gap: 1rem;
       }
@@ -254,6 +602,7 @@ type LoadStatus = 'loading' | 'loaded' | 'error';
       .filter-control {
         display: grid;
         gap: 0.3rem;
+        min-width: 0;
         font-size: 0.85rem;
         color: var(--muted);
       }
@@ -266,29 +615,64 @@ type LoadStatus = 'loading' | 'loaded' | 'error';
         border: 1px solid rgba(15, 95, 89, 0.25);
         background: #fff;
         font: inherit;
+        width: 100%;
+        min-width: 0;
       }
 
-      .filter-summary {
-        margin: 0;
-        color: var(--muted);
-        font-size: 0.85rem;
-        flex: 1 0 auto;
-      }
-
-      .ghost-action {
+      .view-toggle {
+        width: 10.75rem;
         min-height: 2.4rem;
-        display: inline-flex;
-        align-items: center;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(5rem, 1fr));
+        padding: 0.18rem;
+        border-radius: 0.55rem;
+        background: rgba(15, 95, 89, 0.08);
+        border: 1px solid rgba(15, 95, 89, 0.16);
+      }
+
+      .view-toggle button {
+        border: 0;
+        border-radius: 0.4rem;
+        background: transparent;
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.82rem;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      .view-toggle button.is-active {
+        background: var(--surface, #fff);
+        color: var(--accent);
+        box-shadow: 0 4px 12px rgba(15, 95, 89, 0.12);
+      }
+
+      .view-toggle button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .clear-filters-button {
+        min-height: 2.4rem;
         padding: 0 0.85rem;
         border-radius: 0.45rem;
-        font-weight: 800;
-        text-decoration: none;
+        border: 1px solid rgba(15, 95, 89, 0.25);
+        background: #fff;
         color: var(--accent);
-        border: 1px solid currentColor;
+        font: inherit;
+        font-size: 0.85rem;
+        font-weight: 800;
+        cursor: pointer;
+        white-space: nowrap;
       }
 
-      .ghost-action:hover,
-      .ghost-action:focus-visible {
+      .clear-filters-button:disabled {
+        cursor: default;
+        opacity: 0.45;
+      }
+
+      .clear-filters-button:not(:disabled):hover,
+      .clear-filters-button:not(:disabled):focus-visible {
         background: rgba(15, 95, 89, 0.08);
         outline: none;
       }
@@ -298,6 +682,134 @@ type LoadStatus = 'loading' | 'loaded' | 'error';
         gap: 1rem;
         grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
         align-items: start;
+      }
+
+      .alumno-list {
+        display: grid;
+        gap: 0.7rem;
+      }
+
+      .alumno-row {
+        padding: 0.85rem 1rem;
+        border-radius: 0.65rem;
+        background: var(--surface, #fff);
+        border: 1px solid rgba(15, 95, 89, 0.15);
+        display: grid;
+        gap: 0.65rem;
+      }
+
+      .alumno-row.is-assigned {
+        background: linear-gradient(135deg, rgba(232, 245, 233, 0.96), rgba(255, 255, 255, 0.98));
+        border-color: rgba(46, 125, 50, 0.35);
+      }
+
+      .row-main {
+        display: flex;
+        gap: 0.6rem;
+        align-items: center;
+      }
+
+      .student-cell h3,
+      .alumno-card-heading h3 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+
+      .status-cell {
+        flex: 0 0 8.5rem;
+        display: flex;
+        justify-content: center !important;
+      }
+
+      .row-details {
+        flex: 1 1 22rem;
+        min-width: 0;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.65rem;
+        margin: 0;
+      }
+
+      .row-details dt {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.68rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .row-details dd {
+        margin: 0.15rem 0 0;
+        font-size: 0.9rem;
+        font-weight: 700;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .row-counters {
+        flex: 0 0 auto;
+        display: grid;
+        grid-template-columns: repeat(4, 2rem);
+        justify-content: end;
+        gap: 0.3rem;
+      }
+
+      .row-counters span {
+        min-height: 2rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.42rem;
+        background: rgba(15, 95, 89, 0.06);
+        font-weight: 900;
+        font-size: 0.88rem;
+      }
+
+      .row-counters span:nth-child(2) {
+        background: rgba(199, 101, 59, 0.18);
+      }
+
+      .row-counters span:nth-child(3) {
+        background: rgba(46, 125, 50, 0.18);
+        color: #1b5e20;
+      }
+
+      .row-counters span:nth-child(4) {
+        background: rgba(184, 79, 59, 0.18);
+        color: #8a3a26;
+      }
+
+      .row-assignment {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 0.75rem;
+        align-items: center;
+        padding-top: 0.65rem;
+        border-top: 1px solid rgba(15, 95, 89, 0.12);
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .row-assignment > span:first-child {
+        color: var(--accent);
+        font-size: 0.72rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .row-assignment strong {
+        color: var(--ink);
+      }
+
+      .row-assignment.is-pending {
+        justify-content: flex-start;
+      }
+
+      .row-assignment .assign-button {
+        margin-left: auto;
       }
 
       .alumno-card {
@@ -310,50 +822,17 @@ type LoadStatus = 'loading' | 'loaded' | 'error';
         align-content: start;
       }
 
+      .alumno-card.is-assigned {
+        background: linear-gradient(135deg, rgba(232, 245, 233, 0.96), rgba(255, 255, 255, 0.98));
+        border-color: rgba(46, 125, 50, 0.42);
+        box-shadow: 0 12px 28px rgba(46, 125, 50, 0.12);
+      }
+
       .alumno-card-heading {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
         gap: 0.75rem;
-      }
-
-      .alumno-card-heading h3 {
-        margin: 0;
-        font-size: 1.1rem;
-      }
-
-      .alumno-email {
-        margin: 0.15rem 0 0;
-        color: var(--muted);
-        font-size: 0.85rem;
-      }
-
-      .estado-pill {
-        align-self: start;
-        display: inline-flex;
-        align-items: center;
-        padding: 0 0.7rem;
-        min-height: 1.7rem;
-        border-radius: 999px;
-        font-size: 0.7rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-      }
-
-      .estado-pill[data-estado='ACTIVA'] {
-        background: rgba(46, 125, 50, 0.18);
-        color: #1b5e20;
-      }
-
-      .estado-pill[data-estado='FINALIZADA'] {
-        background: rgba(15, 118, 110, 0.18);
-        color: #0b5f59;
-      }
-
-      .estado-pill.estado-sin {
-        background: rgba(0, 0, 0, 0.08);
-        color: var(--muted);
       }
 
       .alumno-details {
@@ -435,13 +914,20 @@ type LoadStatus = 'loading' | 'loaded' | 'error';
         gap: 0.2rem;
       }
 
+      .asignacion-pendiente {
+        padding: 0.8rem 0.9rem;
+        border-radius: 0.6rem;
+        background: rgba(255, 244, 230, 0.8);
+        border: 1px solid rgba(199, 101, 59, 0.28);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.85rem;
+      }
+
       .asignacion-line {
         margin: 0;
         font-weight: 700;
-      }
-
-      .observaciones {
-        font-style: italic;
       }
 
       .muted {
@@ -449,15 +935,176 @@ type LoadStatus = 'loading' | 'loaded' | 'error';
         margin: 0;
       }
 
-      .hint {
+      .assign-button,
+      .primary-button,
+      .secondary-button {
+        min-height: 2.35rem;
+        border: 0;
+        border-radius: 0.5rem;
+        padding: 0 0.85rem;
+        font: inherit;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      .assign-button,
+      .primary-button {
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .secondary-button {
+        background: rgba(15, 95, 89, 0.08);
+        color: var(--accent);
+      }
+
+      .assign-button:hover,
+      .assign-button:focus-visible,
+      .primary-button:hover,
+      .primary-button:focus-visible {
+        background: #0b4f4a;
+        outline: none;
+      }
+
+      .secondary-button:hover,
+      .secondary-button:focus-visible {
+        background: rgba(15, 95, 89, 0.14);
+        outline: none;
+      }
+
+      button:disabled {
+        cursor: progress;
+        opacity: 0.7;
+      }
+
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        display: grid;
+        place-items: center;
+        overflow-y: auto;
+        padding: 1rem;
+        background: rgba(9, 24, 31, 0.46);
+      }
+
+      .confirm-modal {
+        width: min(100%, 34rem);
+        border-radius: 1rem;
+        padding: 1.25rem;
+        background: var(--surface-strong, #fffaf2);
+        border: 1px solid rgba(15, 95, 89, 0.18);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
+        display: grid;
+        gap: 1rem;
+      }
+
+      .confirm-modal.detail-modal {
+        width: min(72rem, calc(100vw - 2rem));
+        max-height: min(calc(100dvh - 2rem), 52rem);
+        padding: 1rem;
+        gap: 0.75rem;
+      }
+
+      .confirm-modal h2 {
         margin: 0;
-        font-size: 0.85rem;
+      }
+
+      .confirm-details {
+        margin: 0;
+        display: grid;
+        gap: 0.7rem;
+      }
+
+      .confirm-details div {
+        padding: 0.7rem 0.8rem;
+        border-radius: 0.55rem;
+        background: rgba(15, 95, 89, 0.06);
+      }
+
+      .confirm-details dt {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .confirm-details dd {
+        margin: 0.2rem 0 0;
+        font-weight: 700;
+      }
+
+      .modal-note,
+      .modal-error {
+        margin: 0;
+        font-size: 0.9rem;
+      }
+
+      .modal-note {
         color: var(--muted);
       }
 
-      .hint a {
-        color: var(--accent);
+      .modal-error {
+        padding: 0.7rem 0.8rem;
+        border-radius: 0.55rem;
+        background: rgba(184, 79, 59, 0.12);
+        color: #8a3a26;
         font-weight: 700;
+      }
+
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.65rem;
+      }
+
+      @media (max-width: 980px) {
+        .filters-row {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .clear-filters-button,
+        .view-toggle {
+          width: 100%;
+        }
+
+        .row-main {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 8.5rem;
+          row-gap: 0.85rem;
+        }
+
+        .row-details,
+        .row-counters {
+          grid-column: 1 / -1;
+        }
+
+        .row-counters {
+          justify-content: start;
+        }
+      }
+
+      @media (max-width: 680px) {
+        .filter-control,
+        .view-toggle {
+          width: 100%;
+        }
+
+        .row-main,
+        .row-details {
+          grid-template-columns: 1fr;
+        }
+
+        .status-cell {
+          justify-content: flex-start !important;
+        }
+
+        .row-assignment .assign-button {
+          width: 100%;
+          margin-left: 0;
+        }
       }
     `,
   ],
@@ -465,6 +1112,8 @@ type LoadStatus = 'loading' | 'loaded' | 'error';
 })
 export class TutorPage implements OnInit {
   private readonly tutorService = inject(TutorAlumnosService);
+  private readonly asignacionesService = inject(AsignacionesService);
+  private readonly asignacionesExternasService = inject(AsignacionesExternasService);
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -475,14 +1124,25 @@ export class TutorPage implements OnInit {
   protected readonly status = signal<LoadStatus>('loading');
   protected readonly errorMessage = signal<string>('');
   protected readonly alumnos = signal<TutorAlumno[]>([]);
+  protected readonly selectedAlumno = signal<TutorAlumno | null>(null);
+  protected readonly selectedDetailAlumno = signal<TutorAlumno | null>(null);
+  protected readonly assignStatus = signal<AssignStatus>('idle');
+  protected readonly assignError = signal<string>('');
+  protected readonly cvActionStatus = signal<CvActionStatus>('idle');
+  protected readonly cvActionError = signal<string>('');
+  protected readonly viewMode = signal<ViewMode>('list');
 
   protected readonly searchFilter = new FormControl<string>('', { nonNullable: true });
   protected readonly estadoFilter = new FormControl<'TODOS' | 'ASIGNADO' | 'SIN_ASIGNAR'>(
     'TODOS',
     { nonNullable: true },
   );
+  protected readonly familiaFilter = new FormControl<string>('TODAS', { nonNullable: true });
+  protected readonly cicloFilter = new FormControl<string>('TODOS', { nonNullable: true });
   private readonly searchValue = signal<string>('');
   private readonly estadoValue = signal<'TODOS' | 'ASIGNADO' | 'SIN_ASIGNAR'>('TODOS');
+  private readonly familiaValue = signal<string>('TODAS');
+  private readonly cicloValue = signal<string>('TODOS');
 
   protected readonly totalAsignados = computed(
     () => this.alumnos().filter((a) => !!a.asignacionActual).length,
@@ -493,23 +1153,50 @@ export class TutorPage implements OnInit {
   protected readonly totalSolicitudesPendientes = computed(() =>
     this.alumnos().reduce((sum, a) => sum + a.solicitudes.solicitadas, 0),
   );
+  protected readonly familiasDisponibles = computed(() =>
+    distinctSorted(this.alumnos().map((a) => a.preferencias?.familiaProfesional)),
+  );
+  protected readonly ciclosDisponibles = computed(() =>
+    distinctSorted(this.alumnos().map((a) => a.preferencias?.cicloFormativo)),
+  );
+  protected readonly hasActiveFilters = computed(
+    () =>
+      !!this.searchValue().trim() ||
+      this.estadoValue() !== 'TODOS' ||
+      this.familiaValue() !== 'TODAS' ||
+      this.cicloValue() !== 'TODOS',
+  );
 
   protected readonly filteredAlumnos = computed(() => {
     const q = this.searchValue().trim().toLowerCase();
     const estado = this.estadoValue();
+    const familia = this.familiaValue();
+    const ciclo = this.cicloValue();
     return this.alumnos().filter((a) => {
       if (estado === 'ASIGNADO' && !a.asignacionActual) return false;
       if (estado === 'SIN_ASIGNAR' && a.asignacionActual) return false;
+      if (
+        familia !== 'TODAS' &&
+        normalizeOption(a.preferencias?.familiaProfesional) !== normalizeOption(familia)
+      ) {
+        return false;
+      }
+      if (
+        ciclo !== 'TODOS' &&
+        normalizeOption(a.preferencias?.cicloFormativo) !== normalizeOption(ciclo)
+      ) {
+        return false;
+      }
       if (!q) return true;
-      const ciclo = a.preferencias?.cicloFormativo?.toLowerCase() ?? '';
-      const familia = a.preferencias?.familiaProfesional?.toLowerCase() ?? '';
+      const cicloText = a.preferencias?.cicloFormativo?.toLowerCase() ?? '';
+      const familiaText = a.preferencias?.familiaProfesional?.toLowerCase() ?? '';
       return (
         a.displayName.toLowerCase().includes(q) ||
         a.email.toLowerCase().includes(q) ||
-        ciclo.includes(q) ||
-        familia.includes(q)
+        cicloText.includes(q) ||
+        familiaText.includes(q)
       );
-    });
+    }).sort(compareAlumnosByAssignmentState);
   });
 
   ngOnInit(): void {
@@ -519,12 +1206,23 @@ export class TutorPage implements OnInit {
     this.estadoFilter.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => this.estadoValue.set(value ?? 'TODOS'));
+    this.familiaFilter.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => this.familiaValue.set(value ?? 'TODAS'));
+    this.cicloFilter.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => this.cicloValue.set(value ?? 'TODOS'));
 
     this.load();
   }
 
   protected estadoLabel(estado: 'ACTIVA' | 'FINALIZADA'): string {
     return estado === 'ACTIVA' ? 'Activa' : 'Finalizada';
+  }
+
+  protected modalidadLabel(value: string | null | undefined): string {
+    if (!value) return 'Sin preferencia';
+    return MODALIDAD_LABELS[value] ?? value;
   }
 
   protected formatFecha(value: string | null | undefined): string {
@@ -536,6 +1234,84 @@ export class TutorPage implements OnInit {
       month: '2-digit',
       year: 'numeric',
     });
+  }
+
+  protected openAssignModal(alumno: TutorAlumno): void {
+    if (!alumno.asignacionPendiente || alumno.asignacionActual) return;
+    this.selectedAlumno.set(alumno);
+    this.assignStatus.set('idle');
+    this.assignError.set('');
+  }
+
+  protected openAlumnoDetail(alumno: TutorAlumno): void {
+    this.selectedDetailAlumno.set(alumno);
+    this.cvActionStatus.set('idle');
+    this.cvActionError.set('');
+  }
+
+  protected closeAlumnoDetail(): void {
+    if (this.cvActionStatus() === 'loading') return;
+    this.selectedDetailAlumno.set(null);
+    this.cvActionStatus.set('idle');
+    this.cvActionError.set('');
+  }
+
+  protected setViewMode(mode: ViewMode): void {
+    this.viewMode.set(mode);
+  }
+
+  protected clearFilters(): void {
+    this.searchFilter.setValue('');
+    this.estadoFilter.setValue('TODOS');
+    this.familiaFilter.setValue('TODAS');
+    this.cicloFilter.setValue('TODOS');
+  }
+
+  protected cvSummary(alumno: TutorAlumno): string {
+    const size = alumno.cvSize ? `${Math.round(alumno.cvSize / 1024)} KB` : 'tamaño no disponible';
+    return alumno.cvUpdatedAt ? `${size} · actualizado el ${this.formatFecha(alumno.cvUpdatedAt)}` : size;
+  }
+
+  protected previewCv(alumno: TutorAlumno): void {
+    this.openCv(alumno, 'preview');
+  }
+
+  protected downloadCv(alumno: TutorAlumno): void {
+    this.openCv(alumno, 'download');
+  }
+
+  protected closeAssignModal(): void {
+    if (this.assignStatus() === 'assigning') return;
+    this.selectedAlumno.set(null);
+    this.assignStatus.set('idle');
+    this.assignError.set('');
+  }
+
+  protected confirmAssign(alumno: TutorAlumno): void {
+    const pendiente = alumno.asignacionPendiente;
+    if (!pendiente || alumno.asignacionActual || this.assignStatus() === 'assigning') {
+      return;
+    }
+
+    this.assignStatus.set('assigning');
+    this.assignError.set('');
+    const request$: Observable<unknown> = pendiente.tipo === 'INTERNA'
+      ? this.asignacionesService.create({ solicitudId: pendiente.solicitudId })
+      : this.asignacionesExternasService.create({ solicitudExternaId: pendiente.solicitudId });
+
+    request$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.assignStatus.set('success');
+          this.selectedAlumno.set(null);
+          this.load();
+        },
+        error: (err: unknown) => {
+          this.assignStatus.set('error');
+          this.assignError.set(this.describeAssignError(err));
+        },
+      });
   }
 
   private load(): void {
@@ -556,6 +1332,43 @@ export class TutorPage implements OnInit {
       });
   }
 
+  private openCv(alumno: TutorAlumno, mode: 'preview' | 'download'): void {
+    if (!alumno.hasCv || this.cvActionStatus() === 'loading') {
+      return;
+    }
+
+    this.cvActionStatus.set('loading');
+    this.cvActionError.set('');
+    this.tutorService
+      .downloadCv(alumno.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (blob) => {
+          const url = URL.createObjectURL(blob);
+          if (mode === 'preview') {
+            const opened = window.open(url, '_blank', 'noopener');
+            if (!opened) {
+              this.cvActionStatus.set('error');
+              this.cvActionError.set('El navegador ha bloqueado la previsualización del CV.');
+              URL.revokeObjectURL(url);
+              return;
+            }
+          } else {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = alumno.cvFileName || `cv-${alumno.id}.pdf`;
+            link.click();
+          }
+          setTimeout(() => URL.revokeObjectURL(url), 30_000);
+          this.cvActionStatus.set('idle');
+        },
+        error: (err: unknown) => {
+          this.cvActionStatus.set('error');
+          this.cvActionError.set(this.describeCvError(err));
+        },
+      });
+  }
+
   private describeError(err: unknown): string {
     if (err instanceof HttpErrorResponse) {
       if (err.status === 401 || err.status === 403) {
@@ -571,4 +1384,80 @@ export class TutorPage implements OnInit {
     }
     return 'Error desconocido al cargar datos.';
   }
+
+  private describeAssignError(err: unknown): string {
+    if (err instanceof HttpErrorResponse) {
+      if (err.status === 409) {
+        return 'No se puede crear la asignación: el alumno ya tiene una asignación activa o la solicitud ya no está disponible.';
+      }
+      if (err.status === 401 || err.status === 403) {
+        return 'Tu sesión no tiene permisos para crear asignaciones.';
+      }
+      if (err.status === 0) {
+        return 'No se pudo contactar con el servidor.';
+      }
+      return `Error ${err.status} al crear la asignación.`;
+    }
+    if (err instanceof Error) {
+      return err.message;
+    }
+    return 'Error desconocido al crear la asignación.';
+  }
+
+  private describeCvError(err: unknown): string {
+    if (err instanceof HttpErrorResponse) {
+      if (err.status === 404) {
+        return 'El CV ya no está disponible.';
+      }
+      if (err.status === 401 || err.status === 403) {
+        return 'Tu sesión no tiene permisos para consultar este CV.';
+      }
+      if (err.status === 0) {
+        return 'No se pudo contactar con el servidor.';
+      }
+      return `Error ${err.status} al abrir el CV.`;
+    }
+    if (err instanceof Error) {
+      return err.message;
+    }
+    return 'Error desconocido al abrir el CV.';
+  }
+}
+
+const MODALIDAD_LABELS: Record<string, string> = {
+  PRESENCIAL: 'Presencial',
+  HIBRIDA: 'Híbrida',
+  REMOTA: 'Remota',
+};
+
+function distinctSorted(values: Array<string | null | undefined>): string[] {
+  const byNormalizedValue = new Map<string, string>();
+  for (const value of values) {
+    const label = value?.trim().replace(/\s+/g, ' ');
+    if (!label) continue;
+    const normalized = normalizeOption(label);
+    if (!byNormalizedValue.has(normalized)) {
+      byNormalizedValue.set(normalized, label);
+    }
+  }
+  return Array.from(byNormalizedValue.values()).sort((a, b) =>
+    a.localeCompare(b, 'es', { sensitivity: 'base' }),
+  );
+}
+
+function normalizeOption(value: string | null | undefined): string {
+  return (
+    value
+      ?.trim()
+      .replace(/\s+/g, ' ')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleLowerCase('es') ?? ''
+  );
+}
+
+function compareAlumnosByAssignmentState(a: TutorAlumno, b: TutorAlumno): number {
+  const stateDiff = Number(!!a.asignacionActual) - Number(!!b.asignacionActual);
+  if (stateDiff !== 0) return stateDiff;
+  return a.displayName.localeCompare(b.displayName, 'es', { sensitivity: 'base' });
 }

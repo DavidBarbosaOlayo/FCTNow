@@ -23,15 +23,6 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
   imports: [EmpresaPerfilPage, PreferenciasAlumnoPage, RouterLink],
   template: `
     <main class="page-shell route-page profile-page">
-      <header class="route-hero profile-hero">
-        <p class="eyebrow">Perfil</p>
-        <h1>Perfil de usuario</h1>
-        <p>
-          Consulta la información básica de tu sesión activa en FCTNow sin abrir flujos de cuenta
-          más complejos.
-        </p>
-      </header>
-
       @if (status() === 'loading') {
         <section class="state-panel" aria-live="polite">
           <p class="eyebrow">Cargando</p>
@@ -109,14 +100,6 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
         align-content: start;
         gap: 1rem;
         padding-top: 2rem;
-      }
-
-      .profile-hero {
-        max-width: 68rem;
-      }
-
-      .profile-hero h1 {
-        max-width: 18ch;
       }
 
       .state-panel,

@@ -10,6 +10,8 @@ public interface AsignacionFctRepository extends JpaRepository<AsignacionFct, Lo
 
   boolean existsBySolicitudId(Long solicitudId);
 
+  boolean existsByAlumnoIdAndEstado(Long alumnoId, AsignacionEstado estado);
+
   @Query("""
       select a
       from AsignacionFct a
