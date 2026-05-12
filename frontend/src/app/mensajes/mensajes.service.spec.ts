@@ -1,7 +1,8 @@
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
+import { AuthenticatedUser } from '../auth/auth.models';
 import { AuthService } from '../auth/auth.service';
 import { MensajesService } from './mensajes.service';
 
@@ -19,6 +20,12 @@ describe('MensajesService', () => {
           provide: AuthService,
           useValue: {
             accessToken: () => 'token-demo',
+            currentUser: signal<AuthenticatedUser | null>({
+              id: 1,
+              email: 'alumno@example.com',
+              displayName: 'Alumno Demo',
+              roles: ['ALUMNO'],
+            } as AuthenticatedUser),
           },
         },
       ],
@@ -48,6 +55,7 @@ describe('MensajesService', () => {
         otroParticipanteNombre: 'Empresa Demo',
         ultimoMensaje: 'Hola',
         ultimoMensajeAt: '2026-05-11T10:00:00Z',
+        ultimoMensajePropio: false,
         updatedAt: '2026-05-11T10:00:00Z',
       },
     ]);
@@ -108,7 +116,31 @@ describe('MensajesService', () => {
       otroParticipanteNombre: 'Ana Compatible',
       ultimoMensaje: null,
       ultimoMensajeAt: null,
+      ultimoMensajePropio: null,
       updatedAt: '2026-05-11T10:10:00Z',
     });
+  });
+
+  it('tracks unread conversations until they are marked as seen', () => {
+    service.listConversaciones().subscribe();
+
+    httpTesting.expectOne('/api/mensajes/conversaciones').flush([
+      {
+        id: 1,
+        titulo: 'Tutor Demo',
+        otroParticipanteId: 3,
+        otroParticipanteNombre: 'Tutor Demo',
+        ultimoMensaje: 'Nuevo mensaje',
+        ultimoMensajeAt: '2026-05-11T10:00:00Z',
+        ultimoMensajePropio: false,
+        updatedAt: '2026-05-11T10:00:00Z',
+      },
+    ]);
+
+    expect(service.unreadCount()).toBe(1);
+
+    service.markConversationSeen(1, '2026-05-11T10:00:00Z');
+
+    expect(service.unreadCount()).toBe(0);
   });
 });

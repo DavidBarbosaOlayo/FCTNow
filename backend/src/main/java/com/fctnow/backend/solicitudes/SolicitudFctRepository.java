@@ -75,4 +75,15 @@ public interface SolicitudFctRepository extends JpaRepository<SolicitudFct, Long
       order by s.createdAt desc, s.id desc
       """)
   List<SolicitudFct> findAceptadasSinAsignacion();
+
+  @Query("""
+      select s
+      from SolicitudFct s
+      join fetch s.oferta o
+      join fetch o.empresa
+      join fetch s.alumno
+      where s.estado = com.fctnow.backend.solicitudes.SolicitudEstado.ACEPTADA
+      order by s.createdAt desc, s.id desc
+      """)
+  List<SolicitudFct> findRecentAceptadasWithDetails();
 }

@@ -1,7 +1,8 @@
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { AuthenticatedUser } from '../auth/auth.models';
 import { AuthService } from '../auth/auth.service';
 import { MensajesPage } from './mensajes';
 
@@ -19,6 +20,12 @@ describe('MensajesPage', () => {
           provide: AuthService,
           useValue: {
             accessToken: () => 'token-demo',
+            currentUser: signal<AuthenticatedUser | null>({
+              id: 1,
+              email: 'alumno@example.com',
+              displayName: 'Alumno Demo',
+              roles: ['ALUMNO'],
+            } as AuthenticatedUser),
           },
         },
       ],
@@ -43,6 +50,7 @@ describe('MensajesPage', () => {
         otroParticipanteNombre: 'Empresa Demo',
         ultimoMensaje: 'Hola, revisamos tu solicitud.',
         ultimoMensajeAt: '2026-05-11T10:00:00Z',
+        ultimoMensajePropio: false,
         updatedAt: '2026-05-11T10:00:00Z',
       },
     ]);
@@ -75,6 +83,7 @@ describe('MensajesPage', () => {
         otroParticipanteNombre: 'Empresa Demo',
         ultimoMensaje: null,
         ultimoMensajeAt: null,
+        ultimoMensajePropio: null,
         updatedAt: '2026-05-11T10:00:00Z',
       },
     ]);
@@ -101,6 +110,80 @@ describe('MensajesPage', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Gracias por avisar');
+  });
+
+  it('enables the send button when the user types a message', () => {
+    const fixture = TestBed.createComponent(MensajesPage);
+    fixture.detectChanges();
+
+    httpTesting.expectOne('/api/mensajes/conversaciones').flush([
+      {
+        id: 1,
+        titulo: 'Empresa Demo',
+        otroParticipanteId: 2,
+        otroParticipanteNombre: 'Empresa Demo',
+        ultimoMensaje: null,
+        ultimoMensajeAt: null,
+        ultimoMensajePropio: null,
+        updatedAt: '2026-05-11T10:00:00Z',
+      },
+    ]);
+    httpTesting.expectOne('/api/mensajes/conversaciones/1').flush([]);
+    fixture.detectChanges();
+
+    const sendButton = fixture.nativeElement.querySelector('.composer button') as HTMLButtonElement;
+    expect(sendButton.disabled).toBeTrue();
+
+    const textarea = fixture.nativeElement.querySelector('#mensaje-contenido') as HTMLTextAreaElement;
+    textarea.value = 'Hola';
+    textarea.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(sendButton.disabled).toBeFalse();
+  });
+
+  it('sends the message when clicking the enabled submit button', () => {
+    const fixture = TestBed.createComponent(MensajesPage);
+    fixture.detectChanges();
+
+    httpTesting.expectOne('/api/mensajes/conversaciones').flush([
+      {
+        id: 1,
+        titulo: 'Empresa Demo',
+        otroParticipanteId: 2,
+        otroParticipanteNombre: 'Empresa Demo',
+        ultimoMensaje: null,
+        ultimoMensajeAt: null,
+        ultimoMensajePropio: null,
+        updatedAt: '2026-05-11T10:00:00Z',
+      },
+    ]);
+    httpTesting.expectOne('/api/mensajes/conversaciones/1').flush([]);
+    fixture.detectChanges();
+
+    const textarea = fixture.nativeElement.querySelector('#mensaje-contenido') as HTMLTextAreaElement;
+    textarea.value = 'Mensaje desde click';
+    textarea.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    const sendButton = fixture.nativeElement.querySelector('.composer button') as HTMLButtonElement;
+    expect(sendButton.disabled).toBeFalse();
+
+    sendButton.click();
+
+    const request = httpTesting.expectOne('/api/mensajes/conversaciones/1/mensajes');
+    expect(request.request.body).toEqual({ contenido: 'Mensaje desde click' });
+    request.flush({
+      id: 12,
+      remitenteId: 1,
+      remitenteNombre: 'Alumno Demo',
+      contenido: 'Mensaje desde click',
+      propio: true,
+      createdAt: '2026-05-11T10:06:00Z',
+    });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Mensaje desde click');
   });
 
   it('opens contact search and starts a new conversation', () => {
@@ -136,6 +219,7 @@ describe('MensajesPage', () => {
       otroParticipanteNombre: 'Ana Compatible',
       ultimoMensaje: null,
       ultimoMensajeAt: null,
+      ultimoMensajePropio: null,
       updatedAt: '2026-05-11T10:10:00Z',
     });
     httpTesting.expectOne('/api/mensajes/conversaciones/8').flush([]);

@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AuthenticatedUser, UserRole } from '../auth/auth.models';
 import { AuthService } from '../auth/auth.service';
+import { MensajesService } from '../mensajes/mensajes.service';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { AppNavigation } from './app-navigation';
 
@@ -19,6 +20,14 @@ describe('AppNavigation', () => {
         provideZonelessChangeDetection(),
         provideRouter([]),
         { provide: AuthService, useValue: { currentUser } },
+        {
+          provide: MensajesService,
+          useValue: {
+            unreadCount: signal(0).asReadonly(),
+            refreshMine: () => undefined,
+            clearMine: () => undefined,
+          },
+        },
         {
           provide: NotificacionesService,
           useValue: {
@@ -214,6 +223,14 @@ describe('AppNavigation', () => {
         provideRouter([]),
         { provide: AuthService, useValue: { currentUser } },
         {
+          provide: MensajesService,
+          useValue: {
+            unreadCount: signal(0).asReadonly(),
+            refreshMine: () => undefined,
+            clearMine: () => undefined,
+          },
+        },
+        {
           provide: NotificacionesService,
           useValue: {
             unreadCount: unreadCount.asReadonly(),
@@ -248,6 +265,14 @@ describe('AppNavigation', () => {
         provideRouter([]),
         { provide: AuthService, useValue: { currentUser } },
         {
+          provide: MensajesService,
+          useValue: {
+            unreadCount: signal(0).asReadonly(),
+            refreshMine: () => undefined,
+            clearMine: () => undefined,
+          },
+        },
+        {
           provide: NotificacionesService,
           useValue: {
             unreadCount: unreadCount.asReadonly(),
@@ -262,6 +287,50 @@ describe('AppNavigation', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('.notification-badge')).toBeNull();
+  });
+
+  it('should render a message badge when there are unseen incoming conversations', () => {
+    const currentUser = signal<AuthenticatedUser | null>({
+      id: 2,
+      email: 'tutor@example.com',
+      displayName: 'Tutor',
+      roles: ['TUTOR_CENTRO'],
+    } as AuthenticatedUser);
+    const unreadCount = signal(2);
+
+    TestBed.configureTestingModule({
+      imports: [AppNavigation],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        { provide: AuthService, useValue: { currentUser } },
+        {
+          provide: MensajesService,
+          useValue: {
+            unreadCount: unreadCount.asReadonly(),
+            refreshMine: () => undefined,
+            clearMine: () => undefined,
+          },
+        },
+        {
+          provide: NotificacionesService,
+          useValue: {
+            unreadCount: signal(0).asReadonly(),
+            refreshMine: () => undefined,
+            clearMine: () => undefined,
+          },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(AppNavigation);
+    fixture.detectChanges();
+
+    const badge = fixture.nativeElement.querySelector(
+      '.notification-badge[aria-label="Mensajes pendientes"]',
+    ) as HTMLElement | null;
+    expect(badge).not.toBeNull();
+    expect(badge?.textContent?.trim()).toBe('2');
   });
 
   it('should expose a collapsed menu toggle with the expected ARIA attributes', () => {

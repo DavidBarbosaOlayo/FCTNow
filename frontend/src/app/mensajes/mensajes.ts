@@ -176,7 +176,7 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
               }
             </div>
 
-            <form class="composer" (ngSubmit)="sendMessage()">
+            <form class="composer" (submit)="handleSubmit($event)">
               <label for="mensaje-contenido">Mensaje</label>
               <div class="composer-row">
                 <textarea
@@ -634,12 +634,18 @@ export class MensajesPage implements OnInit {
   protected readonly selectedConversation = computed(() =>
     this.conversaciones().find((item) => item.id === this.selectedConversationId()) ?? null,
   );
-  protected readonly canSend = computed(() =>
-    this.messageControl.valid && this.messageControl.value.trim().length > 0 && !this.sending(),
-  );
 
   ngOnInit(): void {
     this.loadConversaciones();
+  }
+
+  protected canSend(): boolean {
+    return (
+      this.selectedConversation() !== null &&
+      this.messageControl.valid &&
+      this.messageControl.value.trim().length > 0 &&
+      !this.sending()
+    );
   }
 
   protected selectConversation(conversacion: Conversacion): void {
@@ -647,6 +653,7 @@ export class MensajesPage implements OnInit {
       return;
     }
     this.selectedConversationId.set(conversacion.id);
+    this.mensajesService.markConversationSeen(conversacion.id, conversacion.updatedAt);
     this.loadMensajes(conversacion.id);
   }
 
@@ -705,6 +712,11 @@ export class MensajesPage implements OnInit {
       return;
     }
     keyboardEvent.preventDefault();
+    this.sendMessage();
+  }
+
+  protected handleSubmit(event: Event): void {
+    event.preventDefault();
     this.sendMessage();
   }
 
@@ -805,6 +817,7 @@ function moveConversationToTop(
           ...item,
           ultimoMensaje: mensaje.contenido,
           ultimoMensajeAt: mensaje.createdAt,
+          ultimoMensajePropio: true,
           updatedAt: mensaje.createdAt,
         }
       : item,

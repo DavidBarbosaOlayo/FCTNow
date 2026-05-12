@@ -294,7 +294,7 @@ describe('PracticasPage', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const detailButton = Array.from(compiled.querySelectorAll<HTMLButtonElement>('button')).find(
-      (button) => button.textContent?.trim() === 'Ver detalles',
+      (button) => button.textContent?.trim() === 'Ver detalle',
     );
     detailButton!.click();
     fixture.detectChanges();
@@ -412,7 +412,7 @@ describe('PracticasPage', () => {
     const solicitadaToggle = compiled.querySelector<HTMLButtonElement>('.tracking-toggle.is-estado-solicitada');
     expect(solicitadaToggle).not.toBeNull();
     expect(solicitadaToggle?.querySelector('.state')?.textContent?.trim()).toBe('Solicitada');
-    expect(solicitadaToggle?.querySelector('.hover')?.textContent?.trim()).toBe('Anular solicitud');
+    expect(solicitadaToggle?.querySelector('.hover')?.textContent?.trim()).toBe('Cancelar');
 
     const aceptarBtn = compiled.querySelector<HTMLButtonElement>('.tracking-label.is-primary');
     expect(aceptarBtn).not.toBeNull();

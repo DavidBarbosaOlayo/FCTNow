@@ -1,118 +1,212 @@
-<main class="page-shell">
-  <header class="masthead">
-    <div class="brand-block">
-      <p class="brand-mark">{{ title() }}</p>
-      <p class="brand-caption">Gestión de Formación en Centros de Trabajo con una interfaz única.</p>
-    </div>
-
-    <div class="signal-strip" aria-label="Estado del producto">
-      @for (highlight of highlights; track highlight.label) {
-        <article class="signal-chip">
-          <p class="signal-label">{{ highlight.label }}</p>
-          <p class="signal-value">{{ highlight.value }}</p>
-        </article>
-      }
-    </div>
-  </header>
-
-  <section class="hero">
-    <article class="hero-copy">
-      <p class="eyebrow">Frontpage del producto</p>
-      <h1>Una portada con cara y ojos para coordinar todo el ciclo FCT.</h1>
-      <p class="hero-summary">
-        FCTNow nace para ordenar empresas, solicitudes, seguimiento y evaluación desde una única
-        experiencia de trabajo. La idea no es enseñar una demo; la idea es dejar una home que ya
-        parezca el centro de operaciones del proyecto.
+<main class="page-shell home-feed">
+  @if (!currentUser()) {
+    <section class="state-panel" aria-labelledby="login-required-title">
+      <p class="eyebrow">Sesión requerida</p>
+      <h2 id="login-required-title">Inicia sesión para ver tu feed FCT</h2>
+      <p>
+        El inicio personalizado usa tus preferencias y tu ciclo formativo para ordenar ofertas,
+        avisos y señales agregadas del proceso.
       </p>
-
-      <div class="hero-notes">
-        <article class="hero-note">
-          <p class="hero-note-title">Qué resuelve</p>
-          <p>
-            Reduce la sensación de dispersión entre tutores, coordinadores, empresas y alumnado.
-          </p>
-        </article>
-
-        <article class="hero-note accent">
-          <p class="hero-note-title">Qué deja listo</p>
-          <p>
-            Una base visual creíble sobre la que ir conectando módulos reales del flujo FCT.
-          </p>
-        </article>
-      </div>
-    </article>
-
-    <aside class="hero-board" aria-label="Mapa operativo de FCTNow">
-      <div class="board-heading">
-        <p class="board-kicker">Mapa operativo</p>
-        <h2>Cuatro piezas para ordenar el ciclo completo</h2>
-      </div>
-
-      <div class="board-grid">
-        @for (card of boardCards; track card.title) {
-          <article class="board-card">
-            <p class="board-state">{{ card.state }}</p>
-            <h3>{{ card.title }}</h3>
-            <p>{{ card.detail }}</p>
-          </article>
-        }
-      </div>
-
-      <ul class="board-checks">
-        @for (item of checks; track item) {
-          <li>{{ item }}</li>
-        }
-      </ul>
-    </aside>
-  </section>
-
-  <section class="content-section">
-    <div class="section-heading">
-      <p class="section-kicker">Recorrido principal</p>
-      <h2>Del primer contacto a la evaluación final</h2>
-    </div>
-
-    <div class="journey-track">
-      @for (step of workflowSteps; track step.phase) {
-        <article class="journey-step">
-          <p class="journey-phase">{{ step.phase }}</p>
-          <h3>{{ step.title }}</h3>
-          <p>{{ step.description }}</p>
-        </article>
+      <a class="primary-action" routerLink="/login">Iniciar sesión</a>
+    </section>
+  } @else if (!isAlumno()) {
+    <section class="state-panel" aria-labelledby="role-limited-title">
+      <p class="eyebrow">Vista protegida</p>
+      <h2 id="role-limited-title">Este inicio está orientado al alumnado</h2>
+      <p>
+        Las empresas, tutores y coordinación mantienen sus accesos desde la navegación principal.
+        Aquí no se muestran datos agregados del alumnado a roles no autorizados.
+      </p>
+    </section>
+  } @else {
+    @if (status() === 'loading') {
+      <section class="state-panel" aria-live="polite" aria-labelledby="loading-title">
+        <p class="eyebrow">Cargando</p>
+        <h2 id="loading-title">Preparando tus oportunidades</h2>
+        <p>Estamos consultando recomendaciones, actividad del ciclo y avisos recientes.</p>
+      </section>
+    } @else if (status() === 'error') {
+      <section class="state-panel error-panel" role="alert" aria-labelledby="error-title">
+        <p class="eyebrow">No disponible</p>
+        <h2 id="error-title">No pudimos cargar Inicio</h2>
+        <p>{{ errorMessage() }}</p>
+        <button class="primary-action" type="button" (click)="loadFeed()">Reintentar</button>
+      </section>
+    } @else if (feed(); as data) {
+      @if (!data.student.preferenciasCompletas) {
+        <section class="preference-callout" aria-labelledby="preferences-title">
+          <div>
+            <p class="eyebrow">Preferencias incompletas</p>
+            <h2 id="preferences-title">Mejora tus recomendaciones</h2>
+            <p>
+              Completa al menos tu familia profesional para empezar a priorizar ofertas externas.
+              Si además indicas la localidad y el ciclo, afinaremos todavía más.
+            </p>
+          </div>
+          <a class="primary-action" routerLink="/perfil">Completar preferencias</a>
+        </section>
       }
-    </div>
-  </section>
 
-  <section class="content-section">
-    <div class="section-heading">
-      <p class="section-kicker">Base de producto</p>
-      <h2>Qué aporta ya esta frontpage</h2>
-    </div>
+      <section class="feed-layout" aria-label="Feed principal del alumno">
+        <section class="feed-column" aria-labelledby="recommended-title">
+          <div class="section-heading">
+            <p class="eyebrow">Top 5 para ti</p>
+            <h2 id="recommended-title">Ofertas externas recomendadas</h2>
+          </div>
 
-    <div class="module-grid">
-      @for (workstream of workstreams; track workstream.title) {
-        <article class="module-card">
-          <p class="module-tag">{{ workstream.tag }}</p>
-          <h3>{{ workstream.title }}</h3>
-          <p>{{ workstream.description }}</p>
-        </article>
-      }
-    </div>
-  </section>
+          @if (data.recommendedOffers.length > 0) {
+            <div class="offer-list">
+              @for (offer of data.recommendedOffers; track offer.id) {
+                <article class="offer-card">
+                  <div class="offer-heading">
+                    <div>
+                      <p class="offer-company">{{ offer.company }}</p>
+                      <h3>{{ offer.title }}</h3>
+                    </div>
+                    <span class="source-pill">{{ offer.source === 'INTERNA' ? 'FCTNow' : 'Adzuna' }}</span>
+                  </div>
 
-  <section class="content-section">
-    <div class="section-heading">
-      <p class="section-kicker">Actores del sistema</p>
-      <h2>Quién necesita entender esta pantalla al primer vistazo</h2>
-    </div>
+                  <dl class="offer-meta">
+                    <div>
+                      <dt>Localidad</dt>
+                      <dd>{{ offer.location }}</dd>
+                    </div>
+                    <div>
+                      <dt>{{ offer.source === 'EXTERNA' ? 'Origen' : 'Modalidad' }}</dt>
+                      <dd>{{ offer.source === 'EXTERNA' ? 'Adzuna' : modalityLabel(offer.modality) }}</dd>
+                    </div>
+                    <div>
+                      <dt>Actualizada</dt>
+                      <dd>{{ formatDate(offer.publishedAt) }}</dd>
+                    </div>
+                  </dl>
 
-    <div class="actor-grid">
-      @for (actor of actors; track actor.name) {
-        <article class="actor-card">
-          <h3>{{ actor.name }}</h3>
-          <p>{{ actor.description }}</p>
-        </article>
-      }
-    </div>
-  </section>
+                  @if (offer.matchReasons.length > 0) {
+                    <div class="match-list" aria-label="Motivos de recomendación">
+                      <span class="match-label">Recomendado por:</span>
+                      @for (reason of offer.matchReasons; track reason) {
+                        <span class="match-tag">{{ reason }}</span>
+                      }
+                    </div>
+                  }
+
+                  <div class="card-actions">
+                    @if (offer.externalUrl) {
+                      <a
+                        class="status-link"
+                        [href]="offer.externalUrl"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {{ offer.statusLabel }}
+                      </a>
+                    } @else {
+                      <span class="status-copy">{{ offer.statusLabel }}</span>
+                    }
+                    <button type="button" class="text-action" (click)="openOfferDetail(offer)">
+                      Ver detalle
+                    </button>
+                  </div>
+                </article>
+              }
+            </div>
+          } @else {
+            <article class="empty-panel">
+              <h3>No hay ofertas externas recomendadas todavía</h3>
+              <p>
+                Cuando Adzuna devuelva oportunidades compatibles con tu perfil aparecerán aquí.
+                Mientras tanto puedes revisar el catálogo completo de prácticas.
+              </p>
+              <a class="text-action" routerLink="/practicas">Ver catálogo</a>
+            </article>
+          }
+        </section>
+
+        <aside class="side-feed" aria-label="Actividad y avisos del centro">
+          <section class="side-section" aria-labelledby="activity-title">
+            <div class="section-heading compact">
+              <p class="eyebrow">Tu ciclo</p>
+              <h2 id="activity-title">Actividad de compañeros</h2>
+            </div>
+
+            @if (data.peerActivity.length > 0) {
+              <div class="activity-list">
+                @for (activity of data.peerActivity; track activity.id) {
+                  <article class="activity-item">
+                    <header class="activity-header">
+                      <span class="activity-avatar" [class.has-photo]="!!activity.studentPhotoUrl">
+                        @if (activity.studentPhotoUrl) {
+                          <img [src]="activity.studentPhotoUrl" [alt]="'Foto de ' + (activity.studentName ?? 'compañero')" />
+                        } @else {
+                          <span aria-hidden="true">{{ avatarInitials(activity.studentName) }}</span>
+                        }
+                      </span>
+                      <p class="activity-metric">{{ activity.metric }}</p>
+                    </header>
+                    <h3>{{ activity.title }}</h3>
+                    <p>{{ activity.summary }}</p>
+                    <footer>
+                      <span>{{ formatDate(activity.occurredAt) }}</span>
+                      @if (activity.actionUrl && isExternalUrl(activity.actionUrl)) {
+                        <a class="text-action" [href]="activity.actionUrl" target="_blank" rel="noreferrer">Explorar</a>
+                      } @else {
+                        <a class="text-action" [routerLink]="activityLink(activity)">Explorar</a>
+                      }
+                    </footer>
+                  </article>
+                }
+              </div>
+            } @else {
+              <article class="empty-panel">
+                <h3>Sin actividad agregada</h3>
+                <p>Mostraremos señales del ciclo sin exponer datos personales de compañeros.</p>
+              </article>
+            }
+          </section>
+
+          <section class="side-section" aria-labelledby="announcements-title">
+            <div class="section-heading compact">
+              <p class="eyebrow">Centro</p>
+              <h2 id="announcements-title">Avisos recientes</h2>
+            </div>
+
+            @if (data.announcements.length > 0) {
+              <div class="announcement-list">
+                @for (announcement of data.announcements; track announcement.id) {
+                  <article class="announcement-item" [class.is-assignment]="announcement.kind === 'ASSIGNMENT'">
+                    <div class="announcement-meta">
+                      <span>{{ announcementLabel(announcement) }}</span>
+                      <time>{{ formatDate(announcement.publishedAt) }}</time>
+                    </div>
+                    <h3>{{ announcement.title }}</h3>
+                    <p>{{ announcement.body }}</p>
+                    @if (announcement.actionLabel && announcement.actionUrl) {
+                      @if (isExternalUrl(announcement.actionUrl)) {
+                        <a class="text-action" [href]="announcement.actionUrl" target="_blank" rel="noreferrer">
+                          {{ announcement.actionLabel }}
+                        </a>
+                      } @else {
+                        <a class="text-action" [routerLink]="announcementLink(announcement)">
+                          {{ announcement.actionLabel }}
+                        </a>
+                      }
+                    }
+                  </article>
+                }
+              </div>
+            } @else {
+              <article class="empty-panel">
+                <h3>No hay avisos nuevos</h3>
+                <p>Los recordatorios de tutores y coordinación aparecerán en esta sección.</p>
+              </article>
+            }
+          </section>
+        </aside>
+      </section>
+    }
+  }
+
+  @if (selectedOffer(); as detail) {
+    <app-home-offer-detail-dialog [offer]="detail" (closed)="closeOfferDetail()" />
+  }
 </main>

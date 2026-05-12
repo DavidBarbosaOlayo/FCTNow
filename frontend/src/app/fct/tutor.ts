@@ -545,16 +545,16 @@ type ViewMode = 'list' | 'cards';
 
       .kpi-card {
         padding: 1rem 1.1rem;
-        border-radius: 0.75rem;
-        background: var(--surface, #fff);
-        border: 1px solid rgba(15, 95, 89, 0.15);
-        box-shadow: 0 6px 18px rgba(15, 95, 89, 0.06);
+        border-radius: var(--radius-md);
+        background: var(--surface);
+        border: 1px solid rgba(17, 78, 74, 0.15);
+        box-shadow: 0 6px 18px rgba(17, 78, 74, 0.06);
         display: grid;
         gap: 0.35rem;
       }
 
       .kpi-card.kpi-warn {
-        border-color: rgba(199, 101, 59, 0.45);
+        border-color: rgba(87, 96, 106, 0.45);
         background: rgba(255, 244, 230, 0.6);
       }
 
@@ -576,13 +576,13 @@ type ViewMode = 'list' | 'cards';
       .filters-panel,
       .state-panel {
         padding: 1.1rem 1.2rem;
-        border-radius: 0.75rem;
-        background: var(--surface, #fff);
-        border: 1px solid rgba(15, 95, 89, 0.15);
+        border-radius: var(--radius-md);
+        background: var(--surface);
+        border: 1px solid rgba(17, 78, 74, 0.15);
       }
 
       .state-panel.alert {
-        border-color: rgba(199, 101, 59, 0.45);
+        border-color: rgba(87, 96, 106, 0.45);
         background: rgba(255, 244, 230, 0.6);
       }
 
@@ -611,8 +611,8 @@ type ViewMode = 'list' | 'cards';
       .filter-control select {
         min-height: 2.4rem;
         padding: 0 0.6rem;
-        border-radius: 0.45rem;
-        border: 1px solid rgba(15, 95, 89, 0.25);
+        border-radius: var(--radius-md);
+        border: 1px solid rgba(17, 78, 74, 0.25);
         background: #fff;
         font: inherit;
         width: 100%;
@@ -625,14 +625,14 @@ type ViewMode = 'list' | 'cards';
         display: grid;
         grid-template-columns: repeat(2, minmax(5rem, 1fr));
         padding: 0.18rem;
-        border-radius: 0.55rem;
-        background: rgba(15, 95, 89, 0.08);
-        border: 1px solid rgba(15, 95, 89, 0.16);
+        border-radius: var(--radius-md);
+        background: rgba(17, 78, 74, 0.08);
+        border: 1px solid rgba(17, 78, 74, 0.16);
       }
 
       .view-toggle button {
         border: 0;
-        border-radius: 0.4rem;
+        border-radius: var(--radius-sm);
         background: transparent;
         color: var(--muted);
         font: inherit;
@@ -642,9 +642,9 @@ type ViewMode = 'list' | 'cards';
       }
 
       .view-toggle button.is-active {
-        background: var(--surface, #fff);
+        background: var(--surface);
         color: var(--accent);
-        box-shadow: 0 4px 12px rgba(15, 95, 89, 0.12);
+        box-shadow: 0 4px 12px rgba(17, 78, 74, 0.12);
       }
 
       .view-toggle button:focus-visible {
@@ -655,8 +655,8 @@ type ViewMode = 'list' | 'cards';
       .clear-filters-button {
         min-height: 2.4rem;
         padding: 0 0.85rem;
-        border-radius: 0.45rem;
-        border: 1px solid rgba(15, 95, 89, 0.25);
+        border-radius: var(--radius-md);
+        border: 1px solid rgba(17, 78, 74, 0.25);
         background: #fff;
         color: var(--accent);
         font: inherit;
@@ -673,7 +673,7 @@ type ViewMode = 'list' | 'cards';
 
       .clear-filters-button:not(:disabled):hover,
       .clear-filters-button:not(:disabled):focus-visible {
-        background: rgba(15, 95, 89, 0.08);
+        background: rgba(17, 78, 74, 0.08);
         outline: none;
       }
 
@@ -691,16 +691,16 @@ type ViewMode = 'list' | 'cards';
 
       .alumno-row {
         padding: 0.85rem 1rem;
-        border-radius: 0.65rem;
-        background: var(--surface, #fff);
-        border: 1px solid rgba(15, 95, 89, 0.15);
+        border-radius: var(--radius-md);
+        background: var(--surface);
+        border: 1px solid rgba(17, 78, 74, 0.15);
         display: grid;
         gap: 0.65rem;
       }
 
       .alumno-row.is-assigned {
         background: linear-gradient(135deg, rgba(232, 245, 233, 0.96), rgba(255, 255, 255, 0.98));
-        border-color: rgba(46, 125, 50, 0.35);
+        border-color: rgba(29, 107, 74, 0.35);
       }
 
       .row-main {
@@ -762,22 +762,22 @@ type ViewMode = 'list' | 'cards';
         align-items: center;
         justify-content: center;
         border-radius: 0.42rem;
-        background: rgba(15, 95, 89, 0.06);
+        background: rgba(17, 78, 74, 0.06);
         font-weight: 900;
         font-size: 0.88rem;
       }
 
       .row-counters span:nth-child(2) {
-        background: rgba(199, 101, 59, 0.18);
+        background: rgba(87, 96, 106, 0.18);
       }
 
       .row-counters span:nth-child(3) {
-        background: rgba(46, 125, 50, 0.18);
-        color: #1b5e20;
+        background: rgba(29, 107, 74, 0.18);
+        color: var(--success);
       }
 
       .row-counters span:nth-child(4) {
-        background: rgba(184, 79, 59, 0.18);
+        background: rgba(179, 38, 30, 0.18);
         color: #8a3a26;
       }
 
@@ -787,7 +787,7 @@ type ViewMode = 'list' | 'cards';
         gap: 0.5rem 0.75rem;
         align-items: center;
         padding-top: 0.65rem;
-        border-top: 1px solid rgba(15, 95, 89, 0.12);
+        border-top: 1px solid rgba(17, 78, 74, 0.12);
         color: var(--muted);
         font-size: 0.88rem;
       }
@@ -814,9 +814,9 @@ type ViewMode = 'list' | 'cards';
 
       .alumno-card {
         padding: 1rem 1.1rem;
-        border-radius: 0.75rem;
-        background: var(--surface, #fff);
-        border: 1px solid rgba(15, 95, 89, 0.15);
+        border-radius: var(--radius-md);
+        background: var(--surface);
+        border: 1px solid rgba(17, 78, 74, 0.15);
         display: grid;
         gap: 0.85rem;
         align-content: start;
@@ -824,8 +824,8 @@ type ViewMode = 'list' | 'cards';
 
       .alumno-card.is-assigned {
         background: linear-gradient(135deg, rgba(232, 245, 233, 0.96), rgba(255, 255, 255, 0.98));
-        border-color: rgba(46, 125, 50, 0.42);
-        box-shadow: 0 12px 28px rgba(46, 125, 50, 0.12);
+        border-color: rgba(29, 107, 74, 0.42);
+        box-shadow: 0 12px 28px rgba(29, 107, 74, 0.12);
       }
 
       .alumno-card-heading {
@@ -864,8 +864,8 @@ type ViewMode = 'list' | 'cards';
 
       .counter {
         padding: 0.45rem 0.35rem;
-        border-radius: 0.45rem;
-        background: rgba(15, 95, 89, 0.06);
+        border-radius: var(--radius-md);
+        background: rgba(17, 78, 74, 0.06);
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -893,32 +893,32 @@ type ViewMode = 'list' | 'cards';
       }
 
       .counter-warn {
-        background: rgba(199, 101, 59, 0.18);
+        background: rgba(87, 96, 106, 0.18);
       }
 
       .counter-ok {
-        background: rgba(46, 125, 50, 0.18);
-        color: #1b5e20;
+        background: rgba(29, 107, 74, 0.18);
+        color: var(--success);
       }
 
       .counter-bad {
-        background: rgba(184, 79, 59, 0.18);
+        background: rgba(179, 38, 30, 0.18);
         color: #8a3a26;
       }
 
       .asignacion-actual {
         padding: 0.7rem 0.9rem;
-        background: rgba(15, 95, 89, 0.05);
-        border-radius: 0.55rem;
+        background: rgba(17, 78, 74, 0.05);
+        border-radius: var(--radius-md);
         display: grid;
         gap: 0.2rem;
       }
 
       .asignacion-pendiente {
         padding: 0.8rem 0.9rem;
-        border-radius: 0.6rem;
+        border-radius: var(--radius-md);
         background: rgba(255, 244, 230, 0.8);
-        border: 1px solid rgba(199, 101, 59, 0.28);
+        border: 1px solid rgba(87, 96, 106, 0.28);
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -940,7 +940,7 @@ type ViewMode = 'list' | 'cards';
       .secondary-button {
         min-height: 2.35rem;
         border: 0;
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         padding: 0 0.85rem;
         font: inherit;
         font-weight: 800;
@@ -954,7 +954,7 @@ type ViewMode = 'list' | 'cards';
       }
 
       .secondary-button {
-        background: rgba(15, 95, 89, 0.08);
+        background: rgba(17, 78, 74, 0.08);
         color: var(--accent);
       }
 
@@ -968,7 +968,7 @@ type ViewMode = 'list' | 'cards';
 
       .secondary-button:hover,
       .secondary-button:focus-visible {
-        background: rgba(15, 95, 89, 0.14);
+        background: rgba(17, 78, 74, 0.14);
         outline: none;
       }
 
@@ -990,10 +990,10 @@ type ViewMode = 'list' | 'cards';
 
       .confirm-modal {
         width: min(100%, 34rem);
-        border-radius: 1rem;
+        border-radius: var(--radius-md);
         padding: 1.25rem;
         background: var(--surface-strong, #fffaf2);
-        border: 1px solid rgba(15, 95, 89, 0.18);
+        border: 1px solid rgba(17, 78, 74, 0.18);
         box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
         display: grid;
         gap: 1rem;
@@ -1018,8 +1018,8 @@ type ViewMode = 'list' | 'cards';
 
       .confirm-details div {
         padding: 0.7rem 0.8rem;
-        border-radius: 0.55rem;
-        background: rgba(15, 95, 89, 0.06);
+        border-radius: var(--radius-md);
+        background: rgba(17, 78, 74, 0.06);
       }
 
       .confirm-details dt {
@@ -1048,8 +1048,8 @@ type ViewMode = 'list' | 'cards';
 
       .modal-error {
         padding: 0.7rem 0.8rem;
-        border-radius: 0.55rem;
-        background: rgba(184, 79, 59, 0.12);
+        border-radius: var(--radius-md);
+        background: rgba(179, 38, 30, 0.12);
         color: #8a3a26;
         font-weight: 700;
       }

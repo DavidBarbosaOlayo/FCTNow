@@ -208,7 +208,7 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      Abrir en Adzuna
+                      Solicitar en Adzuna
                     </a>
                   </div>
                 </article>
@@ -237,21 +237,21 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         max-width: 46rem;
         padding: 1.2rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         background: var(--surface);
-        box-shadow: var(--shadow-soft);
-        backdrop-filter: blur(14px);
+        box-shadow: none;
       }
 
       .state-panel p:not(.eyebrow) {
-        margin: 0.7rem 0 0;
+        margin: 0.6rem 0 0;
         color: var(--muted);
-        line-height: 1.65;
+        line-height: 1.6;
+        font-size: 0.95rem;
       }
 
       .state-panel.alert {
-        border-color: rgba(184, 79, 59, 0.28);
-        background: rgba(255, 246, 241, 0.9);
+        border-color: rgba(179, 38, 30, 0.32);
+        background: var(--danger-soft);
       }
 
       .state-panel h2,
@@ -259,103 +259,133 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         margin: 0;
         font-family: inherit;
         line-height: 1.2;
-        font-size: 1.45rem;
+        font-size: 1.3rem;
+        font-weight: 700;
+        letter-spacing: -0.015em;
       }
 
       .results-heading {
         display: grid;
-        gap: 0.35rem;
+        gap: 0.3rem;
       }
 
       .solicitudes-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
-        gap: 1rem;
+        gap: 0.75rem;
       }
 
       .solicitud-card {
         display: grid;
-        gap: 1rem;
+        gap: 0.85rem;
         min-height: 100%;
-        padding: 1rem;
+        padding: 1.1rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
-        background: rgba(255, 251, 245, 0.72);
-        box-shadow: var(--shadow-soft);
+        border-radius: var(--radius-md);
+        background: var(--surface);
+        box-shadow: none;
+        transition: border-color 140ms ease;
+      }
+
+      .solicitud-card:hover {
+        border-color: var(--line-strong);
       }
 
       .solicitud-card-heading {
         display: grid;
-        gap: 0.55rem;
+        gap: 0.45rem;
       }
 
       .solicitud-company {
         margin: 0;
-        color: var(--accent);
-        font-size: 0.82rem;
-        font-weight: 800;
+        color: var(--muted-strong);
+        font-size: 0.72rem;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.05em;
       }
 
       .solicitud-card h3 {
         margin: 0;
         font-family: inherit;
-        font-size: 1.15rem;
-        line-height: 1.25;
+        font-size: 1.02rem;
+        line-height: 1.3;
+        font-weight: 600;
+        letter-spacing: -0.005em;
       }
 
       .solicitud-details {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.65rem;
+        gap: 0;
         margin: 0;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        overflow: hidden;
       }
 
       .solicitud-details div {
         min-width: 0;
+        padding: 0.55rem 0.7rem;
+        background: var(--surface-muted);
+        border-right: 1px solid var(--line);
+      }
+
+      .solicitud-details div:nth-child(2n) {
+        border-right: 0;
+      }
+
+      .solicitud-details div:nth-last-child(-n+2) {
+        border-bottom: 0;
       }
 
       .solicitud-details dt {
         color: var(--muted);
-        font-size: 0.78rem;
-        font-weight: 800;
+        font-size: 0.68rem;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.06em;
+        letter-spacing: 0.04em;
       }
 
       .solicitud-details dd {
-        margin: 0.2rem 0 0;
+        margin: 0.18rem 0 0;
         color: var(--ink);
-        font-weight: 700;
-        line-height: 1.35;
+        font-weight: 600;
+        line-height: 1.3;
+        font-size: 0.88rem;
       }
 
       .estado-pill {
         display: inline-flex;
         align-items: center;
-        min-height: 1.85rem;
-        padding: 0 0.7rem;
-        border-radius: 999px;
-        background: rgba(15, 118, 110, 0.14);
+        min-height: 1.5rem;
+        padding: 0 0.55rem;
+        border-radius: var(--radius-sm);
+        background: var(--surface-muted);
         color: var(--ink);
-        font-size: 0.85rem;
-        font-weight: 800;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border: 1px solid var(--line);
       }
 
       .estado-pill[data-estado='ACEPTADA'] {
-        background: rgba(46, 125, 50, 0.18);
-        color: #1b5e20;
+        background: var(--success-soft);
+        color: var(--success);
+        border-color: rgba(29, 107, 74, 0.3);
       }
 
       .estado-pill[data-estado='RECHAZADA'] {
-        background: rgba(184, 79, 59, 0.18);
-        color: #7a2c1c;
+        background: var(--danger-soft);
+        color: var(--danger);
+        border-color: rgba(179, 38, 30, 0.3);
       }
 
       .estado-pill[data-estado='ASIGNADA'] {
-        background: rgba(11, 95, 89, 0.16);
-        color: #0b5f59;
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-color: rgba(17, 78, 74, 0.3);
       }
 
       .estado-cell {
@@ -369,36 +399,41 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
       .solicitud-link,
       .back-link {
         justify-self: start;
-        min-height: 2.5rem;
+        min-height: 2.35rem;
         display: inline-flex;
         align-items: center;
-        padding: 0 0.85rem;
-        border-radius: 0.5rem;
-        font-weight: 800;
+        padding: 0 0.9rem;
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        font-size: 0.9rem;
         text-decoration: none;
+        transition: background-color 140ms ease, border-color 140ms ease;
       }
 
       .solicitud-link {
-        color: #f7fbf8;
+        color: #ffffff;
         background: var(--accent);
+        border: 1px solid var(--accent);
       }
 
       .solicitud-link:hover,
       .solicitud-link:focus-visible {
-        background: #0b5f59;
+        background: var(--accent-hover);
+        border-color: var(--accent-hover);
         outline: none;
       }
 
       .back-link {
         margin-top: 0.4rem;
-        border: 1px solid var(--line);
+        border: 1px solid var(--line-strong);
         color: var(--ink);
-        background: rgba(255, 255, 255, 0.62);
+        background: var(--surface);
       }
 
       .back-link:hover,
       .back-link:focus-visible {
-        border-color: rgba(15, 118, 110, 0.36);
+        border-color: var(--ink-soft);
+        background: var(--surface-muted);
         outline: none;
       }
 
@@ -414,21 +449,22 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
       }
 
       .solicitud-card-externa {
-        background: rgba(244, 236, 223, 0.78);
-        border-color: rgba(199, 101, 59, 0.28);
+        background: var(--surface);
+        border-left: 3px solid var(--accent);
       }
 
       .origen-badge {
         align-self: start;
         display: inline-flex;
-        padding: 0.2rem 0.55rem;
-        border-radius: 999px;
-        background: rgba(199, 101, 59, 0.18);
-        color: var(--accent-warm);
-        font-size: 0.72rem;
-        font-weight: 800;
-        letter-spacing: 0.08em;
+        padding: 0.18rem 0.5rem;
+        border-radius: var(--radius-sm);
+        background: var(--surface-muted);
+        color: var(--muted-strong);
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
         text-transform: uppercase;
+        border: 1px solid var(--line);
       }
 
       .externa-actions {
@@ -443,15 +479,15 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
       }
 
       .solicitud-link.secondary {
-        border: 1px solid var(--line);
+        border: 1px solid var(--line-strong);
         color: var(--ink);
-        background: rgba(255, 255, 255, 0.62);
+        background: var(--surface);
       }
 
       .solicitud-link.secondary:hover,
       .solicitud-link.secondary:focus-visible {
-        border-color: rgba(15, 118, 110, 0.36);
-        background: rgba(255, 255, 255, 0.82);
+        background: var(--surface-muted);
+        border-color: var(--ink-soft);
         outline: none;
       }
 

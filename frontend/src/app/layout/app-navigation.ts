@@ -13,6 +13,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/ro
 import { filter, fromEvent } from 'rxjs';
 import { UserRole } from '../auth/auth.models';
 import { AuthService } from '../auth/auth.service';
+import { MensajesService } from '../mensajes/mensajes.service';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 
 type NavigationIconKey =
@@ -54,7 +55,8 @@ const ANONYMOUS_NAVIGATION_PATHS = new Set(['/', '/practicas', '/perfil']);
         aria-label="Ir al inicio de FCTNow"
         (click)="closeMenu()"
       >
-        FCTNow
+        <img class="app-brand-logo" src="/logo.png" alt="" aria-hidden="true" />
+        <span class="app-brand-name">FCTNow</span>
       </a>
 
       <button
@@ -138,6 +140,11 @@ const ANONYMOUS_NAVIGATION_PATHS = new Set(['/', '/practicas', '/perfil']);
                     <path d="M8 10h8" />
                     <path d="M8 13h5" />
                   </svg>
+                  @if (messageBadge(item); as count) {
+                    <span class="notification-badge" aria-label="Mensajes pendientes">
+                      {{ count }}
+                    </span>
+                  }
                 }
                 @case ('bell') {
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
@@ -170,6 +177,7 @@ const ANONYMOUS_NAVIGATION_PATHS = new Set(['/', '/practicas', '/perfil']);
 })
 export class AppNavigation {
   private readonly authService = inject(AuthService);
+  private readonly mensajesService = inject(MensajesService);
   private readonly notificacionesService = inject(NotificacionesService);
   private readonly currentUser = this.authService.currentUser;
   private readonly platformId = inject(PLATFORM_ID);
@@ -178,6 +186,7 @@ export class AppNavigation {
 
   protected readonly isScrolled = signal(false);
   protected readonly isMenuOpen = signal(false);
+  protected readonly unreadMessages = this.mensajesService.unreadCount;
   protected readonly unreadNotifications = this.notificacionesService.unreadCount;
 
   private readonly navigationItems: NavigationItem[] = [
@@ -247,6 +256,12 @@ export class AppNavigation {
   constructor() {
     effect(() => {
       const roles = this.currentUser()?.roles ?? [];
+      if (roles.includes('ALUMNO') || roles.includes('TUTOR_CENTRO') || roles.includes('COORDINADOR')) {
+        this.mensajesService.refreshMine();
+      } else {
+        this.mensajesService.clearMine();
+      }
+
       if (roles.includes('ALUMNO')) {
         this.notificacionesService.refreshMine();
       } else {
@@ -304,6 +319,17 @@ export class AppNavigation {
       return null;
     }
     const count = this.unreadNotifications();
+    if (count <= 0) {
+      return null;
+    }
+    return count > 99 ? '99+' : String(count);
+  }
+
+  protected messageBadge(item: NavigationItem): string | null {
+    if (item.path !== '/mensajes') {
+      return null;
+    }
+    const count = this.unreadMessages();
     if (count <= 0) {
       return null;
     }
