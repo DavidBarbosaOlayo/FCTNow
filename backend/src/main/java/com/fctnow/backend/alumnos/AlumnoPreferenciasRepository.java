@@ -17,4 +17,16 @@ public interface AlumnoPreferenciasRepository extends JpaRepository<AlumnoPrefer
       where p.alumno.id in :alumnoIds
       """)
   List<AlumnoPreferencias> findByAlumnoIdIn(@Param("alumnoIds") Collection<Long> alumnoIds);
+
+  @Query("""
+      select p
+      from AlumnoPreferencias p
+      join fetch p.alumno a
+      where a.id <> :alumnoId
+        and lower(p.familiaProfesional) = lower(:familiaProfesional)
+      order by a.displayName asc
+      """)
+  List<AlumnoPreferencias> findCompatibleStudents(
+      @Param("alumnoId") Long alumnoId,
+      @Param("familiaProfesional") String familiaProfesional);
 }

@@ -65,6 +65,9 @@ describe('route placeholder pages', () => {
       for (const request of httpTesting.match('/api/alumno/solicitudes-externas')) {
         request.flush([]);
       }
+      for (const request of httpTesting.match('/api/mensajes/conversaciones')) {
+        request.flush([]);
+      }
       fixture.detectChanges();
       httpTesting.verify();
       const compiled = fixture.nativeElement as HTMLElement;

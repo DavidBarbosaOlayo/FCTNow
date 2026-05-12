@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fctnow.backend.asignaciones.AsignacionFctRepository;
 import com.fctnow.backend.auth.LoginRequest;
 import com.fctnow.backend.solicitudes.externas.SolicitudExternaRepository;
 import com.fctnow.backend.user.UserAccount;
@@ -47,9 +48,13 @@ class AsignacionFctExternaControllerTest {
   @Autowired
   private AsignacionFctExternaRepository asignacionRepository;
 
+  @Autowired
+  private AsignacionFctRepository asignacionFctRepository;
+
   @BeforeEach
   void setUp() {
     asignacionRepository.deleteAll();
+    asignacionFctRepository.deleteAll();
     solicitudExternaRepository.deleteAll();
     userAccountRepository.deleteAll();
     userAccountRepository.save(new UserAccount(

@@ -11,6 +11,12 @@ INSERT INTO app_users (
     TRUE
   ),
   (
+    'alumna.compatible@example.com',
+    '$2a$10$9ssoe.HD9QeqKkShCVorTONNHxV8uNIJKyOQVlvBtiN7FClz8mXDK',
+    'Ana Compatible',
+    TRUE
+  ),
+  (
     'empresa@example.com',
     '$2a$10$9ssoe.HD9QeqKkShCVorTONNHxV8uNIJKyOQVlvBtiN7FClz8mXDK',
     'Empresa Demo',
@@ -20,6 +26,12 @@ INSERT INTO app_users (
     'tutor@example.com',
     '$2a$10$9ssoe.HD9QeqKkShCVorTONNHxV8uNIJKyOQVlvBtiN7FClz8mXDK',
     'Tutor Centro Demo',
+    TRUE
+  ),
+  (
+    'profesor@example.com',
+    '$2a$10$9ssoe.HD9QeqKkShCVorTONNHxV8uNIJKyOQVlvBtiN7FClz8mXDK',
+    'Profesor Demo',
     TRUE
   ),
   (
@@ -40,15 +52,63 @@ WHERE email = 'alumno@example.com'
 ON CONFLICT (user_id, role) DO NOTHING;
 
 INSERT INTO user_roles (user_id, role)
+SELECT id, 'ALUMNO'
+FROM app_users
+WHERE email = 'alumna.compatible@example.com'
+ON CONFLICT (user_id, role) DO NOTHING;
+
+INSERT INTO user_roles (user_id, role)
 SELECT id, 'EMPRESA'
 FROM app_users
 WHERE email = 'empresa@example.com'
 ON CONFLICT (user_id, role) DO NOTHING;
 
+INSERT INTO alumno_preferencias (
+  alumno_id,
+  familia_profesional,
+  ciclo_formativo,
+  localidad_preferida,
+  modalidad_preferida,
+  fecha_disponibilidad,
+  observaciones
+) VALUES
+  (
+    (SELECT id FROM app_users WHERE email = 'alumno@example.com'),
+    'Informatica y comunicaciones',
+    'Desarrollo de Aplicaciones Web',
+    'Valencia',
+    'PRESENCIAL',
+    DATE '2026-09-01',
+    'Preferencias demo para probar mensajes.'
+  ),
+  (
+    (SELECT id FROM app_users WHERE email = 'alumna.compatible@example.com'),
+    'Informatica y comunicaciones',
+    'Desarrollo de Aplicaciones Web',
+    'Valencia',
+    'PRESENCIAL',
+    DATE '2026-09-01',
+    'Contacto compatible para iniciar chats.'
+  )
+ON CONFLICT (alumno_id) DO UPDATE SET
+  familia_profesional = EXCLUDED.familia_profesional,
+  ciclo_formativo = EXCLUDED.ciclo_formativo,
+  localidad_preferida = EXCLUDED.localidad_preferida,
+  modalidad_preferida = EXCLUDED.modalidad_preferida,
+  fecha_disponibilidad = EXCLUDED.fecha_disponibilidad,
+  observaciones = EXCLUDED.observaciones,
+  updated_at = NOW();
+
 INSERT INTO user_roles (user_id, role)
 SELECT id, 'TUTOR_CENTRO'
 FROM app_users
 WHERE email = 'tutor@example.com'
+ON CONFLICT (user_id, role) DO NOTHING;
+
+INSERT INTO user_roles (user_id, role)
+SELECT id, 'TUTOR_CENTRO'
+FROM app_users
+WHERE email = 'profesor@example.com'
 ON CONFLICT (user_id, role) DO NOTHING;
 
 INSERT INTO user_roles (user_id, role)
