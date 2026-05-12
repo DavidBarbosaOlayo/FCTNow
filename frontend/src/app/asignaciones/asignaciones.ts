@@ -260,7 +260,7 @@ const ESTADO_LABEL: Record<AsignacionEstado, string> = {
       .kpi-card {
         padding: 1rem 1.1rem;
         border: 1px solid var(--line);
-        border-radius: 0.6rem;
+        border-radius: var(--radius-md);
         background: var(--surface);
         box-shadow: var(--shadow-soft);
         display: grid;
@@ -268,7 +268,7 @@ const ESTADO_LABEL: Record<AsignacionEstado, string> = {
       }
 
       .kpi-card.kpi-warn {
-        border-color: rgba(199, 101, 59, 0.45);
+        border-color: rgba(87, 96, 106, 0.45);
         background: rgba(255, 244, 230, 0.7);
       }
 
@@ -285,7 +285,7 @@ const ESTADO_LABEL: Record<AsignacionEstado, string> = {
       .state-panel {
         padding: 1.2rem;
         border: 1px solid var(--line);
-        border-radius: 0.55rem;
+        border-radius: var(--radius-md);
         background: var(--surface);
         box-shadow: var(--shadow-soft);
         display: grid;
@@ -293,7 +293,7 @@ const ESTADO_LABEL: Record<AsignacionEstado, string> = {
       }
 
       .state-panel.alert {
-        border-color: rgba(184, 79, 59, 0.28);
+        border-color: rgba(179, 38, 30, 0.28);
         background: rgba(255, 246, 241, 0.9);
       }
 
@@ -316,7 +316,7 @@ const ESTADO_LABEL: Record<AsignacionEstado, string> = {
       .form-row textarea {
         padding: 0.55rem 0.7rem;
         border: 1px solid var(--line);
-        border-radius: 0.4rem;
+        border-radius: var(--radius-sm);
         background: rgba(255, 251, 245, 0.8);
         font: inherit;
       }
@@ -342,7 +342,7 @@ const ESTADO_LABEL: Record<AsignacionEstado, string> = {
       .filter-control select {
         min-height: 2.4rem;
         padding: 0 0.6rem;
-        border-radius: 0.45rem;
+        border-radius: var(--radius-md);
         border: 1px solid var(--line);
         background: var(--surface);
         font: inherit;
@@ -370,7 +370,7 @@ const ESTADO_LABEL: Record<AsignacionEstado, string> = {
         gap: 0.7rem;
         padding: 1rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         background: rgba(255, 251, 245, 0.72);
         box-shadow: var(--shadow-soft);
       }
@@ -397,7 +397,7 @@ const ESTADO_LABEL: Record<AsignacionEstado, string> = {
         align-items: center;
         min-height: 1.8rem;
         padding: 0 0.7rem;
-        border-radius: 999px;
+        border-radius: var(--radius-sm);
         font-size: 0.76rem;
         font-weight: 800;
         text-transform: uppercase;
@@ -405,13 +405,13 @@ const ESTADO_LABEL: Record<AsignacionEstado, string> = {
       }
 
       .estado-pill[data-estado='ACTIVA'] {
-        background: rgba(46, 125, 50, 0.18);
-        color: #1b5e20;
+        background: rgba(29, 107, 74, 0.18);
+        color: var(--success);
       }
 
       .estado-pill[data-estado='FINALIZADA'] {
-        background: rgba(15, 118, 110, 0.18);
-        color: #0b5f59;
+        background: rgba(17, 78, 74, 0.18);
+        color: var(--accent-hover);
       }
 
       .asignacion-details {
@@ -448,7 +448,7 @@ const ESTADO_LABEL: Record<AsignacionEstado, string> = {
         display: inline-flex;
         align-items: center;
         padding: 0 0.85rem;
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         font-weight: 800;
         text-decoration: none;
         cursor: pointer;
@@ -457,13 +457,13 @@ const ESTADO_LABEL: Record<AsignacionEstado, string> = {
 
       .primary-action {
         border: 0;
-        color: #f7fbf8;
+        color: #ffffff;
         background: var(--accent);
       }
 
       .primary-action:hover:not([disabled]),
       .primary-action:focus-visible:not([disabled]) {
-        background: #0b5f59;
+        background: var(--accent-hover);
         outline: none;
       }
 

@@ -104,10 +104,9 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
       .notification-card,
       .route-panel {
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         background: var(--surface);
-        box-shadow: var(--shadow-soft);
-        backdrop-filter: blur(14px);
+        box-shadow: none;
       }
 
       .route-panel {
@@ -115,8 +114,8 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
       }
 
       .route-panel.alert {
-        border-color: rgba(184, 79, 59, 0.28);
-        background: rgba(255, 246, 241, 0.9);
+        border-color: rgba(179, 38, 30, 0.32);
+        background: var(--danger-soft);
       }
 
       .notification-card {
@@ -124,7 +123,12 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
         grid-template-columns: minmax(0, 1fr) auto;
         gap: 1rem;
         align-items: center;
-        padding: 1rem;
+        padding: 1rem 1.15rem;
+        transition: border-color 140ms ease;
+      }
+
+      .notification-card:hover {
+        border-color: var(--line-strong);
       }
 
       .notification-card.is-read {
@@ -133,18 +137,21 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
 
       .notification-copy {
         display: grid;
-        gap: 0.35rem;
+        gap: 0.3rem;
       }
 
       .notification-copy h2,
       .route-panel h2 {
         margin: 0;
         font-family: inherit;
-        line-height: 1.2;
+        line-height: 1.25;
+        font-weight: 700;
+        letter-spacing: -0.012em;
       }
 
       .notification-copy h2 {
-        font-size: 1.15rem;
+        font-size: 1.02rem;
+        font-weight: 600;
       }
 
       .notification-copy p:not(.eyebrow),
@@ -152,12 +159,13 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
         margin: 0;
         color: var(--muted);
         line-height: 1.55;
+        font-size: 0.93rem;
       }
 
       .notification-copy time {
         color: var(--muted);
-        font-size: 0.85rem;
-        font-weight: 700;
+        font-size: 0.8rem;
+        font-weight: 500;
       }
 
       .notification-actions {
@@ -170,39 +178,44 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
       .primary-action,
       .secondary-action,
       .read-badge {
-        min-height: 2.55rem;
+        min-height: 2.4rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        padding: 0 0.9rem;
-        border-radius: 0.5rem;
+        padding: 0 0.95rem;
+        border-radius: var(--radius-md);
         font: inherit;
-        font-weight: 800;
+        font-weight: 600;
+        font-size: 0.9rem;
       }
 
       .primary-action {
-        border: 0;
-        color: #f7fbf8;
+        border: 1px solid var(--accent);
+        color: #ffffff;
         background: var(--accent);
         text-decoration: none;
+        transition: background-color 140ms ease, border-color 140ms ease;
       }
 
       .secondary-action {
-        border: 1px solid var(--line);
+        border: 1px solid var(--line-strong);
         color: var(--ink);
-        background: rgba(255, 255, 255, 0.64);
+        background: var(--surface);
         cursor: pointer;
+        transition: background-color 140ms ease, border-color 140ms ease;
       }
 
       .primary-action:hover,
       .primary-action:focus-visible {
-        background: #0b5f59;
+        background: var(--accent-hover);
+        border-color: var(--accent-hover);
         outline: none;
       }
 
       .secondary-action:hover:not(:disabled),
       .secondary-action:focus-visible:not(:disabled) {
-        border-color: rgba(15, 118, 110, 0.36);
+        background: var(--surface-muted);
+        border-color: var(--ink-soft);
         outline: none;
       }
 
@@ -213,7 +226,8 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
 
       .read-badge {
         color: var(--accent);
-        background: rgba(15, 118, 110, 0.1);
+        background: var(--accent-soft);
+        border: 1px solid rgba(17, 78, 74, 0.22);
       }
 
       @media (max-width: 720px) {

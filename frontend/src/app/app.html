@@ -1,2 +1,4 @@
 <app-navigation />
-<router-outlet />
+<div #routeHost class="route-host">
+  <router-outlet (activate)="onRouteActivated()" />
+</div>

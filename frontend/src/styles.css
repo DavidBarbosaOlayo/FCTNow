@@ -5,8 +5,14 @@ body {
 
 body {
   margin: 0;
-  font-family: 'Avenir Next', 'Segoe UI', sans-serif;
-  color: #1d2733;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Avenir Next', system-ui, sans-serif;
+  font-feature-settings: 'cv11', 'ss01', 'kern';
+  font-size: 15px;
+  line-height: 1.5;
+  color: #0f1620;
+  background: #eef0f1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 *,
@@ -15,17 +21,59 @@ body {
   box-sizing: border-box;
 }
 
+a {
+  color: inherit;
+}
+
+@keyframes route-slide-from-right {
+  0% {
+    transform: translate3d(20px, 0, 0);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes route-slide-from-left {
+  0% {
+    transform: translate3d(-20px, 0, 0);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+app-root .route-host.is-sliding-forward {
+  animation: route-slide-from-right 220ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+app-root .route-host.is-sliding-backward {
+  animation: route-slide-from-left 220ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  app-root .route-host.is-sliding-forward,
+  app-root .route-host.is-sliding-backward {
+    animation: none;
+  }
+}
+
 app-root .student-avatar {
-  width: 2.55rem;
-  height: 2.55rem;
-  border-radius: 999px;
-  background: rgba(15, 95, 89, 0.08);
-  color: var(--muted);
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   flex: 0 0 auto;
+  font-weight: 600;
 }
 
 app-root .student-avatar img {
@@ -35,8 +83,8 @@ app-root .student-avatar img {
 }
 
 app-root .student-avatar svg {
-  width: 1.55rem;
-  height: 1.55rem;
+  width: 1.4rem;
+  height: 1.4rem;
   fill: currentColor;
 }
 
@@ -45,7 +93,7 @@ app-root .student-cell {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.7rem;
 }
 
 app-root .card-student-cell {
@@ -78,43 +126,47 @@ app-root .student-identity-button:focus-visible h3 {
 }
 
 app-root .student-identity-button:focus-visible {
-  outline: 2px solid rgba(15, 118, 110, 0.45);
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
-  border-radius: 0.45rem;
+  border-radius: var(--radius-sm);
 }
 
 app-root .alumno-email {
   margin: 0.15rem 0 0;
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
 }
 
 app-root .estado-pill {
   align-self: start;
   display: inline-flex;
   align-items: center;
-  padding: 0 0.7rem;
-  min-height: 1.7rem;
-  border-radius: 999px;
+  padding: 0 0.55rem;
+  min-height: 1.4rem;
+  border-radius: var(--radius-sm);
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
+  border: 1px solid transparent;
 }
 
 app-root .estado-pill[data-estado='ACTIVA'] {
-  background: rgba(46, 125, 50, 0.18);
-  color: #1b5e20;
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: rgba(29, 107, 74, 0.25);
 }
 
 app-root .estado-pill[data-estado='FINALIZADA'] {
-  background: rgba(15, 118, 110, 0.18);
-  color: #0b5f59;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: rgba(17, 78, 74, 0.25);
 }
 
 app-root .estado-pill.estado-sin {
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--surface-muted);
   color: var(--muted);
+  border-color: var(--line);
 }
 
 app-root .detail-modal {
@@ -130,19 +182,19 @@ app-root .student-detail-header {
 }
 
 app-root .detail-avatar {
-  width: 3.7rem;
-  height: 3.7rem;
+  width: 3.4rem;
+  height: 3.4rem;
 }
 
 app-root .detail-avatar svg {
-  width: 2.3rem;
-  height: 2.3rem;
+  width: 2rem;
+  height: 2rem;
 }
 
 app-root .detail-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.55rem;
+  gap: 0.5rem;
   margin: 0;
 }
 
@@ -152,10 +204,10 @@ app-root .detail-grid > div {
 
 app-root .detail-grid > div,
 app-root .cv-detail-panel {
-  padding: 0.6rem 0.7rem;
+  padding: 0.7rem 0.8rem;
   border: 1px solid var(--line);
-  border-radius: 0.55rem;
-  background: var(--surface-strong, #fffaf2);
+  border-radius: var(--radius-md);
+  background: var(--surface);
 }
 
 app-root .detail-grid .detail-full {
@@ -165,17 +217,18 @@ app-root .detail-grid .detail-full {
 app-root .detail-grid dt {
   margin: 0;
   color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 800;
+  font-size: 0.7rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
 }
 
 app-root .detail-grid dd {
-  margin: 0.18rem 0 0;
-  font-weight: 700;
-  line-height: 1.28;
+  margin: 0.2rem 0 0;
+  font-weight: 600;
+  line-height: 1.32;
   white-space: pre-wrap;
+  color: var(--ink);
 }
 
 app-root .cv-detail-panel {
@@ -187,7 +240,8 @@ app-root .cv-detail-panel {
 
 app-root .cv-detail-title {
   margin: 0.15rem 0;
-  font-weight: 800;
+  font-weight: 700;
+  color: var(--ink);
 }
 
 app-root .cv-detail-actions {
@@ -221,65 +275,76 @@ app-root .cv-detail-actions {
 app-root .page-shell {
   position: relative;
   z-index: 1;
-  width: min(1220px, calc(100% - 2rem));
+  width: min(1180px, calc(100% - 2rem));
   margin: 0 auto;
-  padding: 1rem 0 4rem;
+  padding: 1.25rem 0 4rem;
 }
 
 app-root .app-header {
   position: sticky;
   top: 0;
   z-index: 5;
-  width: min(1220px, calc(100% - 2rem));
-  margin: 0 auto;
-  padding: 0.6rem 1rem 0.55rem;
+  width: 100%;
+  margin: 0;
+  padding: 0 max(1rem, calc((100% - 1180px) / 2));
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 1rem;
+  gap: 1.25rem;
   align-items: center;
-  border-radius: 0 0 1.1rem 1.1rem;
-  background: transparent;
-  border: 1px solid transparent;
+  border-radius: 0;
+  background: var(--surface);
+  border: 0;
+  border-bottom: 1px solid var(--line);
   box-shadow: none;
-  transition:
-    background-color 220ms ease,
-    border-color 220ms ease,
-    box-shadow 220ms ease,
-    backdrop-filter 220ms ease;
+  min-height: 3.5rem;
+  transition: box-shadow 180ms ease, border-color 180ms ease;
 }
 
 app-root .app-header.is-scrolled {
-  background: rgba(244, 236, 223, 0.82);
-  border-color: var(--line);
   box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
 }
 
 app-root .app-brand {
-  color: var(--accent);
-  font-size: 1.05rem;
+  color: var(--ink);
+  font-size: 1rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-decoration: none;
   text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0;
+}
+
+app-root .app-brand-logo {
+  display: block;
+  width: 1.85rem;
+  height: 1.85rem;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+app-root .app-brand-name {
+  display: inline-block;
+  line-height: 1;
 }
 
 app-root .app-nav-toggle {
   grid-column: 3;
   display: none;
-  width: 2.6rem;
-  height: 2.6rem;
+  width: 2.4rem;
+  height: 2.4rem;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
+  border-radius: var(--radius-md);
+  background: var(--surface);
   color: var(--ink);
   cursor: pointer;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.28rem;
 }
 
 app-root .app-nav-toggle:focus-visible {
@@ -288,10 +353,9 @@ app-root .app-nav-toggle:focus-visible {
 }
 
 app-root .app-nav-toggle-bar {
-  width: 1.1rem;
+  width: 1.05rem;
   height: 2px;
   background: currentColor;
-  border-radius: 2px;
   transition: transform 200ms ease, opacity 200ms ease;
 }
 
@@ -312,27 +376,29 @@ app-root .app-nav {
   min-width: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0;
   justify-content: flex-end;
   align-items: stretch;
 }
 
 app-root .app-nav-link {
+  position: relative;
   flex: 0 0 auto;
-  min-height: 3.2rem;
+  min-height: 3.25rem;
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.15rem;
-  padding: 0.35rem 0.75rem 0.4rem;
-  border-radius: 0.85rem;
+  padding: 0.3rem 0.85rem 0.35rem;
+  border-radius: 0;
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
   line-height: 1.1;
+  transition: color 140ms ease;
 }
 
 app-root .app-nav-icon {
@@ -340,8 +406,8 @@ app-root .app-nav-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.2rem;
+  height: 1.2rem;
 }
 
 app-root .app-nav-icon svg {
@@ -351,72 +417,82 @@ app-root .app-nav-icon svg {
 
 app-root .notification-badge {
   position: absolute;
-  top: -0.45rem;
+  top: -0.4rem;
   right: -0.55rem;
-  min-width: 1.05rem;
-  height: 1.05rem;
+  min-width: 1rem;
+  height: 1rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0 0.25rem;
-  border: 2px solid var(--surface-strong);
-  border-radius: 999px;
+  border: 2px solid var(--surface);
+  border-radius: var(--radius-pill);
   color: #ffffff;
-  background: #d92d20;
-  font-size: 0.62rem;
-  font-weight: 900;
+  background: var(--danger);
+  font-size: 0.6rem;
+  font-weight: 800;
   line-height: 1;
 }
 
 app-root .app-nav-label {
-  font-size: 0.78rem;
-  letter-spacing: 0.02em;
+  font-size: 0.76rem;
+  letter-spacing: 0.01em;
 }
 
 app-root .app-nav-link:hover,
 app-root .app-nav-link:focus-visible {
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.58);
+  background: transparent;
   outline: none;
 }
 
 app-root .app-nav-link.is-active {
-  color: #f7fbf8;
+  color: var(--ink);
+  background: transparent;
+}
+
+app-root .app-nav-link.is-active::after {
+  content: '';
+  position: absolute;
+  left: 0.6rem;
+  right: 0.6rem;
+  bottom: 0;
+  height: 2px;
   background: var(--accent);
 }
 
 app-root .masthead,
 app-root .hero,
 app-root .content-section {
-  animation: rise-in 720ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: rise-in 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 app-root .hero {
-  animation-delay: 80ms;
+  animation-delay: 60ms;
 }
 
 app-root .content-section:nth-of-type(1) {
-  animation-delay: 140ms;
+  animation-delay: 100ms;
 }
 
 app-root .content-section:nth-of-type(2) {
-  animation-delay: 200ms;
+  animation-delay: 140ms;
 }
 
 app-root .content-section:nth-of-type(3) {
-  animation-delay: 260ms;
+  animation-delay: 180ms;
 }
 
 app-root .masthead {
   display: flex;
   justify-content: space-between;
-  gap: 1.25rem;
+  gap: 1.5rem;
   align-items: flex-start;
   margin-bottom: 1.5rem;
 }
 
 app-root .brand-block {
-  max-width: 28rem;
+  max-width: 32rem;
 }
 
 app-root .brand-mark,
@@ -430,9 +506,10 @@ app-root .hero-note-title,
 app-root .board-state {
   margin: 0;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
-  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  font-size: 0.72rem;
   font-weight: 700;
+  color: var(--muted);
 }
 
 app-root .brand-mark {
@@ -440,33 +517,25 @@ app-root .brand-mark {
 }
 
 app-root .brand-caption {
-  margin: 0.45rem 0 0;
+  margin: 0.6rem 0 0;
   color: var(--muted);
-  font-size: 0.98rem;
+  font-size: 0.95rem;
   line-height: 1.55;
 }
 
 app-root .signal-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: 0.5rem;
   width: min(100%, 42rem);
 }
 
-app-root .signal-chip,
-app-root .hero-copy,
-app-root .module-card,
-app-root .actor-card,
-app-root .journey-step {
+app-root .signal-chip {
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
   background: var(--surface);
   border: 1px solid var(--line);
-  box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(14px);
-}
-
-app-root .signal-chip {
-  padding: 0.95rem 1rem;
-  border-radius: 1rem;
+  box-shadow: none;
 }
 
 app-root .signal-label,
@@ -478,9 +547,9 @@ app-root .module-tag {
 }
 
 app-root .signal-value {
-  margin: 0.35rem 0 0;
+  margin: 0.4rem 0 0;
   color: var(--ink);
-  font-size: 0.96rem;
+  font-size: 0.95rem;
   font-weight: 600;
   line-height: 1.4;
 }
@@ -488,36 +557,52 @@ app-root .signal-value {
 app-root .hero {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(21rem, 0.92fr);
-  gap: 1.5rem;
+  gap: 1rem;
   align-items: stretch;
 }
 
+app-root .hero-copy,
+app-root .module-card,
+app-root .actor-card,
+app-root .journey-step {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+
 app-root .hero-copy {
-  padding: 2.2rem;
-  border-radius: 2rem;
+  padding: 2rem 2.2rem 2.2rem;
+  border-radius: var(--radius-md);
 }
 
 app-root h1,
 app-root h2,
 app-root h3 {
   margin: 0;
-  font-family: 'Cormorant Garamond', 'Iowan Old Style', 'Palatino Linotype', serif;
+  font-family: var(--font-sans);
   font-weight: 700;
-  line-height: 0.98;
+  line-height: 1.15;
+  color: var(--ink);
 }
 
 app-root h1 {
-  max-width: 12ch;
-  margin-top: 0.85rem;
-  font-size: clamp(3.5rem, 6vw, 6.4rem);
+  max-width: 18ch;
+  margin-top: 0.7rem;
+  font-size: clamp(2.4rem, 4.5vw, 3.4rem);
+  letter-spacing: -0.022em;
+  line-height: 1.05;
 }
 
 app-root h2 {
-  font-size: clamp(2rem, 3.5vw, 3rem);
+  font-size: clamp(1.45rem, 2.5vw, 1.9rem);
+  letter-spacing: -0.015em;
 }
 
 app-root h3 {
-  font-size: 1.45rem;
+  font-size: 1.05rem;
+  letter-spacing: -0.005em;
+  font-weight: 600;
 }
 
 app-root .hero-summary,
@@ -528,76 +613,66 @@ app-root .actor-card p,
 app-root .hero-note p {
   margin: 0;
   color: var(--muted);
-  font-size: 1rem;
-  line-height: 1.7;
+  font-size: 0.95rem;
+  line-height: 1.6;
 }
 
 app-root .hero-summary {
   max-width: 60ch;
-  margin-top: 1.2rem;
-  font-size: 1.08rem;
+  margin-top: 1rem;
+  font-size: 1rem;
 }
 
 app-root .hero-notes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-  margin-top: 2rem;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
 }
 
 app-root .hero-note {
   padding: 1rem 1.1rem 1.1rem;
-  border-radius: 1.2rem;
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(25, 36, 47, 0.08);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
 }
 
 app-root .hero-note.accent {
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), rgba(15, 118, 110, 0.02));
+  background: var(--accent-soft);
+  border-color: rgba(17, 78, 74, 0.2);
 }
 
 app-root .hero-board {
-  padding: 1.4rem;
-  border-radius: 2rem;
-  color: #f5f5ee;
-  background:
-    linear-gradient(160deg, rgba(255, 255, 255, 0.07), transparent 40%),
-    linear-gradient(180deg, #123b3d 0%, #173e48 55%, #2b4f52 100%);
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  color: #e6e9ec;
+  background: var(--surface-deep);
+  border: 1px solid #0a0f17;
   box-shadow: var(--shadow-deep);
   position: relative;
   overflow: hidden;
-}
-
-app-root .hero-board::after {
-  content: '';
-  position: absolute;
-  inset: auto -3rem -4rem auto;
-  width: 14rem;
-  height: 14rem;
-  border-radius: 999px;
-  background: rgba(199, 101, 59, 0.18);
-  filter: blur(8px);
 }
 
 app-root .board-heading,
 app-root .section-heading {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.4rem;
 }
 
 app-root .board-kicker {
-  color: rgba(241, 241, 233, 0.72);
+  color: rgba(230, 233, 236, 0.6);
 }
 
 app-root .hero-board h2 {
-  max-width: 11ch;
+  max-width: 14ch;
+  color: #ffffff;
 }
 
 app-root .board-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem;
+  gap: 0.75rem;
   margin-top: 1.25rem;
 }
 
@@ -605,52 +680,54 @@ app-root .board-card {
   position: relative;
   z-index: 1;
   padding: 1rem;
-  border-radius: 1.15rem;
-  background: rgba(255, 250, 242, 0.08);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 app-root .board-state {
-  color: #f1cb9f;
+  color: var(--accent-soft);
 }
 
 app-root .board-card h3 {
-  margin-top: 0.45rem;
-  font-size: 1.25rem;
-  line-height: 1.05;
+  margin-top: 0.4rem;
+  font-size: 1.05rem;
+  line-height: 1.2;
+  color: #ffffff;
 }
 
 app-root .board-card p {
-  margin-top: 0.65rem;
-  color: rgba(245, 245, 238, 0.76);
+  margin-top: 0.5rem;
+  color: rgba(230, 233, 236, 0.7);
 }
 
 app-root .board-checks {
   position: relative;
   z-index: 1;
-  margin: 1.15rem 0 0;
+  margin: 1.1rem 0 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 0.75rem;
+  gap: 0.6rem;
 }
 
 app-root .board-checks li {
-  padding-left: 1.45rem;
+  padding-left: 1.25rem;
   position: relative;
-  color: rgba(245, 245, 238, 0.84);
-  line-height: 1.55;
+  color: rgba(230, 233, 236, 0.78);
+  line-height: 1.5;
+  font-size: 0.92rem;
 }
 
 app-root .board-checks li::before {
   content: '';
   position: absolute;
   left: 0;
-  top: 0.48rem;
-  width: 0.58rem;
-  height: 0.58rem;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #f1cb9f, #c7653b);
+  top: 0.55rem;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 1px;
+  background: var(--accent-soft);
 }
 
 app-root .content-section {
@@ -661,7 +738,7 @@ app-root .journey-track,
 app-root .module-grid,
 app-root .actor-grid {
   display: grid;
-  gap: 1rem;
+  gap: 0.75rem;
   margin-top: 1rem;
 }
 
@@ -674,31 +751,30 @@ app-root .module-card,
 app-root .actor-card {
   position: relative;
   min-height: 100%;
-  border-radius: 1.5rem;
-  padding: 1.35rem;
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
 }
 
 app-root .journey-step::before {
   content: '';
   position: absolute;
   inset: 0 auto auto 0;
-  width: 100%;
-  height: 0.28rem;
-  border-radius: 1.5rem 1.5rem 0 0;
-  background: linear-gradient(90deg, var(--accent), var(--accent-warm));
+  width: 2px;
+  height: 100%;
+  background: var(--accent);
 }
 
 app-root .journey-step h3,
 app-root .module-card h3,
 app-root .actor-card h3 {
-  margin-top: 0.55rem;
-  line-height: 1.06;
+  margin-top: 0.5rem;
+  line-height: 1.2;
 }
 
 app-root .journey-step p,
 app-root .module-card p,
 app-root .actor-card p {
-  margin-top: 0.7rem;
+  margin-top: 0.6rem;
 }
 
 app-root .module-grid {
@@ -709,16 +785,9 @@ app-root .actor-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-app-root .module-card {
-  background:
-    linear-gradient(180deg, rgba(15, 118, 110, 0.05), rgba(255, 255, 255, 0.78)),
-    var(--surface);
-}
-
+app-root .module-card,
 app-root .actor-card {
-  background:
-    linear-gradient(180deg, rgba(199, 101, 59, 0.04), rgba(255, 255, 255, 0.78)),
-    var(--surface);
+  background: var(--surface);
 }
 
 app-root .route-page {
@@ -733,25 +802,24 @@ app-root .route-actions {
   max-width: 56rem;
   background: var(--surface);
   border: 1px solid var(--line);
-  box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(14px);
+  box-shadow: none;
+  border-radius: var(--radius-md);
 }
 
 app-root .route-panel {
   padding: 1.5rem;
-  border-radius: 1.5rem;
 }
 
 app-root .route-panel p,
 app-root .route-list {
   margin: 1rem 0 0;
   color: var(--muted);
-  font-size: 1rem;
-  line-height: 1.7;
+  font-size: 0.98rem;
+  line-height: 1.6;
 }
 
 app-root .route-panel h2 {
-  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
 }
 
 app-root .route-list {
@@ -764,21 +832,28 @@ app-root .route-list li + li {
 
 app-root .route-actions {
   width: fit-content;
-  padding: 0.8rem;
-  border-radius: 999px;
+  padding: 0.6rem;
+  border-radius: var(--radius-md);
 }
 
 app-root .route-actions a {
   display: inline-flex;
-  min-height: 2.75rem;
+  min-height: 2.4rem;
   align-items: center;
   justify-content: center;
   padding: 0 1rem;
-  border-radius: 999px;
-  color: #f7fbf8;
+  border-radius: var(--radius-md);
+  color: #ffffff;
   background: var(--accent);
-  font-weight: 700;
+  font-weight: 600;
   text-decoration: none;
+  font-size: 0.92rem;
+}
+
+app-root .route-actions a:hover,
+app-root .route-actions a:focus-visible {
+  background: var(--accent-hover);
+  outline: none;
 }
 
 app-root .login-page {
@@ -796,88 +871,97 @@ app-root .login-panel {
 app-root .login-copy p:not(.eyebrow) {
   margin: 1rem 0 0;
   color: var(--muted);
-  line-height: 1.7;
+  line-height: 1.6;
 }
 
 app-root .login-form {
   display: grid;
-  gap: 1rem;
+  gap: 0.9rem;
 }
 
 app-root .form-field {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.35rem;
 }
 
 app-root .form-field label {
   color: var(--ink);
-  font-size: 0.92rem;
-  font-weight: 800;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 app-root .form-field input {
   width: 100%;
-  min-height: 3rem;
-  padding: 0 0.95rem;
+  min-height: 2.6rem;
+  padding: 0 0.85rem;
   border: 1px solid var(--line);
-  border-radius: 0.65rem;
+  border-radius: var(--radius-md);
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--surface);
   font: inherit;
+  font-size: 0.95rem;
   outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+app-root .form-field input:hover {
+  border-color: var(--line-strong);
 }
 
 app-root .form-field input:focus-visible {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.16);
+  box-shadow: 0 0 0 3px rgba(17, 78, 74, 0.15);
 }
 
 app-root .form-field input[aria-invalid='true'] {
-  border-color: #b84f3b;
+  border-color: var(--danger);
 }
 
 app-root .field-error,
 app-root .form-alert {
   margin: 0;
-  color: #8f3324;
-  font-size: 0.9rem;
+  color: var(--danger);
+  font-size: 0.85rem;
   line-height: 1.45;
 }
 
 app-root .form-alert {
-  padding: 0.8rem 0.9rem;
-  border: 1px solid rgba(184, 79, 59, 0.22);
-  border-radius: 0.65rem;
-  background: rgba(184, 79, 59, 0.08);
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(179, 38, 30, 0.22);
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
 }
 
 app-root .login-submit {
-  min-height: 3rem;
+  min-height: 2.6rem;
   border: 0;
-  border-radius: 0.65rem;
-  color: #f7fbf8;
+  border-radius: var(--radius-md);
+  color: #ffffff;
   background: var(--accent);
   font: inherit;
-  font-weight: 800;
+  font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
+  transition: background-color 140ms ease;
 }
 
 app-root .login-submit:hover:not(:disabled),
 app-root .login-submit:focus-visible:not(:disabled) {
-  background: #0b5f59;
+  background: var(--accent-hover);
   outline: none;
 }
 
 app-root .login-submit:disabled {
-  color: rgba(25, 36, 47, 0.52);
-  background: rgba(25, 36, 47, 0.12);
+  color: rgba(15, 22, 32, 0.5);
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
   cursor: not-allowed;
 }
 
 @keyframes rise-in {
   from {
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(10px);
   }
 
   to {
@@ -921,7 +1005,7 @@ app-root .login-submit:disabled {
 
 @media (max-width: 1100px) {
   app-root .app-nav {
-    gap: 0.2rem;
+    gap: 0;
   }
 
   app-root .app-nav-link {
@@ -930,29 +1014,25 @@ app-root .login-submit:disabled {
   }
 
   app-root .app-nav-icon {
-    width: 1.2rem;
-    height: 1.2rem;
+    width: 1.15rem;
+    height: 1.15rem;
   }
 
   app-root .app-nav-label {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
   }
 }
 
 @media (max-width: 880px) {
-  app-root .app-nav {
-    gap: 0.15rem;
-  }
-
   app-root .app-nav-link {
-    min-height: auto;
-    padding: 0.45rem 0.55rem;
+    min-height: 3rem;
+    padding: 0.4rem 0.55rem;
     gap: 0;
   }
 
   app-root .app-nav-icon {
-    width: 1.4rem;
-    height: 1.4rem;
+    width: 1.35rem;
+    height: 1.35rem;
   }
 
   app-root .app-nav-label {
@@ -962,9 +1042,9 @@ app-root .login-submit:disabled {
 
 @media (max-width: 560px) {
   app-root .app-header {
-    width: min(100% - 1rem, 1220px);
     grid-template-columns: auto 1fr auto;
     gap: 0.5rem;
+    padding: 0 0.9rem;
   }
 
   app-root .app-nav-toggle {
@@ -976,22 +1056,16 @@ app-root .login-submit:disabled {
     grid-row: 2;
     justify-content: flex-start;
     flex-wrap: wrap;
-    gap: 0.4rem;
+    gap: 0;
     max-height: 0;
     overflow: hidden;
     opacity: 0;
     pointer-events: none;
-    transition:
-      max-height 220ms ease,
-      opacity 180ms ease;
+    transition: max-height 220ms ease, opacity 180ms ease;
   }
 
   app-root .app-header.is-menu-open {
-    background: rgba(244, 236, 223, 0.92);
-    border-color: var(--line);
     box-shadow: var(--shadow-soft);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
   }
 
   app-root .app-header.is-menu-open .app-nav {
@@ -999,31 +1073,32 @@ app-root .login-submit:disabled {
     overflow-y: auto;
     opacity: 1;
     pointer-events: auto;
-    padding: 0.4rem 0 0.6rem;
+    padding: 0.3rem 0 0.4rem;
+    border-top: 1px solid var(--line);
   }
 
   app-root .app-header.is-menu-open .app-nav-link {
     flex: 1 1 calc(50% - 0.4rem);
     min-width: 5.5rem;
-    min-height: 3rem;
+    min-height: 2.8rem;
     padding: 0.5rem 0.6rem;
     gap: 0.15rem;
   }
 
   app-root .app-header.is-menu-open .app-nav-icon {
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 1.2rem;
+    height: 1.2rem;
   }
 
   app-root .app-header.is-menu-open .app-nav-label {
     display: inline-block;
-    font-size: 0.78rem;
+    font-size: 0.76rem;
   }
 }
 
 @media (max-width: 720px) {
   app-root .page-shell {
-    width: min(100% - 1rem, 1220px);
+    width: min(100% - 1rem, 1180px);
     padding: 1rem 0 2rem;
   }
 
@@ -1034,7 +1109,7 @@ app-root .login-submit:disabled {
   app-root .actor-card,
   app-root .route-panel {
     padding: 1.2rem;
-    border-radius: 1.3rem;
+    border-radius: var(--radius-md);
   }
 
   app-root .hero-notes,
@@ -1043,11 +1118,11 @@ app-root .login-submit:disabled {
   }
 
   app-root h1 {
-    font-size: clamp(2.6rem, 13vw, 4rem);
+    font-size: clamp(2.1rem, 11vw, 3rem);
   }
 
   app-root h2 {
-    font-size: clamp(1.8rem, 8vw, 2.4rem);
+    font-size: clamp(1.4rem, 6vw, 1.8rem);
   }
 }
 
@@ -1063,21 +1138,21 @@ app-root .recommend-toggle {
 app-root .internal-card-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.55rem;
+  gap: 0.5rem;
   align-items: center;
 }
 
 app-root .recommend-panel {
   position: absolute;
-  top: calc(100% + 0.4rem);
+  top: calc(100% + 0.35rem);
   right: 0;
   min-width: 16rem;
   max-width: 22rem;
   padding: 0.7rem 0.85rem;
-  border-radius: 0.55rem;
-  background: #fffaf3;
-  border: 1px solid var(--line, rgba(15, 95, 89, 0.2));
-  box-shadow: 0 12px 28px rgba(15, 95, 89, 0.18);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-deep);
   z-index: 20;
   display: grid;
   gap: 0.4rem;
@@ -1086,7 +1161,7 @@ app-root .recommend-panel {
 
 app-root .recommend-heading {
   margin: 0;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--ink);
   font-size: 0.85rem;
 }
@@ -1102,7 +1177,7 @@ app-root .recommend-list {
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 0.35rem;
+  gap: 0.25rem;
   max-height: 14rem;
   overflow: auto;
 }
@@ -1120,9 +1195,9 @@ app-root .recommend-list li span {
 app-root .recommend-student {
   width: 100%;
   display: block;
-  padding: 0.35rem 0.45rem;
+  padding: 0.4rem 0.5rem;
   border: 0;
-  border-radius: 0.35rem;
+  border-radius: var(--radius-sm);
   color: inherit;
   background: transparent;
   font: inherit;
@@ -1132,7 +1207,7 @@ app-root .recommend-student {
 
 app-root .recommend-student:hover:not(:disabled),
 app-root .recommend-student:focus-visible:not(:disabled) {
-  background: rgba(15, 118, 110, 0.1);
+  background: var(--accent-soft);
   outline: none;
 }
 
@@ -1142,15 +1217,15 @@ app-root .recommend-student:disabled {
 }
 
 app-root .recommend-feedback {
-  margin-top: 0.55rem;
+  margin-top: 0.5rem;
   font-size: 0.84rem;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 app-root .success-copy {
-  color: #0f766e;
+  color: var(--success);
 }
 
 app-root .error-copy {
-  color: #b84f3b;
+  color: var(--danger);
 }

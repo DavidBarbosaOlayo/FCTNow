@@ -226,23 +226,24 @@ type ModalidadOption = {
 
       .back-link {
         justify-self: start;
-        min-height: 2.4rem;
+        min-height: 2.35rem;
         display: inline-flex;
         align-items: center;
-        padding: 0 0.8rem;
-        border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        padding: 0 0.85rem;
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius-md);
         color: var(--ink);
-        background: rgba(255, 255, 255, 0.62);
-        font-weight: 800;
+        background: var(--surface);
+        font-weight: 600;
+        font-size: 0.9rem;
         text-decoration: none;
+        transition: border-color 140ms ease, background-color 140ms ease;
       }
 
       .back-link:hover,
-      .back-link:focus-visible,
-      .primary-action:hover,
-      .primary-action:focus-visible {
-        border-color: rgba(15, 118, 110, 0.36);
+      .back-link:focus-visible {
+        border-color: var(--ink-soft);
+        background: var(--surface-muted);
         outline: none;
       }
 
@@ -250,17 +251,16 @@ type ModalidadOption = {
       .state-panel,
       .detail-panel {
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
-        box-shadow: var(--shadow-soft);
-        backdrop-filter: blur(14px);
+        border-radius: var(--radius-md);
+        box-shadow: none;
       }
 
       .detail-hero {
         display: grid;
         gap: 0.8rem;
         max-width: 72rem;
-        padding: 1.35rem;
-        background: rgba(255, 251, 245, 0.74);
+        padding: 1.5rem;
+        background: var(--surface);
       }
 
       .detail-hero h1,
@@ -270,12 +270,14 @@ type ModalidadOption = {
         margin: 0;
         font-family: inherit;
         line-height: 1.2;
+        font-weight: 700;
       }
 
       .detail-hero h1,
       .state-panel h1 {
-        max-width: 22ch;
-        font-size: 3rem;
+        max-width: 28ch;
+        font-size: clamp(1.6rem, 3vw, 2.1rem);
+        letter-spacing: -0.018em;
       }
 
       .detail-hero p:not(.eyebrow),
@@ -283,26 +285,27 @@ type ModalidadOption = {
       .copy-block p {
         margin: 0;
         color: var(--muted);
-        line-height: 1.65;
+        line-height: 1.6;
+        font-size: 0.95rem;
       }
 
       .hero-meta {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.55rem;
+        gap: 0.4rem;
       }
 
       .hero-meta span {
-        min-height: 2rem;
+        min-height: 1.7rem;
         display: inline-flex;
         align-items: center;
-        padding: 0 0.65rem;
+        padding: 0 0.55rem;
         border: 1px solid var(--line);
-        border-radius: 999px;
-        color: var(--ink);
-        background: rgba(255, 255, 255, 0.58);
-        font-size: 0.88rem;
-        font-weight: 800;
+        border-radius: var(--radius-sm);
+        color: var(--muted-strong);
+        background: var(--surface-muted);
+        font-size: 0.78rem;
+        font-weight: 600;
       }
 
       .detail-layout {
@@ -320,41 +323,54 @@ type ModalidadOption = {
         display: grid;
         align-content: start;
         gap: 1rem;
-        padding: 1.1rem;
+        padding: 1.25rem;
       }
 
       .detail-panel h2 {
-        font-size: 1.35rem;
+        font-size: 1.2rem;
+        letter-spacing: -0.012em;
       }
 
       .detail-list {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.85rem;
+        gap: 0;
         margin: 0;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        overflow: hidden;
       }
 
       .detail-list div {
         min-width: 0;
-        padding: 0.75rem;
-        border: 1px solid var(--line);
-        border-radius: 0.5rem;
-        background: rgba(255, 255, 255, 0.5);
+        padding: 0.7rem 0.85rem;
+        background: var(--surface-muted);
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .detail-list div:nth-child(2n) {
+        border-right: 0;
+      }
+
+      .detail-list div:nth-last-child(-n+2) {
+        border-bottom: 0;
       }
 
       .detail-list dt {
         color: var(--muted);
-        font-size: 0.78rem;
-        font-weight: 800;
+        font-size: 0.7rem;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.06em;
+        letter-spacing: 0.04em;
       }
 
       .detail-list dd {
         margin: 0.2rem 0 0;
         color: var(--ink);
-        font-weight: 800;
+        font-weight: 600;
         line-height: 1.35;
+        font-size: 0.9rem;
       }
 
       .copy-block {
@@ -370,7 +386,8 @@ type ModalidadOption = {
       }
 
       .copy-block h3 {
-        font-size: 1rem;
+        font-size: 0.98rem;
+        font-weight: 600;
       }
 
       .application-panel {
@@ -385,19 +402,28 @@ type ModalidadOption = {
 
       .primary-action {
         justify-self: start;
-        min-height: 2.55rem;
+        min-height: 2.4rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         padding: 0 1rem;
-        border: 1px solid rgba(15, 118, 110, 0.28);
-        border-radius: 0.5rem;
+        border: 1px solid var(--accent);
+        border-radius: var(--radius-md);
         color: #ffffff;
-        background: #0f766e;
+        background: var(--accent);
         font: inherit;
-        font-weight: 800;
+        font-weight: 600;
+        font-size: 0.9rem;
         text-decoration: none;
         cursor: pointer;
+        transition: background-color 140ms ease, border-color 140ms ease;
+      }
+
+      .primary-action:hover:not(:disabled),
+      .primary-action:focus-visible:not(:disabled) {
+        background: var(--accent-hover);
+        border-color: var(--accent-hover);
+        outline: none;
       }
 
       .primary-action:disabled {
@@ -406,13 +432,13 @@ type ModalidadOption = {
       }
 
       .success-copy {
-        color: #0f766e;
-        font-weight: 800;
+        color: var(--success);
+        font-weight: 600;
       }
 
       .error-copy {
-        color: #b84f3b;
-        font-weight: 800;
+        color: var(--danger);
+        font-weight: 600;
       }
 
       .detail-recommend-panel {
@@ -430,8 +456,8 @@ type ModalidadOption = {
       }
 
       .state-panel.alert {
-        border-color: rgba(184, 79, 59, 0.28);
-        background: rgba(255, 246, 241, 0.9);
+        border-color: rgba(179, 38, 30, 0.32);
+        background: var(--danger-soft);
       }
 
       @media (max-width: 820px) {

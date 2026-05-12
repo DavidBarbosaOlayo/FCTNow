@@ -140,10 +140,9 @@ type ModalidadOption = {
         gap: 1rem;
         padding: 1.2rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         background: var(--surface);
         box-shadow: var(--shadow-soft);
-        backdrop-filter: blur(14px);
       }
 
       .form-grid {
@@ -173,7 +172,7 @@ type ModalidadOption = {
         min-height: 2.7rem;
         padding: 0.5rem 0.8rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         background: rgba(255, 255, 255, 0.74);
         font: inherit;
         color: var(--ink);
@@ -188,7 +187,7 @@ type ModalidadOption = {
       .field select:focus-visible,
       .field textarea:focus-visible {
         border-color: var(--accent);
-        box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.16);
+        box-shadow: 0 0 0 3px rgba(17, 78, 74, 0.16);
       }
 
       .form-actions {
@@ -204,7 +203,7 @@ type ModalidadOption = {
         display: inline-flex;
         align-items: center;
         padding: 0 0.95rem;
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         font-weight: 800;
         text-decoration: none;
         cursor: pointer;
@@ -213,13 +212,13 @@ type ModalidadOption = {
 
       .primary-action {
         border: 0;
-        color: #f7fbf8;
+        color: #ffffff;
         background: var(--accent);
       }
 
       .primary-action:hover:not([disabled]),
       .primary-action:focus-visible:not([disabled]) {
-        background: #0b5f59;
+        background: var(--accent-hover);
         outline: none;
       }
 
@@ -238,19 +237,19 @@ type ModalidadOption = {
         max-width: 46rem;
         padding: 1.2rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         background: var(--surface);
         box-shadow: var(--shadow-soft);
       }
 
       .state-panel.alert {
-        border-color: rgba(184, 79, 59, 0.28);
+        border-color: rgba(179, 38, 30, 0.28);
         background: rgba(255, 246, 241, 0.9);
       }
 
       .form-error {
         margin: 0;
-        color: #7a2c1c;
+        color: var(--danger);
         font-weight: 700;
       }
 

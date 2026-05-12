@@ -218,7 +218,8 @@ class MensajeControllerTest {
         .andExpect(jsonPath("$[0].id").value(conversacionId))
         .andExpect(jsonPath("$[0].titulo").value("Empresa Demo"))
         .andExpect(jsonPath("$[0].otroParticipanteNombre").value("Empresa Demo"))
-        .andExpect(jsonPath("$[0].ultimoMensaje").value("Hola, revisamos tu solicitud."));
+        .andExpect(jsonPath("$[0].ultimoMensaje").value("Hola, revisamos tu solicitud."))
+        .andExpect(jsonPath("$[0].ultimoMensajePropio").value(false));
   }
 
   @Test

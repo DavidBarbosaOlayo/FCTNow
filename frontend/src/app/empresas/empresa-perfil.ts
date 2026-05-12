@@ -241,7 +241,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
         gap: 1rem;
         padding: 1.2rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         background: var(--surface);
         box-shadow: var(--shadow-soft);
       }
@@ -251,7 +251,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
       }
 
       .state-panel.alert {
-        border-color: rgba(184, 79, 59, 0.28);
+        border-color: rgba(179, 38, 30, 0.28);
         background: rgba(255, 246, 241, 0.9);
       }
 
@@ -293,7 +293,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
         width: 100%;
         min-height: 2.7rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         padding: 0.65rem 0.75rem;
         color: var(--ink);
         background: rgba(255, 255, 255, 0.74);
@@ -307,9 +307,9 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
       input:focus,
       select:focus,
       textarea:focus {
-        border-color: rgba(15, 118, 110, 0.5);
+        border-color: rgba(17, 78, 74, 0.5);
         outline: none;
-        box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+        box-shadow: 0 0 0 3px rgba(17, 78, 74, 0.12);
       }
 
       .full-field {
@@ -324,14 +324,14 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
         justify-content: center;
         justify-self: start;
         padding: 0 0.9rem;
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         border: 1px solid transparent;
         font-weight: 800;
         text-decoration: none;
       }
 
       .primary-action {
-        color: #f7fbf8;
+        color: #ffffff;
         background: var(--accent);
       }
 
@@ -352,11 +352,11 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
       }
 
       .form-message.success {
-        color: #0f766e;
+        color: var(--accent);
       }
 
       .form-message.error {
-        color: #a13d2d;
+        color: var(--danger);
       }
 
       .form-actions {
@@ -379,7 +379,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
       .profile-view-grid div {
         padding: 0.75rem 0.85rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         background: rgba(255, 255, 255, 0.55);
       }
 

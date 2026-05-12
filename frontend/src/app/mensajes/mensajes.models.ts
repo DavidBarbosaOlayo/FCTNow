@@ -5,6 +5,7 @@ export type Conversacion = {
   otroParticipanteNombre: string;
   ultimoMensaje: string | null;
   ultimoMensajeAt: string | null;
+  ultimoMensajePropio: boolean | null;
   updatedAt: string;
 };
 

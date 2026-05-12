@@ -1,144 +1,155 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { AuthService } from '../auth/auth.service';
+import { UserRole } from '../auth/auth.models';
+import { OfertaModalidad } from '../practicas/ofertas.models';
+import {
+  HomeAnnouncement,
+  PeerActivityItem,
+  RecommendedHomeOffer,
+  StudentHomeFeed,
+} from './home.models';
+import { HomeCacheService } from './home-cache.service';
+import { HomeOfferDetailDialog } from './home-offer-detail-dialog';
+import { HomeService } from './home.service';
 
-type Highlight = {
-  label: string;
-  value: string;
-};
-
-type BoardCard = {
-  state: string;
-  title: string;
-  detail: string;
-};
-
-type WorkflowStep = {
-  phase: string;
-  title: string;
-  description: string;
-};
-
-type Workstream = {
-  title: string;
-  description: string;
-  tag: string;
-};
-
-type Actor = {
-  name: string;
-  description: string;
-};
+type FeedStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
 @Component({
   selector: 'app-home',
+  imports: [RouterLink, HomeOfferDetailDialog],
   templateUrl: './home.html',
+  styleUrl: './home.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Home {
-  protected readonly title = signal('FCTNow');
+  private readonly authService = inject(AuthService);
+  private readonly homeService = inject(HomeService);
+  private readonly cache = inject(HomeCacheService);
 
-  protected readonly highlights: Highlight[] = [
-    { label: 'Base', value: 'Angular 20 + SSR' },
-    { label: 'Enfoque', value: 'Centro, empresa y alumnado' },
-    { label: 'Estado', value: 'Frontpage operativa' },
-  ];
+  protected readonly currentUser = this.authService.currentUser;
+  protected readonly status = signal<FeedStatus>('idle');
+  protected readonly feed = signal<StudentHomeFeed | null>(null);
+  protected readonly errorMessage = signal('');
+  protected readonly selectedOffer = signal<RecommendedHomeOffer | null>(null);
 
-  protected readonly boardCards: BoardCard[] = [
-    {
-      state: 'Preparado',
-      title: 'Empresas y ofertas',
-      detail:
-        'Registro de empresas colaboradoras, catálogo de plazas y publicación de oportunidades FCT.',
-    },
-    {
-      state: 'Escalable',
-      title: 'Solicitudes y asignación',
-      detail:
-        'Preferencias del alumnado, revisión por tutores y un flujo claro para decidir asignaciones.',
-    },
-    {
-      state: 'Trazable',
-      title: 'Seguimiento y tutoría',
-      detail:
-        'Visitas, incidencias, hitos y observaciones reunidos en un único espacio operativo.',
-    },
-    {
-      state: 'Ordenado',
-      title: 'Evaluación y cierre',
-      detail:
-        'Documentación final, evaluación conjunta y reporting del ciclo sin depender de hojas dispersas.',
-    },
-  ];
+  protected readonly isAlumno = computed(() => this.hasRole('ALUMNO'));
+  protected readonly shouldShowStudentFeed = computed(() => this.currentUser() && this.isAlumno());
 
-  protected readonly workflowSteps: WorkflowStep[] = [
-    {
-      phase: '01',
-      title: 'Preparación',
-      description:
-        'Perfiles, requisitos y empresas quedan listos antes de abrir el ciclo de solicitudes.',
-    },
-    {
-      phase: '02',
-      title: 'Asignación',
-      description:
-        'Preferencias, vacantes y criterios del centro convergen en un proceso entendible y visible.',
-    },
-    {
-      phase: '03',
-      title: 'Seguimiento',
-      description:
-        'Tutor centro, empresa y alumnado comparten estado, incidencias y evolución de la estancia.',
-    },
-    {
-      phase: '04',
-      title: 'Cierre',
-      description:
-        'La evaluación final y la documentación del ciclo quedan preparadas para consulta y trazabilidad.',
-    },
-  ];
+  ngOnInit(): void {
+    if (this.shouldShowStudentFeed()) {
+      this.loadFeed();
+    }
+  }
 
-  protected readonly workstreams: Workstream[] = [
-    {
-      tag: 'Producto',
-      title: 'Arquitectura lista para crecer por módulos',
-      description:
-        'La portada ya separa la conversación entre empresas, alumnado, seguimiento y cierre, evitando una home genérica.',
-    },
-    {
-      tag: 'Operativa',
-      title: 'Jerarquía clara para revisar el estado del sistema',
-      description:
-        'La landing comunica de un vistazo qué partes del flujo FCT deben vivir aquí y cómo se conectan entre sí.',
-    },
-    {
-      tag: 'UX',
-      title: 'Composición visual pensada para escritorio y móvil',
-      description:
-        'Se mantiene una lectura cómoda en responsive y una identidad propia, lejos del scaffold inicial de Angular.',
-    },
-  ];
+  protected loadFeed(forceRefresh = false): void {
+    if (!forceRefresh) {
+      const cached = this.cache.get();
+      if (cached) {
+        this.feed.set(cached);
+        this.errorMessage.set('');
+        this.status.set('loaded');
+        return;
+      }
+    }
 
-  protected readonly actors: Actor[] = [
-    {
-      name: 'Alumno',
-      description: 'Consulta oportunidades, expresa preferencias y sigue el estado de su proceso FCT.',
-    },
-    {
-      name: 'Empresa',
-      description: 'Publica ofertas, colabora en el seguimiento y participa en la evaluación de la estancia.',
-    },
-    {
-      name: 'Tutor centro',
-      description: 'Supervisa el progreso, valida hitos y mantiene trazabilidad de cada práctica.',
-    },
-    {
-      name: 'Coordinador',
-      description: 'Gestiona el ciclo completo, detecta bloqueos y mantiene la visión operativa del programa.',
-    },
-  ];
+    this.status.set('loading');
+    this.errorMessage.set('');
 
-  protected readonly checks: string[] = [
-    'El arranque muestra una portada de producto real y no una pantalla provisional.',
-    'La interfaz comunica el dominio FCTNow sin asumir todavía backend operativo.',
-    'El renderizado sigue siendo compatible con SSR y deja una base limpia para iterar.',
-  ];
+    this.homeService.getStudentFeed().subscribe({
+      next: (feed) => {
+        this.cache.set(feed);
+        this.feed.set(feed);
+        this.status.set('loaded');
+      },
+      error: () => {
+        this.feed.set(null);
+        this.errorMessage.set(
+          'No se pudo cargar tu inicio. Revisa la conexión o inténtalo de nuevo más tarde.',
+        );
+        this.status.set('error');
+      },
+    });
+  }
+
+  protected primaryOfferLink(offer: RecommendedHomeOffer): string | unknown[] {
+    if (offer.offerId) {
+      return ['/practicas', offer.offerId];
+    }
+
+    return '/practicas';
+  }
+
+  protected openOfferDetail(offer: RecommendedHomeOffer): void {
+    this.selectedOffer.set(offer);
+  }
+
+  protected closeOfferDetail(): void {
+    this.selectedOffer.set(null);
+  }
+
+  protected activityLink(activity: PeerActivityItem): string {
+    return activity.actionUrl ?? '/practicas';
+  }
+
+  protected announcementLink(announcement: HomeAnnouncement): string {
+    return announcement.actionUrl ?? '/notificaciones';
+  }
+
+  protected modalityLabel(modality: OfertaModalidad | null): string {
+    switch (modality) {
+      case 'PRESENCIAL':
+        return 'Presencial';
+      case 'HIBRIDA':
+        return 'Híbrida';
+      case 'REMOTA':
+        return 'Remota';
+      default:
+        return 'Sin modalidad definida';
+    }
+  }
+
+  protected roleLabel(role: HomeAnnouncement['authorRole']): string {
+    return role === 'COORDINADOR' ? 'Coordinación FCT' : 'Tutoría del centro';
+  }
+
+  protected announcementLabel(announcement: HomeAnnouncement): string {
+    if (announcement.kind === 'ASSIGNMENT') {
+      return 'Asignación de tutor';
+    }
+    return this.roleLabel(announcement.authorRole);
+  }
+
+  protected isExternalUrl(url: string | null): boolean {
+    return !!url && /^https?:\/\//i.test(url);
+  }
+
+  protected avatarInitials(name: string | null): string {
+    if (!name) {
+      return '?';
+    }
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) {
+      return '?';
+    }
+    const first = parts[0].charAt(0);
+    const last = parts.length > 1 ? parts[parts.length - 1].charAt(0) : '';
+    return (first + last).toUpperCase();
+  }
+
+  protected formatDate(value: string | null): string {
+    if (!value) {
+      return 'Fecha pendiente';
+    }
+
+    return new Intl.DateTimeFormat('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(new Date(value));
+  }
+
+  private hasRole(role: UserRole): boolean {
+    return this.currentUser()?.roles.includes(role) ?? false;
+  }
 }

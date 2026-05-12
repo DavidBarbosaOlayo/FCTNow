@@ -105,9 +105,8 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
       .state-panel,
       .profile-panel {
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         box-shadow: var(--shadow-soft);
-        backdrop-filter: blur(14px);
         background: var(--surface);
       }
 
@@ -123,7 +122,7 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
       }
 
       .state-panel.alert {
-        border-color: rgba(184, 79, 59, 0.28);
+        border-color: rgba(179, 38, 30, 0.28);
         background: rgba(255, 246, 241, 0.9);
       }
 
@@ -168,7 +167,7 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
         align-items: center;
         padding: 0 0.75rem;
         border: 1px solid var(--line);
-        border-radius: 999px;
+        border-radius: var(--radius-sm);
         color: var(--ink);
         background: rgba(255, 255, 255, 0.6);
         font-size: 0.88rem;
@@ -184,8 +183,8 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
       .logout-action {
         min-height: 2.5rem;
         padding: 0 0.95rem;
-        border: 1px solid rgba(184, 79, 59, 0.4);
-        border-radius: 0.5rem;
+        border: 1px solid rgba(179, 38, 30, 0.4);
+        border-radius: var(--radius-md);
         background: rgba(255, 246, 241, 0.92);
         color: #8a3a25;
         font: inherit;
@@ -195,7 +194,7 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
 
       .logout-action:hover,
       .logout-action:focus-visible {
-        border-color: rgba(184, 79, 59, 0.65);
+        border-color: rgba(179, 38, 30, 0.65);
         outline: none;
       }
 
@@ -210,7 +209,7 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
         min-width: 0;
         padding: 0.85rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         background: rgba(255, 255, 255, 0.52);
       }
 
@@ -239,7 +238,7 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
         align-items: center;
         padding: 0 0.8rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         color: var(--ink);
         background: rgba(255, 255, 255, 0.62);
         font-weight: 800;
@@ -248,7 +247,7 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
 
       .back-link:hover,
       .back-link:focus-visible {
-        border-color: rgba(15, 118, 110, 0.36);
+        border-color: rgba(17, 78, 74, 0.36);
         outline: none;
       }
 

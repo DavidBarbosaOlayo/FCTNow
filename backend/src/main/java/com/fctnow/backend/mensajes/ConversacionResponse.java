@@ -9,6 +9,7 @@ public record ConversacionResponse(
     String otroParticipanteNombre,
     String ultimoMensaje,
     Instant ultimoMensajeAt,
+    Boolean ultimoMensajePropio,
     Instant updatedAt) {
 
   static ConversacionResponse from(
@@ -26,6 +27,7 @@ public record ConversacionResponse(
         other.getDisplayName(),
         ultimoMensaje == null ? null : ultimoMensaje.getContenido(),
         ultimoMensaje == null ? null : ultimoMensaje.getCreatedAt(),
+        ultimoMensaje == null ? null : ultimoMensaje.getRemitente().getId().equals(currentUserId),
         conversacion.getUpdatedAt());
   }
 }

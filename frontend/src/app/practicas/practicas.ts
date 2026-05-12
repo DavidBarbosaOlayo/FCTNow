@@ -199,11 +199,11 @@ type ModalidadOption = {
                             type="button"
                             class="tracking-toggle is-estado-solicitada"
                             [disabled]="isExternalActionInFlight(oferta)"
-                            aria-label="Solicitada — pulsa para anular"
+                            aria-label="Solicitada — pulsa para cancelar"
                             (click)="anularSolicitud(oferta)"
                           >
                             <span class="state">Solicitada</span>
-                            <span class="hover">Anular solicitud</span>
+                            <span class="hover">Cancelar</span>
                           </button>
                           <button
                             type="button"
@@ -218,11 +218,11 @@ type ModalidadOption = {
                             type="button"
                             class="tracking-toggle is-estado-aceptada"
                             [disabled]="isExternalActionInFlight(oferta)"
-                            aria-label="Aceptada — pulsa para anular"
+                            aria-label="Aceptada — pulsa para anular asignación"
                             (click)="anularSolicitud(oferta)"
                           >
                             <span class="state">Aceptada</span>
-                            <span class="hover">Anular solicitud</span>
+                            <span class="hover">Anular Asignación</span>
                           </button>
                         } @else {
                           <button
@@ -286,16 +286,16 @@ type ModalidadOption = {
                     [href]="oferta.urlAplicacion"
                     target="_blank"
                     rel="noopener noreferrer"
-                    [attr.aria-label]="'Ver oferta de ' + oferta.titulo + ' en Adzuna'"
+                    [attr.aria-label]="'Abrir oferta de ' + oferta.titulo + ' en Adzuna'"
                   >
-                    Ver oferta en Adzuna
+                    Solicitar en Adzuna
                   </a>
                   <button
                     type="button"
                     class="offer-link secondary"
                     (click)="openExternalDetail(oferta)"
                   >
-                    Ver detalles
+                    Ver detalle
                   </button>
                 </div>
               </article>
@@ -495,9 +495,8 @@ type ModalidadOption = {
       .state-panel {
         background: var(--surface);
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         box-shadow: var(--shadow-soft);
-        backdrop-filter: blur(14px);
       }
 
       .catalog-toolbar {
@@ -529,7 +528,7 @@ type ModalidadOption = {
         min-height: 2.75rem;
         padding: 0 0.8rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         color: var(--ink);
         background: rgba(255, 255, 255, 0.74);
         font: inherit;
@@ -539,7 +538,7 @@ type ModalidadOption = {
       .filter-field input:focus-visible,
       .filter-field select:focus-visible {
         border-color: var(--accent);
-        box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.16);
+        box-shadow: 0 0 0 3px rgba(17, 78, 74, 0.16);
       }
 
       .filter-actions {
@@ -552,7 +551,7 @@ type ModalidadOption = {
       .secondary-action {
         min-height: 2.75rem;
         padding: 0 0.9rem;
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         font: inherit;
         font-weight: 800;
         cursor: pointer;
@@ -560,7 +559,7 @@ type ModalidadOption = {
 
       .primary-action {
         border: 0;
-        color: #f7fbf8;
+        color: #ffffff;
         background: var(--accent);
       }
 
@@ -572,13 +571,13 @@ type ModalidadOption = {
 
       .primary-action:hover,
       .primary-action:focus-visible {
-        background: #0b5f59;
+        background: var(--accent-hover);
         outline: none;
       }
 
       .secondary-action:hover,
       .secondary-action:focus-visible {
-        border-color: rgba(15, 118, 110, 0.36);
+        border-color: rgba(17, 78, 74, 0.36);
         outline: none;
       }
 
@@ -615,7 +614,7 @@ type ModalidadOption = {
       }
 
       .state-panel.alert {
-        border-color: rgba(184, 79, 59, 0.28);
+        border-color: rgba(179, 38, 30, 0.28);
         background: rgba(255, 246, 241, 0.9);
       }
 
@@ -632,9 +631,14 @@ type ModalidadOption = {
         height: 100%;
         padding: 1rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
-        background: rgba(255, 251, 245, 0.72);
-        box-shadow: var(--shadow-soft);
+        border-radius: var(--radius-md);
+        background: #e6ece8;
+        box-shadow: none;
+        transition: border-color 140ms ease;
+      }
+
+      .offer-card:hover {
+        border-color: var(--line-strong);
       }
 
       .offer-card-heading {
@@ -694,39 +698,31 @@ type ModalidadOption = {
       }
 
       .offer-link {
-        margin-top: auto;
-        align-self: flex-start;
-        min-height: 2.75rem;
+        align-self: center;
+        min-height: 1.8rem;
         display: inline-flex;
         align-items: center;
-        justify-content: center;
-        padding: 0 1rem;
-        border-radius: 0.5rem;
+        padding: 0 0.1rem;
         border: 0;
-        color: #f7fbf8;
-        background: var(--accent);
+        background: transparent;
+        color: var(--accent);
         font: inherit;
-        font-weight: 800;
+        font-weight: 600;
+        font-size: 0.9rem;
         text-decoration: none;
         cursor: pointer;
       }
 
       .offer-link:hover,
       .offer-link:focus-visible {
-        background: #0b5f59;
+        color: var(--accent-hover);
+        text-decoration: underline;
+        text-underline-offset: 3px;
         outline: none;
       }
 
       .offer-link.secondary {
-        border: 1px solid var(--line);
-        color: var(--ink);
-        background: rgba(255, 255, 255, 0.68);
-      }
-
-      .offer-link.secondary:hover,
-      .offer-link.secondary:focus-visible {
-        border-color: rgba(15, 118, 110, 0.36);
-        background: rgba(255, 255, 255, 0.9);
+        color: var(--accent);
       }
 
       .catalog-results-externas {
@@ -742,8 +738,8 @@ type ModalidadOption = {
       }
 
       .offer-card-externa {
-        background: rgba(244, 236, 223, 0.78);
-        border-color: rgba(199, 101, 59, 0.28);
+        background: #e6ece8;
+        border-left: 2px solid var(--accent);
       }
 
       .external-card-topline {
@@ -770,8 +766,8 @@ type ModalidadOption = {
         justify-content: center;
         height: 1.85rem;
         padding: 0 0.65rem;
-        border-radius: 999px;
-        background: rgba(199, 101, 59, 0.18);
+        border-radius: var(--radius-sm);
+        background: rgba(87, 96, 106, 0.18);
         color: var(--accent-warm);
         font-size: 0.72rem;
         font-weight: 800;
@@ -793,8 +789,8 @@ type ModalidadOption = {
         min-height: 2.75rem;
         padding: 0 1.4rem;
         border: 0;
-        border-radius: 0.5rem;
-        color: #f7fbf8;
+        border-radius: var(--radius-md);
+        color: #ffffff;
         background: var(--accent);
         font: inherit;
         font-weight: 800;
@@ -803,13 +799,13 @@ type ModalidadOption = {
 
       .load-more-action:hover:not(:disabled),
       .load-more-action:focus-visible:not(:disabled) {
-        background: #0b5f59;
+        background: var(--accent-hover);
         outline: none;
       }
 
       .load-more-action:disabled {
         cursor: progress;
-        background: rgba(15, 118, 110, 0.55);
+        background: rgba(17, 78, 74, 0.55);
       }
 
       .load-more-hint {
@@ -820,7 +816,7 @@ type ModalidadOption = {
 
       .load-more-error {
         margin: 0.5rem 0 0;
-        color: #b8423b;
+        color: var(--danger);
         font-size: 0.92rem;
         text-align: center;
       }
@@ -830,9 +826,10 @@ type ModalidadOption = {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 0.5rem;
+        justify-content: space-between;
+        gap: 0.75rem;
         padding-top: 0.85rem;
-        border-top: 1px dashed var(--line);
+        border-top: 1px solid var(--line);
       }
 
       .tracking-label {
@@ -842,10 +839,10 @@ type ModalidadOption = {
         align-items: center;
         justify-content: center;
         padding: 0.15rem 0.65rem;
-        border: 1px solid rgba(15, 118, 110, 0.28);
-        border-radius: 999px;
+        border: 1px solid rgba(17, 78, 74, 0.28);
+        border-radius: var(--radius-sm);
         color: var(--accent);
-        background: rgba(15, 118, 110, 0.1);
+        background: rgba(17, 78, 74, 0.1);
         font: inherit;
         font-size: 0.74rem;
         font-weight: 800;
@@ -856,8 +853,8 @@ type ModalidadOption = {
 
       .tracking-label:hover:not(:disabled),
       .tracking-label:focus-visible:not(:disabled) {
-        border-color: rgba(15, 118, 110, 0.44);
-        background: rgba(15, 118, 110, 0.16);
+        border-color: rgba(17, 78, 74, 0.44);
+        background: rgba(17, 78, 74, 0.16);
         outline: none;
       }
 
@@ -867,15 +864,14 @@ type ModalidadOption = {
       }
 
       .tracking-toggle {
-        max-width: 12rem;
         min-height: 1.85rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         padding: 0.15rem 0.7rem;
-        border: 1px solid rgba(15, 118, 110, 0.28);
-        border-radius: 999px;
-        background: rgba(15, 118, 110, 0.16);
+        border: 1px solid rgba(17, 78, 74, 0.28);
+        border-radius: var(--radius-sm);
+        background: rgba(17, 78, 74, 0.16);
         color: var(--accent);
         font: inherit;
         font-size: 0.72rem;
@@ -886,34 +882,39 @@ type ModalidadOption = {
         cursor: pointer;
       }
 
-      .tracking-toggle.is-estado-aceptada {
-        border-color: rgba(11, 95, 89, 0.4);
-        background: rgba(15, 118, 110, 0.22);
-        color: #0b5f59;
-      }
-
-      .tracking-label.is-primary {
-        border-color: rgba(15, 118, 110, 0.55);
-        background: var(--accent);
-        color: #f7fbf8;
-      }
-
-      .tracking-label.is-primary:hover:not(:disabled),
-      .tracking-label.is-primary:focus-visible:not(:disabled) {
-        background: #0b5f59;
-        border-color: #0b5f59;
-        color: #f7fbf8;
+      .tracking-toggle .state,
+      .tracking-toggle .hover {
+        white-space: nowrap;
       }
 
       .tracking-toggle .hover {
         display: none;
       }
 
+      .tracking-toggle.is-estado-aceptada {
+        border-color: rgba(17, 78, 74, 0.4);
+        background: rgba(17, 78, 74, 0.22);
+        color: var(--accent-hover);
+      }
+
+      .tracking-label.is-primary {
+        border-color: rgba(17, 78, 74, 0.55);
+        background: var(--accent);
+        color: #ffffff;
+      }
+
+      .tracking-label.is-primary:hover:not(:disabled),
+      .tracking-label.is-primary:focus-visible:not(:disabled) {
+        background: var(--accent-hover);
+        border-color: var(--accent-hover);
+        color: #ffffff;
+      }
+
       .tracking-toggle:hover:not(:disabled),
       .tracking-toggle:focus-visible:not(:disabled) {
-        border-color: rgba(184, 79, 59, 0.5);
-        background: rgba(184, 79, 59, 0.16);
-        color: #b8423b;
+        border-color: rgba(179, 38, 30, 0.5);
+        background: rgba(179, 38, 30, 0.16);
+        color: var(--danger);
         outline: none;
       }
 
@@ -924,7 +925,9 @@ type ModalidadOption = {
 
       .tracking-toggle:hover:not(:disabled) .hover,
       .tracking-toggle:focus-visible:not(:disabled) .hover {
-        display: inline;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
       }
 
       .tracking-toggle:disabled {

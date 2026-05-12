@@ -34,6 +34,14 @@ public interface SolicitudExternaRepository extends JpaRepository<SolicitudExter
       FROM SolicitudExterna s
       JOIN FETCH s.alumno
       WHERE s.estado = com.fctnow.backend.solicitudes.externas.SolicitudExternaEstado.ACEPTADA
+      ORDER BY s.updatedAt DESC""")
+  List<SolicitudExterna> findRecentAceptadasWithDetails();
+
+  @Query("""
+      SELECT s
+      FROM SolicitudExterna s
+      JOIN FETCH s.alumno
+      WHERE s.estado = com.fctnow.backend.solicitudes.externas.SolicitudExternaEstado.ACEPTADA
         AND NOT EXISTS (
           SELECT 1 FROM AsignacionFctExterna a WHERE a.solicitud.id = s.id
         )

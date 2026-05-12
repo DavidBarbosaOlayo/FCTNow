@@ -123,10 +123,9 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         max-width: 46rem;
         padding: 1.2rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         background: var(--surface);
         box-shadow: var(--shadow-soft);
-        backdrop-filter: blur(14px);
       }
 
       .state-panel p:not(.eyebrow) {
@@ -136,7 +135,7 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
       }
 
       .state-panel.alert {
-        border-color: rgba(184, 79, 59, 0.28);
+        border-color: rgba(179, 38, 30, 0.28);
         background: rgba(255, 246, 241, 0.9);
       }
 
@@ -169,7 +168,7 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         gap: 0.85rem;
         padding: 1rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         background: rgba(255, 251, 245, 0.72);
         box-shadow: var(--shadow-soft);
       }
@@ -198,7 +197,7 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         align-items: center;
         min-height: 1.85rem;
         padding: 0 0.7rem;
-        border-radius: 999px;
+        border-radius: var(--radius-sm);
         font-size: 0.78rem;
         font-weight: 800;
         text-transform: uppercase;
@@ -206,18 +205,18 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
       }
 
       .estado-pill[data-estado='SOLICITADA'] {
-        background: rgba(15, 118, 110, 0.18);
-        color: #0b5f59;
+        background: rgba(17, 78, 74, 0.18);
+        color: var(--accent-hover);
       }
 
       .estado-pill[data-estado='ACEPTADA'] {
-        background: rgba(46, 125, 50, 0.18);
-        color: #1b5e20;
+        background: rgba(29, 107, 74, 0.18);
+        color: var(--success);
       }
 
       .estado-pill[data-estado='RECHAZADA'] {
-        background: rgba(184, 79, 59, 0.18);
-        color: #7a2c1c;
+        background: rgba(179, 38, 30, 0.18);
+        color: var(--danger);
       }
 
       .solicitud-details {
@@ -255,7 +254,7 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         display: inline-flex;
         align-items: center;
         padding: 0 0.85rem;
-        border-radius: 0.5rem;
+        border-radius: var(--radius-md);
         font-weight: 800;
         text-decoration: none;
         cursor: pointer;
@@ -264,25 +263,25 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
 
       .primary-action {
         border: 0;
-        color: #f7fbf8;
+        color: #ffffff;
         background: var(--accent);
       }
 
       .primary-action:hover:not([disabled]),
       .primary-action:focus-visible:not([disabled]) {
-        background: #0b5f59;
+        background: var(--accent-hover);
         outline: none;
       }
 
       .danger-action {
-        border: 1px solid rgba(184, 79, 59, 0.4);
+        border: 1px solid rgba(179, 38, 30, 0.4);
         color: #8a3a25;
         background: rgba(255, 246, 241, 0.92);
       }
 
       .danger-action:hover:not([disabled]),
       .danger-action:focus-visible:not([disabled]) {
-        border-color: rgba(184, 79, 59, 0.65);
+        border-color: rgba(179, 38, 30, 0.65);
         outline: none;
       }
 
@@ -300,7 +299,7 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
 
       .back-link:hover,
       .back-link:focus-visible {
-        border-color: rgba(15, 118, 110, 0.36);
+        border-color: rgba(17, 78, 74, 0.36);
         outline: none;
       }
 
