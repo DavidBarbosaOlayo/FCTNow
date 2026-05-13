@@ -4,8 +4,10 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  EventEmitter,
   Input,
   OnInit,
+  Output,
   PLATFORM_ID,
   computed,
   effect,
@@ -59,12 +61,14 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
           <p>{{ errorMessage() }}</p>
         </section>
       } @else if (editing()) {
-        <section class="preferences-layout">
+        <section class="preferences-layout preferences-edit-layout" [class.is-profile-embedded]="!showPhoto">
           <form class="preferences-form" [formGroup]="form" (ngSubmit)="savePreferences()">
-            <div class="section-heading">
-              <p class="eyebrow">Preferencias</p>
-              <h2>Datos básicos para orientar tus prácticas</h2>
-            </div>
+            @if (showPhoto) {
+              <div class="section-heading">
+                <p class="eyebrow">Preferencias</p>
+                <h2>Datos básicos para orientar tus prácticas</h2>
+              </div>
+            }
 
             <div class="form-grid">
               <label>
@@ -134,6 +138,108 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
               <p class="form-message error" role="alert">{{ saveError() }}</p>
             }
 
+            @if (!showPhoto) {
+              <input
+                #embeddedPhotoInput
+                class="visually-hidden-file"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                (change)="onEmbeddedPhotoSelected($event)"
+              />
+
+              @if (photoUploadStatus() === 'saved') {
+                <p class="form-message success" aria-live="polite">Foto actualizada.</p>
+              } @else if (photoUploadStatus() === 'error') {
+                <p class="form-message error" role="alert">{{ photoUploadError() }}</p>
+              }
+            }
+
+            @if (showPhoto) {
+              <section class="form-media-section" aria-label="Foto identificativa del alumno">
+                <div class="photo-block">
+                  <span class="profile-photo" [class.has-photo]="!!preferences()?.photoDataUrl">
+                    @if (preferences()?.photoDataUrl) {
+                      <img [src]="preferences()?.photoDataUrl" alt="Foto identificativa del alumno" />
+                    } @else {
+                      <svg aria-hidden="true" viewBox="0 0 24 24">
+                        <path d="M12 12c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4Zm0 2c-3.4 0-6.4 1.7-8 4.4.8 1 3.4 1.6 8 1.6s7.2-.6 8-1.6c-1.6-2.7-4.6-4.4-8-4.4Z" />
+                      </svg>
+                    }
+                  </span>
+                  <div class="photo-copy">
+                    <strong>Foto identificativa</strong>
+                    <span>{{ preferences()?.hasPhoto ? 'Foto asociada al perfil.' : 'Sin foto asociada.' }}</span>
+                  </div>
+                </div>
+
+                <label class="file-control">
+                  <span>Seleccionar imagen</span>
+                  <input type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" (change)="onPhotoSelected($event)" />
+                </label>
+
+                @if (selectedPhoto()) {
+                  <p class="muted">Imagen seleccionada: {{ selectedPhoto()?.name }}</p>
+                }
+
+                @if (photoUploadStatus() === 'saved') {
+                  <p class="form-message success" aria-live="polite">Foto actualizada.</p>
+                } @else if (photoUploadStatus() === 'error') {
+                  <p class="form-message error" role="alert">{{ photoUploadError() }}</p>
+                }
+
+                <button
+                  class="secondary-action"
+                  type="button"
+                  [disabled]="!selectedPhoto() || photoUploadStatus() === 'uploading'"
+                  (click)="uploadPhoto()"
+                >
+                  {{ photoUploadStatus() === 'uploading' ? 'Subiendo...' : 'Subir foto' }}
+                </button>
+              </section>
+            }
+
+            <section class="form-cv-section" aria-label="CV del alumno">
+              @if (showPhoto) {
+                <div class="section-heading">
+                  <p class="eyebrow">CV</p>
+                  <h2>Currículum actualizado</h2>
+                </div>
+              }
+
+              @if (preferences()?.hasCv) {
+                <div class="cv-status">
+                  <strong>{{ preferences()?.cvFileName }}</strong>
+                  <span>{{ cvSummary() }}</span>
+                </div>
+              } @else {
+                <p class="muted">Aún no tienes un CV asociado a tu perfil.</p>
+              }
+
+              <label class="file-control">
+                <span>Seleccionar PDF</span>
+                <input type="file" accept="application/pdf,.pdf" (change)="onFileSelected($event)" />
+              </label>
+
+              @if (selectedFile()) {
+                <p class="muted">Archivo seleccionado: {{ selectedFile()?.name }}</p>
+              }
+
+              @if (uploadStatus() === 'saved') {
+                <p class="form-message success" aria-live="polite">CV actualizado.</p>
+              } @else if (uploadStatus() === 'error') {
+                <p class="form-message error" role="alert">{{ uploadError() }}</p>
+              }
+
+              <button
+                class="secondary-action"
+                type="button"
+                [disabled]="!selectedFile() || uploadStatus() === 'uploading'"
+                (click)="uploadCv()"
+              >
+                {{ uploadStatus() === 'uploading' ? 'Subiendo...' : 'Subir CV' }}
+              </button>
+            </section>
+
             <div class="form-actions">
               <button class="primary-action" type="submit" [disabled]="form.invalid || saveStatus() === 'saving'">
                 {{ saveStatus() === 'saving' ? 'Guardando...' : 'Guardar preferencias' }}
@@ -143,94 +249,16 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
               </button>
             </div>
           </form>
-
-          <aside class="cv-panel" aria-label="CV del alumno">
-            <div class="photo-block">
-              <span class="profile-photo" [class.has-photo]="!!preferences()?.photoDataUrl">
-                @if (preferences()?.photoDataUrl) {
-                  <img [src]="preferences()?.photoDataUrl" alt="Foto identificativa del alumno" />
-                } @else {
-                  <svg aria-hidden="true" viewBox="0 0 24 24">
-                    <path d="M12 12c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4Zm0 2c-3.4 0-6.4 1.7-8 4.4.8 1 3.4 1.6 8 1.6s7.2-.6 8-1.6c-1.6-2.7-4.6-4.4-8-4.4Z" />
-                  </svg>
-                }
-              </span>
-              <div class="photo-copy">
-                <strong>Foto identificativa</strong>
-                <span>{{ preferences()?.hasPhoto ? 'Foto asociada al perfil.' : 'Sin foto asociada.' }}</span>
-              </div>
-            </div>
-
-            <label class="file-control">
-              <span>Seleccionar imagen</span>
-              <input type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" (change)="onPhotoSelected($event)" />
-            </label>
-
-            @if (selectedPhoto()) {
-              <p class="muted">Imagen seleccionada: {{ selectedPhoto()?.name }}</p>
-            }
-
-            @if (photoUploadStatus() === 'saved') {
-              <p class="form-message success" aria-live="polite">Foto actualizada.</p>
-            } @else if (photoUploadStatus() === 'error') {
-              <p class="form-message error" role="alert">{{ photoUploadError() }}</p>
-            }
-
-            <button
-              class="secondary-action"
-              type="button"
-              [disabled]="!selectedPhoto() || photoUploadStatus() === 'uploading'"
-              (click)="uploadPhoto()"
-            >
-              {{ photoUploadStatus() === 'uploading' ? 'Subiendo...' : 'Subir foto' }}
-            </button>
-
-            <div class="section-heading">
-              <p class="eyebrow">CV</p>
-              <h2>Currículum actualizado</h2>
-            </div>
-
-            @if (preferences()?.hasCv) {
-              <div class="cv-status">
-                <strong>{{ preferences()?.cvFileName }}</strong>
-                <span>{{ cvSummary() }}</span>
-              </div>
-            } @else {
-              <p class="muted">Aún no tienes un CV asociado a tu perfil.</p>
-            }
-
-            <label class="file-control">
-              <span>Seleccionar PDF</span>
-              <input type="file" accept="application/pdf,.pdf" (change)="onFileSelected($event)" />
-            </label>
-
-            @if (selectedFile()) {
-              <p class="muted">Archivo seleccionado: {{ selectedFile()?.name }}</p>
-            }
-
-            @if (uploadStatus() === 'saved') {
-              <p class="form-message success" aria-live="polite">CV actualizado.</p>
-            } @else if (uploadStatus() === 'error') {
-              <p class="form-message error" role="alert">{{ uploadError() }}</p>
-            }
-
-            <button
-              class="secondary-action"
-              type="button"
-              [disabled]="!selectedFile() || uploadStatus() === 'uploading'"
-              (click)="uploadCv()"
-            >
-              {{ uploadStatus() === 'uploading' ? 'Subiendo...' : 'Subir CV' }}
-            </button>
-          </aside>
         </section>
       } @else {
-        <section class="preferences-layout">
+        <section class="preferences-layout" [class.is-profile-embedded]="!showPhoto">
           <article class="profile-view" aria-label="Preferencias guardadas">
-            <div class="section-heading">
-              <p class="eyebrow">Preferencias</p>
-              <h2>Datos básicos para orientar tus prácticas</h2>
-            </div>
+            @if (showPhoto) {
+              <div class="section-heading">
+                <p class="eyebrow">Preferencias</p>
+                <h2>Datos básicos para orientar tus prácticas</h2>
+              </div>
+            }
 
             <dl class="profile-view-grid">
               <div>
@@ -259,6 +287,19 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
               </div>
             </dl>
 
+            @if (!showPhoto) {
+              <section class="embedded-cv-panel" aria-label="CV del alumno">
+                @if (preferences()?.hasCv) {
+                  <div class="cv-status">
+                    <strong>{{ preferences()?.cvFileName }}</strong>
+                    <span>{{ cvSummary() }}</span>
+                  </div>
+                } @else {
+                  <p class="muted">Aún no tienes un CV asociado a tu perfil.</p>
+                }
+              </section>
+            }
+
             @if (saveStatus() === 'saved') {
               <p class="form-message success" aria-live="polite">Preferencias guardadas.</p>
             }
@@ -268,37 +309,39 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
             </button>
           </article>
 
-          <aside class="cv-panel" aria-label="CV del alumno">
-            <div class="photo-block">
-              <span class="profile-photo" [class.has-photo]="!!preferences()?.photoDataUrl">
-                @if (preferences()?.photoDataUrl) {
-                  <img [src]="preferences()?.photoDataUrl" alt="Foto identificativa del alumno" />
-                } @else {
-                  <svg aria-hidden="true" viewBox="0 0 24 24">
-                    <path d="M12 12c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4Zm0 2c-3.4 0-6.4 1.7-8 4.4.8 1 3.4 1.6 8 1.6s7.2-.6 8-1.6c-1.6-2.7-4.6-4.4-8-4.4Z" />
-                  </svg>
-                }
-              </span>
-              <div class="photo-copy">
-                <strong>Foto identificativa</strong>
-                <span>{{ preferences()?.hasPhoto ? 'Foto asociada al perfil.' : 'Sin foto asociada.' }}</span>
+          @if (showPhoto) {
+            <aside class="cv-panel" aria-label="CV del alumno">
+              <div class="photo-block">
+                <span class="profile-photo" [class.has-photo]="!!preferences()?.photoDataUrl">
+                  @if (preferences()?.photoDataUrl) {
+                    <img [src]="preferences()?.photoDataUrl" alt="Foto identificativa del alumno" />
+                  } @else {
+                    <svg aria-hidden="true" viewBox="0 0 24 24">
+                      <path d="M12 12c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4Zm0 2c-3.4 0-6.4 1.7-8 4.4.8 1 3.4 1.6 8 1.6s7.2-.6 8-1.6c-1.6-2.7-4.6-4.4-8-4.4Z" />
+                    </svg>
+                  }
+                </span>
+                <div class="photo-copy">
+                  <strong>Foto identificativa</strong>
+                  <span>{{ preferences()?.hasPhoto ? 'Foto asociada al perfil.' : 'Sin foto asociada.' }}</span>
+                </div>
               </div>
-            </div>
 
-            <div class="section-heading">
-              <p class="eyebrow">CV</p>
-              <h2>Currículum actualizado</h2>
-            </div>
-
-            @if (preferences()?.hasCv) {
-              <div class="cv-status">
-                <strong>{{ preferences()?.cvFileName }}</strong>
-                <span>{{ cvSummary() }}</span>
+              <div class="section-heading">
+                <p class="eyebrow">CV</p>
+                <h2>Currículum actualizado</h2>
               </div>
-            } @else {
-              <p class="muted">Aún no tienes un CV asociado a tu perfil.</p>
-            }
-          </aside>
+
+              @if (preferences()?.hasCv) {
+                <div class="cv-status">
+                  <strong>{{ preferences()?.cvFileName }}</strong>
+                  <span>{{ cvSummary() }}</span>
+                </div>
+              } @else {
+                <p class="muted">Aún no tienes un CV asociado a tu perfil.</p>
+              }
+            </aside>
+          }
         </section>
       }
     </ng-template>
@@ -316,6 +359,20 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
         grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
         gap: 1rem;
         align-items: start;
+      }
+
+      .preferences-layout.is-profile-embedded {
+        grid-template-columns: 1fr;
+        min-height: 0;
+      }
+
+      .preferences-edit-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .preferences-layout.is-profile-embedded .preferences-form {
+        max-height: none;
+        overflow: visible;
       }
 
       .preferences-form,
@@ -421,8 +478,16 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
         flex-wrap: wrap;
       }
 
+      .form-media-section,
+      .form-cv-section {
+        display: grid;
+        gap: 0.8rem;
+        padding-top: 0.1rem;
+      }
+
       .profile-view {
-        gap: 0.85rem;
+        gap: 0.65rem;
+        padding: 1rem;
       }
 
       .profile-view-grid {
@@ -486,6 +551,12 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
       .cv-status span {
         color: var(--muted);
         font-size: 0.9rem;
+      }
+
+      .embedded-cv-panel {
+        display: grid;
+        gap: 0.5rem;
+        padding-top: 0.1rem;
       }
 
       .photo-block {
@@ -577,6 +648,16 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
         opacity: 0.58;
       }
 
+      .visually-hidden-file {
+        width: 1px;
+        height: 1px;
+        position: absolute;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
       .form-message {
         margin: 0;
         font-weight: 600;
@@ -603,6 +684,9 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
 })
 export class PreferenciasAlumnoPage implements OnInit {
   @Input() embedded = false;
+  @Input() showPhoto = true;
+  @Output() editingChange = new EventEmitter<boolean>();
+  @Output() photoChange = new EventEmitter<string | null>();
 
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
@@ -709,6 +793,7 @@ export class PreferenciasAlumnoPage implements OnInit {
         next: (preferences) => {
           this.preferences.set(preferences);
           this.patchFormFromPreferences();
+          this.photoChange.emit(preferences.photoDataUrl);
           this.status.set('loaded');
         },
         error: (error: unknown) => {
@@ -739,8 +824,10 @@ export class PreferenciasAlumnoPage implements OnInit {
         next: (preferences) => {
           this.preferences.set(preferences);
           this.patchFormFromPreferences();
+          this.photoChange.emit(preferences.photoDataUrl);
           this.saveStatus.set('saved');
           this.editing.set(false);
+          this.editingChange.emit(false);
         },
         error: (error: unknown) => {
           this.saveError.set(errorMessage(error));
@@ -760,6 +847,7 @@ export class PreferenciasAlumnoPage implements OnInit {
     this.photoUploadStatus.set('idle');
     this.photoUploadError.set(null);
     this.editing.set(true);
+    this.editingChange.emit(true);
   }
 
   protected cancelEdit(): void {
@@ -773,6 +861,7 @@ export class PreferenciasAlumnoPage implements OnInit {
     this.photoUploadStatus.set('idle');
     this.photoUploadError.set(null);
     this.editing.set(false);
+    this.editingChange.emit(false);
   }
 
   protected modalidadLabel(value: string | null | undefined): string {
@@ -837,6 +926,11 @@ export class PreferenciasAlumnoPage implements OnInit {
     this.photoUploadError.set(null);
   }
 
+  protected onEmbeddedPhotoSelected(event: Event): void {
+    this.onPhotoSelected(event);
+    this.uploadPhoto();
+  }
+
   protected uploadCv(): void {
     const file = this.selectedFile();
     if (!file || this.uploadStatus() === 'uploading') {
@@ -879,6 +973,7 @@ export class PreferenciasAlumnoPage implements OnInit {
           this.preferences.set(preferences);
           this.selectedPhoto.set(null);
           this.photoUploadStatus.set('saved');
+          this.photoChange.emit(preferences.photoDataUrl);
         },
         error: (error: unknown) => {
           this.photoUploadError.set(errorMessage(error));

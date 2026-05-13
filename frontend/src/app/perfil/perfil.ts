@@ -14,6 +14,7 @@ import { Router, RouterLink } from '@angular/router';
 import { PreferenciasAlumnoPage } from '../alumnos/preferencias';
 import { AuthenticatedUser, UserRole } from '../auth/auth.models';
 import { AuthService } from '../auth/auth.service';
+import { AlumnoPreferenciasService } from '../alumnos/preferencias.service';
 import { EmpresaPerfilPage } from '../empresas/empresa-perfil';
 
 type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
@@ -45,18 +46,47 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
       } @else if (user(); as user) {
         <section class="profile-panel" aria-labelledby="profile-title">
           <div class="profile-summary">
+            <span class="profile-avatar" [class.has-photo]="!!profilePhotoDataUrl()">
+              <button
+                type="button"
+                class="profile-avatar-button"
+                [class.is-editable]="canEditPhoto(user)"
+                [disabled]="!canEditPhoto(user)"
+                [attr.aria-label]="canEditPhoto(user) ? 'Cambiar foto de perfil' : null"
+                (click)="openPhotoPicker()"
+              >
+                @if (profilePhotoDataUrl(); as photo) {
+                  <img [src]="photo" alt="Foto identificativa del alumno" />
+                } @else {
+                  <span aria-hidden="true">{{ initials(user.displayName) }}</span>
+                }
+                @if (canEditPhoto(user)) {
+                  <span class="photo-edit-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M4 17.3V20h2.7L17.8 8.9l-2.7-2.7L4 17.3Zm15.9-10.5c.3-.3.3-.8 0-1.1l-1.6-1.6c-.3-.3-.8-.3-1.1 0l-1.2 1.2L18.7 8l1.2-1.2Z" />
+                    </svg>
+                  </span>
+                }
+              </button>
+            </span>
+
             <div class="profile-copy">
               <p class="eyebrow">Sesión activa</p>
-              <h2 id="profile-title">{{ user.displayName }}</h2>
+              <div class="profile-title-row">
+                <h2 id="profile-title">{{ user.displayName }}</h2>
+                <div class="role-cloud" aria-label="Roles de usuario">
+                  @for (role of user.roles; track role) {
+                    <span>{{ roleLabel(role) }}</span>
+                  }
+                </div>
+              </div>
               <p>{{ user.email }}</p>
             </div>
-
-            <div class="role-cloud" aria-label="Roles de usuario">
-              @for (role of user.roles; track role) {
-                <span>{{ roleLabel(role) }}</span>
-              }
-            </div>
           </div>
+
+          <p class="identity-note">
+            Nombre, correo y rol se gestionan desde la cuenta del centro y no se editan desde este formulario.
+          </p>
 
           <dl class="profile-details" aria-label="Datos básicos del perfil">
             <div>
@@ -72,18 +102,22 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
               <dd>{{ rolesText(user.roles) }}</dd>
             </div>
           </dl>
+        </section>
 
-          <div class="profile-actions">
+        @if (user.roles.includes('ALUMNO')) {
+          <div class="profile-role-row" [class.is-editing]="alumnoPreferencesEditing()">
+            <section class="profile-role-section" aria-label="Datos editables del alumno">
+              <app-preferencias-alumno-page
+                [embedded]="true"
+                [showPhoto]="false"
+                (editingChange)="alumnoPreferencesEditing.set($event)"
+                (photoChange)="profilePhotoDataUrl.set($event)"
+              />
+            </section>
             <button type="button" class="logout-action" (click)="logout()">
               Cerrar sesión
             </button>
           </div>
-        </section>
-
-        @if (user.roles.includes('ALUMNO')) {
-          <section class="profile-role-section" aria-label="Preferencias del alumno">
-            <app-preferencias-alumno-page [embedded]="true" />
-          </section>
         }
 
         @if (user.roles.includes('EMPRESA')) {
@@ -91,15 +125,25 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
             <app-empresa-perfil-page [embedded]="true" />
           </section>
         }
+
+        @if (!user.roles.includes('ALUMNO')) {
+          <footer class="profile-footer">
+            <button type="button" class="logout-action" (click)="logout()">
+              Cerrar sesión
+            </button>
+          </footer>
+        }
       }
     </main>
   `,
   styles: [
     `
       .profile-page {
+        min-height: calc(100dvh - 3.5rem);
         align-content: start;
-        gap: 1rem;
-        padding-top: 2rem;
+        gap: 0.75rem;
+        padding: 0.85rem 0 1rem;
+        overflow: visible;
       }
 
       .state-panel,
@@ -136,48 +180,164 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
 
       .profile-panel {
         display: grid;
-        gap: 1rem;
-        padding: 1.1rem;
+        gap: 0.65rem;
+        padding: 1rem;
       }
 
       .profile-summary {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        display: flex;
         gap: 1rem;
-        align-items: start;
+        align-items: center;
       }
 
-      .profile-copy p:not(.eyebrow),
+      .profile-avatar {
+        width: 5.25rem;
+        height: 5.25rem;
+        flex: 0 0 auto;
+        position: relative;
+        overflow: visible;
+      }
+
+      .profile-avatar-button {
+        width: 100%;
+        height: 100%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: visible;
+        padding: 0;
+        border: 0;
+        border-radius: var(--radius-pill);
+        color: var(--accent);
+        background: var(--accent-soft);
+        font: inherit;
+        font-size: 1.35rem;
+        font-weight: 800;
+        cursor: default;
+      }
+
+      .profile-avatar-button::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        border-radius: inherit;
+        background: var(--accent-soft);
+      }
+
+      .profile-avatar-button > span:not(.photo-edit-icon),
+      .profile-avatar-button > img {
+        position: relative;
+        z-index: 1;
+      }
+
+      .profile-avatar.has-photo {
+        background: transparent;
+      }
+
+      .profile-avatar-button.is-editable {
+        cursor: pointer;
+      }
+
+      .profile-avatar-button.is-editable:hover,
+      .profile-avatar-button.is-editable:focus-visible {
+        outline: 3px solid rgba(17, 78, 74, 0.22);
+        outline-offset: 3px;
+      }
+
+      .profile-avatar-button:disabled {
+        opacity: 1;
+      }
+
+      .profile-avatar img,
+      .profile-avatar-button img {
+        width: 100%;
+        height: 100%;
+        border-radius: var(--radius-pill);
+        object-fit: cover;
+        overflow: hidden;
+      }
+
+      .photo-edit-icon {
+        width: 1.8rem;
+        height: 1.8rem;
+        position: absolute;
+        right: -0.15rem;
+        bottom: -0.15rem;
+        z-index: 2;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid var(--surface);
+        border-radius: var(--radius-pill);
+        color: #ffffff;
+        background: var(--accent);
+      }
+
+      .photo-edit-icon svg {
+        width: 1rem;
+        height: 1rem;
+        fill: currentColor;
+      }
+
+      .profile-copy {
+        min-width: 0;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .profile-title-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.55rem;
+      }
+
+      .profile-copy p:not(.eyebrow) {
+        margin: 0.35rem 0 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
       .profile-details dd {
         margin: 0.35rem 0 0;
         color: var(--muted);
         line-height: 1.6;
       }
 
+      .identity-note {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+
       .role-cloud {
         display: flex;
         flex-wrap: wrap;
-        justify-content: flex-end;
-        gap: 0.5rem;
+        gap: 0.4rem;
       }
 
       .role-cloud span {
-        min-height: 2rem;
+        min-height: 1.7rem;
         display: inline-flex;
         align-items: center;
-        padding: 0 0.75rem;
-        border: 1px solid var(--line);
+        padding: 0 0.6rem;
+        border: 1px solid rgba(17, 78, 74, 0.2);
         border-radius: var(--radius-sm);
-        color: var(--ink);
-        background: rgba(255, 255, 255, 0.6);
-        font-size: 0.88rem;
+        color: var(--accent);
+        background: var(--accent-soft);
+        font-size: 0.78rem;
         font-weight: 800;
       }
 
-      .profile-actions {
+      .profile-footer {
         display: flex;
+        justify-content: flex-start;
         gap: 0.5rem;
         flex-wrap: wrap;
+        padding-top: 0.25rem;
       }
 
       .logout-action {
@@ -201,13 +361,13 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
       .profile-details {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 0.85rem;
+        gap: 0.65rem;
         margin: 0;
       }
 
       .profile-details div {
         min-width: 0;
-        padding: 0.85rem;
+        padding: 0.7rem 0.8rem;
         border: 1px solid var(--line);
         border-radius: var(--radius-md);
         background: rgba(255, 255, 255, 0.52);
@@ -226,9 +386,29 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
         font-weight: 800;
       }
 
+      .profile-role-row {
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.65rem;
+        align-items: start;
+      }
+
+      .profile-role-row.is-editing {
+        align-items: start;
+      }
+
+      .profile-role-row > .logout-action {
+        justify-self: end;
+        width: max-content;
+        max-width: 100%;
+      }
+
       .profile-role-section {
         display: grid;
         gap: 1rem;
+        min-width: 0;
+        min-height: 0;
       }
 
       .back-link {
@@ -252,19 +432,34 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
       }
 
       @media (max-width: 820px) {
-        .profile-summary,
-        .profile-details {
-          grid-template-columns: 1fr;
+        .profile-summary {
+          align-items: flex-start;
         }
 
-        .role-cloud {
-          justify-content: flex-start;
+        .profile-details {
+          grid-template-columns: 1fr;
         }
       }
 
       @media (max-width: 620px) {
         .profile-page {
+          height: auto;
+          min-height: 100dvh;
           padding-top: 1rem;
+          overflow: visible;
+        }
+
+        .profile-summary {
+          display: grid;
+        }
+
+        .profile-avatar {
+          width: 4.75rem;
+          height: 4.75rem;
+        }
+
+        .profile-role-row {
+          grid-template-columns: 1fr;
         }
       }
     `,
@@ -273,6 +468,7 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
 })
 export class PerfilPage implements OnInit {
   private readonly authService = inject(AuthService);
+  private readonly preferenciasService = inject(AlumnoPreferenciasService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly router = inject(Router);
@@ -280,6 +476,8 @@ export class PerfilPage implements OnInit {
   protected readonly status = signal<ProfileStatus>('loading');
   protected readonly user = signal<AuthenticatedUser | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly profilePhotoDataUrl = signal<string | null>(null);
+  protected readonly alumnoPreferencesEditing = signal(false);
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) {
@@ -302,6 +500,7 @@ export class PerfilPage implements OnInit {
         next: (user) => {
           this.user.set(user);
           this.status.set('loaded');
+          this.loadAlumnoPhoto(user);
         },
         error: (error: unknown) => {
           this.user.set(null);
@@ -325,11 +524,53 @@ export class PerfilPage implements OnInit {
     return roles.map((role) => this.roleLabel(role)).join(', ');
   }
 
+  protected initials(name: string): string {
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('') || 'A';
+  }
+
+  protected canEditPhoto(user: AuthenticatedUser): boolean {
+    return user.roles.includes('ALUMNO') && this.alumnoPreferencesEditing();
+  }
+
+  protected openPhotoPicker(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+    document
+      .querySelector<HTMLInputElement>('app-preferencias-alumno-page input[type="file"].visually-hidden-file')
+      ?.click();
+  }
+
   protected logout(): void {
     this.authService.logout();
     this.user.set(null);
+    this.profilePhotoDataUrl.set(null);
     this.status.set('not-authenticated');
     this.router.navigateByUrl('/login');
+  }
+
+  private loadAlumnoPhoto(user: AuthenticatedUser): void {
+    if (!user.roles.includes('ALUMNO')) {
+      this.profilePhotoDataUrl.set(null);
+      return;
+    }
+
+    this.preferenciasService
+      .getMine()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (preferences) => {
+          this.profilePhotoDataUrl.set(preferences.photoDataUrl);
+        },
+        error: () => {
+          this.profilePhotoDataUrl.set(null);
+        },
+      });
   }
 }
 

@@ -348,26 +348,12 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
       .solicitud-details {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0;
+        gap: 0.75rem 1rem;
         margin: 0;
-        border: 1px solid var(--line);
-        border-radius: var(--radius-sm);
-        overflow: hidden;
       }
 
       .solicitud-details div {
         min-width: 0;
-        padding: 0.55rem 0.7rem;
-        background: var(--surface-muted);
-        border-right: 1px solid var(--line);
-      }
-
-      .solicitud-details div:nth-child(2n) {
-        border-right: 0;
-      }
-
-      .solicitud-details div:nth-last-child(-n+2) {
-        border-bottom: 0;
       }
 
       .solicitud-details dt {
@@ -389,6 +375,7 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
       .estado-pill {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         min-height: 1.5rem;
         padding: 0 0.55rem;
         border-radius: var(--radius-sm);
@@ -399,6 +386,11 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         text-transform: uppercase;
         letter-spacing: 0.04em;
         border: 1px solid var(--line);
+        white-space: nowrap;
+      }
+
+      .estado-pill[data-estado='RETIRADA'] {
+        min-width: 8.6rem;
       }
 
       .estado-pill[data-estado='ACEPTADA'] {
@@ -480,7 +472,7 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
       }
 
       .solicitud-card-externa {
-        grid-template-columns: minmax(16rem, 1.15fr) minmax(20rem, 1.35fr) auto;
+        grid-template-columns: minmax(16rem, 1.15fr) minmax(20rem, 1.35fr) 19rem;
         align-items: center;
         background: var(--surface);
         border-left: 3px solid var(--accent);
@@ -503,40 +495,31 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
       }
 
       .solicitud-card-externa .solicitud-details {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
-
-      .solicitud-card-externa .solicitud-details div {
-        border-right: 1px solid var(--line);
-      }
-
-      .solicitud-card-externa .solicitud-details div:last-child {
-        border-right: 0;
+        grid-template-columns: minmax(7.5rem, 1fr) minmax(8.9rem, 1fr) minmax(8.5rem, 1fr);
+        column-gap: 1.35rem;
       }
 
       .origen-badge {
         align-self: start;
-        display: inline-flex;
-        padding: 0.18rem 0.5rem;
-        border-radius: var(--radius-sm);
-        background: var(--surface-muted);
+        display: inline-block;
+        padding: 0;
         color: var(--muted-strong);
         font-size: 0.68rem;
         font-weight: 700;
         letter-spacing: 0.05em;
         text-transform: uppercase;
-        border: 1px solid var(--line);
       }
 
       .externa-actions {
         margin-top: auto;
-        display: flex;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0.4rem;
       }
 
       .solicitud-card-externa .externa-actions {
-        justify-content: flex-end;
+        justify-self: end;
+        width: 19rem;
         margin-top: 0;
       }
 
@@ -577,7 +560,14 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
       }
 
       .externa-actions .solicitud-link {
-        justify-self: start;
+        width: 100%;
+        justify-self: stretch;
+        justify-content: center;
+        white-space: nowrap;
+      }
+
+      .externa-actions .solicitud-link:only-child {
+        grid-column: 2;
       }
 
       .solicitud-link.secondary {
@@ -616,7 +606,8 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         }
 
         .solicitud-card-externa .externa-actions {
-          justify-content: flex-start;
+          justify-self: stretch;
+          width: 100%;
         }
 
         .delete-solicitud {
@@ -633,10 +624,6 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
           grid-template-columns: 1fr;
         }
 
-        .solicitud-card-externa .solicitud-details div,
-        .solicitud-card-externa .solicitud-details div:last-child {
-          border-right: 0;
-        }
       }
     `,
   ],
