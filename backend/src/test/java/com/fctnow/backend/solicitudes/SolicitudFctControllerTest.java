@@ -13,6 +13,7 @@ import com.fctnow.backend.empresas.Empresa;
 import com.fctnow.backend.empresas.EmpresaEstado;
 import com.fctnow.backend.empresas.EmpresaRepository;
 import com.fctnow.backend.empresas.IdentificadorFiscalTipo;
+import com.fctnow.backend.notificaciones.NotificacionRepository;
 import com.fctnow.backend.ofertas.OfertaEstado;
 import com.fctnow.backend.ofertas.OfertaFct;
 import com.fctnow.backend.ofertas.OfertaFctRepository;
@@ -63,6 +64,9 @@ class SolicitudFctControllerTest {
   private AsignacionFctRepository asignacionFctRepository;
 
   @Autowired
+  private NotificacionRepository notificacionRepository;
+
+  @Autowired
   private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
   private Long publishedOfferId;
@@ -71,6 +75,7 @@ class SolicitudFctControllerTest {
   @BeforeEach
   void setUp() {
     asignacionFctRepository.deleteAll();
+    notificacionRepository.deleteAll();
     solicitudFctRepository.deleteAll();
     ofertaFctRepository.deleteAll();
     userAccountRepository.deleteAll();
@@ -81,12 +86,6 @@ class SolicitudFctControllerTest {
         passwordEncoder.encode("CorrectPassword123!"),
         "Alumno Demo",
         Set.of(UserRole.ALUMNO)));
-
-    userAccountRepository.save(new UserAccount(
-        "empresa@example.com",
-        passwordEncoder.encode("CorrectPassword123!"),
-        "Empresa Demo",
-        Set.of(UserRole.EMPRESA)));
 
     Empresa company = empresaRepository.save(new Empresa(
         "Tech Norte Formacion",
@@ -102,6 +101,13 @@ class SolicitudFctControllerTest {
         "960000000",
         "Laura Garcia",
         EmpresaEstado.ACTIVA));
+
+    userAccountRepository.save(new UserAccount(
+        "empresa@example.com",
+        passwordEncoder.encode("CorrectPassword123!"),
+        "Empresa Demo",
+        Set.of(UserRole.EMPRESA),
+        company.getId()));
 
     publishedOfferId = ofertaFctRepository.save(new OfertaFct(
             company,
@@ -153,6 +159,21 @@ class SolicitudFctControllerTest {
         .andExpect(jsonPath("$.ofertaTitulo").value("Practicas de analisis de datos"))
         .andExpect(jsonPath("$.empresaNombre").value("Tech Norte Formacion"))
         .andExpect(jsonPath("$.estado").value("SOLICITADA"));
+  }
+
+  @Test
+  void requestOfferNotifiesCompanyUsers() throws Exception {
+    mockMvc.perform(post("/api/ofertas/{id}/solicitudes", publishedOfferId)
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("alumno@example.com")))
+        .andExpect(status().isCreated());
+
+    mockMvc.perform(get("/api/notificaciones/me")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("empresa@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(jsonPath("$[0].tipo").value("SOLICITUD_RECIBIDA"))
+        .andExpect(jsonPath("$[0].titulo").value("Nueva solicitud recibida"))
+        .andExpect(jsonPath("$[0].leida").value(false));
   }
 
   @Test

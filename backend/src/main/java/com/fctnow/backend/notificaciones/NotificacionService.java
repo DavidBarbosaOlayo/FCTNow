@@ -3,6 +3,8 @@ package com.fctnow.backend.notificaciones;
 import com.fctnow.backend.ofertas.OfertaEstado;
 import com.fctnow.backend.ofertas.OfertaFct;
 import com.fctnow.backend.ofertas.OfertaFctRepository;
+import com.fctnow.backend.solicitudes.SolicitudEstado;
+import com.fctnow.backend.solicitudes.SolicitudFct;
 import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
 import com.fctnow.backend.user.UserRole;
@@ -64,18 +66,16 @@ public class NotificacionService {
 
   @Transactional(readOnly = true)
   public List<NotificacionResponse> listMine(JwtAuthenticationToken authentication) {
-    UserAccount alumno = currentUser(authentication);
-    requireAnyRole(alumno, Set.of(UserRole.ALUMNO), "Solo los alumnos pueden ver sus notificaciones");
-    return notificacionRepository.findByAlumnoIdWithOfertaOrderByCreatedAtDesc(alumno.getId()).stream()
+    UserAccount user = currentUser(authentication);
+    return notificacionRepository.findByDestinatarioIdWithOfertaOrderByCreatedAtDesc(user.getId()).stream()
         .map(NotificacionResponse::from)
         .toList();
   }
 
   @Transactional
   public NotificacionResponse marcarLeida(Long id, JwtAuthenticationToken authentication) {
-    UserAccount alumno = currentUser(authentication);
-    requireAnyRole(alumno, Set.of(UserRole.ALUMNO), "Solo los alumnos pueden marcar notificaciones");
-    Notificacion notificacion = notificacionRepository.findByIdAndAlumnoId(id, alumno.getId())
+    UserAccount user = currentUser(authentication);
+    Notificacion notificacion = notificacionRepository.findByIdAndDestinatarioId(id, user.getId())
         .orElseThrow(() -> new ResponseStatusException(
             HttpStatus.NOT_FOUND,
             "Notificacion no encontrada"));
@@ -85,13 +85,86 @@ public class NotificacionService {
 
   @Transactional
   public void delete(Long id, JwtAuthenticationToken authentication) {
-    UserAccount alumno = currentUser(authentication);
-    requireAnyRole(alumno, Set.of(UserRole.ALUMNO), "Solo los alumnos pueden eliminar notificaciones");
-    Notificacion notificacion = notificacionRepository.findByIdAndAlumnoId(id, alumno.getId())
+    UserAccount user = currentUser(authentication);
+    Notificacion notificacion = notificacionRepository.findByIdAndDestinatarioId(id, user.getId())
         .orElseThrow(() -> new ResponseStatusException(
             HttpStatus.NOT_FOUND,
             "Notificacion no encontrada"));
     notificacionRepository.delete(notificacion);
+  }
+
+  @Transactional
+  public void notifyNuevaSolicitud(SolicitudFct solicitud) {
+    userAccountRepository.findAllByRoleAndEmpresaId(
+            UserRole.EMPRESA,
+            solicitud.getOferta().getEmpresa().getId())
+        .forEach(destinatario -> save(
+            destinatario,
+            solicitud.getAlumno(),
+            NotificacionTipo.SOLICITUD_RECIBIDA,
+            "Nueva solicitud recibida",
+            "%s ha solicitado \"%s\".".formatted(
+                solicitud.getAlumno().getDisplayName(),
+                solicitud.getOferta().getTitulo()),
+            "/empresa/solicitudes",
+            "Ver solicitudes",
+            solicitud.getOferta()));
+  }
+
+  @Transactional
+  public void notifyRespuestaSolicitud(SolicitudFct solicitud, SolicitudEstado estado) {
+    if (estado != SolicitudEstado.ACEPTADA && estado != SolicitudEstado.RECHAZADA) {
+      return;
+    }
+
+    boolean aceptada = estado == SolicitudEstado.ACEPTADA;
+    save(
+        solicitud.getAlumno(),
+        null,
+        aceptada ? NotificacionTipo.SOLICITUD_ACEPTADA : NotificacionTipo.SOLICITUD_RECHAZADA,
+        aceptada ? "Solicitud aceptada" : "Solicitud rechazada",
+        "%s ha %s tu solicitud para \"%s\".".formatted(
+            solicitud.getOferta().getEmpresa().getNombre(),
+            aceptada ? "aceptado" : "rechazado",
+            solicitud.getOferta().getTitulo()),
+        "/alumno/solicitudes",
+        "Ver mis solicitudes",
+        solicitud.getOferta());
+
+    if (aceptada) {
+      notifyCentroSolicitudAceptada(solicitud);
+    }
+  }
+
+  @Transactional
+  public void notifyAsignacionCreada(SolicitudFct solicitud) {
+    save(
+        solicitud.getAlumno(),
+        null,
+        NotificacionTipo.ASIGNACION_CREADA,
+        "Practica asignada",
+        "El centro ha asignado tu practica en %s para \"%s\".".formatted(
+            solicitud.getOferta().getEmpresa().getNombre(),
+            solicitud.getOferta().getTitulo()),
+        "/alumno/solicitudes",
+        "Ver asignacion",
+        solicitud.getOferta());
+  }
+
+  @Transactional
+  public void notifyOfertaPublicada(OfertaFct oferta) {
+    forEachCentro(destinatario -> save(
+        destinatario,
+        null,
+        NotificacionTipo.OFERTA_PUBLICADA,
+        "Nueva oferta FCT publicada",
+        "%s ha publicado \"%s\" para %s.".formatted(
+            oferta.getEmpresa().getNombre(),
+            oferta.getTitulo(),
+            oferta.getCicloFormativo() == null ? oferta.getFamiliaProfesional() : oferta.getCicloFormativo()),
+        "/practicas/" + oferta.getId(),
+        "Ver oferta",
+        oferta));
   }
 
   private Notificacion buildInternalRecommendation(
@@ -100,7 +173,7 @@ public class NotificacionService {
       Long ofertaId) {
     OfertaFct oferta = ofertaFctRepository.findByIdAndEstadoWithEmpresa(ofertaId, OfertaEstado.PUBLICADA)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Oferta no encontrada"));
-    if (notificacionRepository.existsByAlumnoIdAndTipoAndOfertaId(
+    if (notificacionRepository.existsByDestinatarioIdAndTipoAndOfertaId(
         alumno.getId(),
         NotificacionTipo.RECOMENDACION,
         oferta.getId())) {
@@ -163,6 +236,52 @@ public class NotificacionService {
   private UserAccount currentUser(JwtAuthenticationToken authentication) {
     return userAccountRepository.findByEmailIgnoreCase(authentication.getName())
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sesion no valida"));
+  }
+
+  private void notifyCentroSolicitudAceptada(SolicitudFct solicitud) {
+    forEachCentro(destinatario -> save(
+        destinatario,
+        solicitud.getAlumno(),
+        NotificacionTipo.SOLICITUD_ACEPTADA_PENDIENTE_ASIGNACION,
+        "Solicitud aceptada pendiente de asignacion",
+        "%s ha sido aceptado por %s para \"%s\". Revisa la asignacion de practicas.".formatted(
+            solicitud.getAlumno().getDisplayName(),
+            solicitud.getOferta().getEmpresa().getNombre(),
+            solicitud.getOferta().getTitulo()),
+        "/asignaciones",
+        "Asignar practica",
+        solicitud.getOferta()));
+  }
+
+  private void forEachCentro(java.util.function.Consumer<UserAccount> action) {
+    ROLES_CENTRO.stream()
+        .flatMap(role -> userAccountRepository.findAllByRole(role).stream())
+        .distinct()
+        .forEach(action);
+  }
+
+  private Notificacion save(
+      UserAccount destinatario,
+      UserAccount actor,
+      NotificacionTipo tipo,
+      String titulo,
+      String mensaje,
+      String actionUrl,
+      String actionLabel,
+      OfertaFct oferta) {
+    return notificacionRepository.save(new Notificacion(
+        destinatario,
+        actor,
+        tipo,
+        titulo,
+        mensaje,
+        actionUrl,
+        actionLabel,
+        oferta,
+        null,
+        null,
+        null,
+        null));
   }
 
   private void requireAnyRole(UserAccount user, Set<UserRole> expectedRoles, String message) {

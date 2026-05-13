@@ -24,8 +24,8 @@ public class Notificacion {
   private Long id;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "alumno_id", nullable = false)
-  private UserAccount alumno;
+  @JoinColumn(name = "destinatario_id", nullable = false)
+  private UserAccount destinatario;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "recomendada_por")
@@ -73,7 +73,7 @@ public class Notificacion {
   }
 
   public Notificacion(
-      UserAccount alumno,
+      UserAccount destinatario,
       UserAccount recomendadaPor,
       NotificacionTipo tipo,
       String titulo,
@@ -85,7 +85,7 @@ public class Notificacion {
       String ofertaExternaEmpresa,
       String ofertaExternaUrl,
       String ofertaExternaLocalidad) {
-    this.alumno = alumno;
+    this.destinatario = destinatario;
     this.recomendadaPor = recomendadaPor;
     this.tipo = tipo;
     this.titulo = titulo;
@@ -108,7 +108,11 @@ public class Notificacion {
   }
 
   public UserAccount getAlumno() {
-    return alumno;
+    return destinatario;
+  }
+
+  public UserAccount getDestinatario() {
+    return destinatario;
   }
 
   public UserAccount getRecomendadaPor() {

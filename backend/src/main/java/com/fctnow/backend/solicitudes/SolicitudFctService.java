@@ -2,6 +2,7 @@ package com.fctnow.backend.solicitudes;
 
 import com.fctnow.backend.asignaciones.AsignacionFct;
 import com.fctnow.backend.asignaciones.AsignacionFctRepository;
+import com.fctnow.backend.notificaciones.NotificacionService;
 import com.fctnow.backend.ofertas.OfertaEstado;
 import com.fctnow.backend.ofertas.OfertaFct;
 import com.fctnow.backend.ofertas.OfertaFctRepository;
@@ -24,16 +25,19 @@ public class SolicitudFctService {
   private final OfertaFctRepository ofertaFctRepository;
   private final UserAccountRepository userAccountRepository;
   private final AsignacionFctRepository asignacionFctRepository;
+  private final NotificacionService notificacionService;
 
   public SolicitudFctService(
       SolicitudFctRepository solicitudFctRepository,
       OfertaFctRepository ofertaFctRepository,
       UserAccountRepository userAccountRepository,
-      AsignacionFctRepository asignacionFctRepository) {
+      AsignacionFctRepository asignacionFctRepository,
+      NotificacionService notificacionService) {
     this.solicitudFctRepository = solicitudFctRepository;
     this.ofertaFctRepository = ofertaFctRepository;
     this.userAccountRepository = userAccountRepository;
     this.asignacionFctRepository = asignacionFctRepository;
+    this.notificacionService = notificacionService;
   }
 
   public List<SolicitudFctResponse> findMine(JwtAuthenticationToken authentication) {
@@ -71,7 +75,9 @@ public class SolicitudFctService {
           "Ya has solicitado esta oferta");
     }
 
-    return SolicitudFctResponse.from(solicitudFctRepository.save(new SolicitudFct(alumno, oferta)));
+    SolicitudFct solicitud = solicitudFctRepository.save(new SolicitudFct(alumno, oferta));
+    notificacionService.notifyNuevaSolicitud(solicitud);
+    return SolicitudFctResponse.from(solicitud);
   }
 
   private UserAccount currentAlumno(JwtAuthenticationToken authentication) {

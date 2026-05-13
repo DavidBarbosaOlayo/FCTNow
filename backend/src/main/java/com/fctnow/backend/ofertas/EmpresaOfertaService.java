@@ -2,6 +2,7 @@ package com.fctnow.backend.ofertas;
 
 import com.fctnow.backend.empresas.Empresa;
 import com.fctnow.backend.empresas.EmpresaRepository;
+import com.fctnow.backend.notificaciones.NotificacionService;
 import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
 import com.fctnow.backend.user.UserRole;
@@ -30,14 +31,17 @@ public class EmpresaOfertaService {
   private final OfertaFctRepository ofertaFctRepository;
   private final EmpresaRepository empresaRepository;
   private final UserAccountRepository userAccountRepository;
+  private final NotificacionService notificacionService;
 
   public EmpresaOfertaService(
       OfertaFctRepository ofertaFctRepository,
       EmpresaRepository empresaRepository,
-      UserAccountRepository userAccountRepository) {
+      UserAccountRepository userAccountRepository,
+      NotificacionService notificacionService) {
     this.ofertaFctRepository = ofertaFctRepository;
     this.empresaRepository = empresaRepository;
     this.userAccountRepository = userAccountRepository;
+    this.notificacionService = notificacionService;
   }
 
   @Transactional(readOnly = true)
@@ -131,6 +135,9 @@ public class EmpresaOfertaService {
     }
 
     oferta.changeEstado(destino);
+    if (destino == OfertaEstado.PUBLICADA) {
+      notificacionService.notifyOfertaPublicada(oferta);
+    }
     return OfertaFctResponse.from(oferta);
   }
 

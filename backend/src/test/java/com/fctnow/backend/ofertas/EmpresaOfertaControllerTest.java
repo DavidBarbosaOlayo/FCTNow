@@ -9,11 +9,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fctnow.backend.asignaciones.AsignacionFctRepository;
+import com.fctnow.backend.asignaciones.externas.AsignacionFctExternaRepository;
 import com.fctnow.backend.auth.LoginRequest;
 import com.fctnow.backend.empresas.Empresa;
 import com.fctnow.backend.empresas.EmpresaEstado;
 import com.fctnow.backend.empresas.EmpresaRepository;
 import com.fctnow.backend.empresas.IdentificadorFiscalTipo;
+import com.fctnow.backend.notificaciones.NotificacionRepository;
 import com.fctnow.backend.solicitudes.SolicitudFctRepository;
 import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
@@ -59,6 +62,15 @@ class EmpresaOfertaControllerTest {
   @Autowired
   private SolicitudFctRepository solicitudFctRepository;
 
+  @Autowired
+  private NotificacionRepository notificacionRepository;
+
+  @Autowired
+  private AsignacionFctRepository asignacionFctRepository;
+
+  @Autowired
+  private AsignacionFctExternaRepository asignacionFctExternaRepository;
+
   private Long empresaAId;
   private Long empresaBId;
   private Long borradorOfferIdEmpresaA;
@@ -67,6 +79,9 @@ class EmpresaOfertaControllerTest {
 
   @BeforeEach
   void setUp() {
+    asignacionFctRepository.deleteAll();
+    asignacionFctExternaRepository.deleteAll();
+    notificacionRepository.deleteAll();
     solicitudFctRepository.deleteAll();
     ofertaFctRepository.deleteAll();
     userAccountRepository.deleteAll();
@@ -130,6 +145,12 @@ class EmpresaOfertaControllerTest {
         passwordEncoder.encode("CorrectPassword123!"),
         "Alumno Demo",
         Set.of(UserRole.ALUMNO)));
+
+    userAccountRepository.save(new UserAccount(
+        "tutor@example.com",
+        passwordEncoder.encode("CorrectPassword123!"),
+        "Tutor Centro",
+        Set.of(UserRole.TUTOR_CENTRO)));
 
     borradorOfferIdEmpresaA = ofertaFctRepository.save(new OfertaFct(
             empresaA,
@@ -289,6 +310,22 @@ class EmpresaOfertaControllerTest {
             .content("{\"estado\":\"PUBLICADA\"}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.estado").value("PUBLICADA"));
+  }
+
+  @Test
+  void changeEstadoBorradorToPublicadaNotifiesCentro() throws Exception {
+    mockMvc.perform(patch("/api/empresas/me/ofertas/{id}/estado", borradorOfferIdEmpresaA)
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("empresa-a@example.com"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"estado\":\"PUBLICADA\"}"))
+        .andExpect(status().isOk());
+
+    mockMvc.perform(get("/api/notificaciones/me")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(jsonPath("$[0].tipo").value("OFERTA_PUBLICADA"))
+        .andExpect(jsonPath("$[0].actionUrl").value("/practicas/" + borradorOfferIdEmpresaA));
   }
 
   @Test

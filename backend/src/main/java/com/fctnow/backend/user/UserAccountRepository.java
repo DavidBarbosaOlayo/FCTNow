@@ -17,4 +17,15 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
       where r = :role
       """)
   List<UserAccount> findAllByRole(@Param("role") UserRole role);
+
+  @Query("""
+      select distinct u
+      from UserAccount u
+      join u.roles r
+      where r = :role
+        and u.empresaId = :empresaId
+      """)
+  List<UserAccount> findAllByRoleAndEmpresaId(
+      @Param("role") UserRole role,
+      @Param("empresaId") Long empresaId);
 }

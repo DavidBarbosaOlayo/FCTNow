@@ -364,7 +364,21 @@ export class NotificacionesPage implements OnInit {
   }
 
   protected tipoLabel(notificacion: Notificacion): string {
-    return notificacion.tipo === 'RECOMENDACION' ? 'Recomendación' : notificacion.tipo;
+    const labels: Record<Notificacion['tipo'], string> = {
+      RECOMENDACION: 'Recomendación',
+      SOLICITUD_RECIBIDA: 'Solicitud recibida',
+      SOLICITUD_ACEPTADA: 'Solicitud aceptada',
+      SOLICITUD_RECHAZADA: 'Solicitud rechazada',
+      SOLICITUD_ACEPTADA_PENDIENTE_ASIGNACION: 'Pendiente de asignación',
+      ASIGNACION_CREADA: 'Práctica asignada',
+      OFERTA_PUBLICADA: 'Oferta publicada',
+      OFERTA_MODIFICADA: 'Oferta modificada',
+      DOCUMENTACION_PENDIENTE: 'Documentación pendiente',
+      SEGUIMIENTO_PENDIENTE: 'Seguimiento pendiente',
+      EVALUACION_PENDIENTE: 'Evaluación pendiente',
+      INCIDENCIA_REGISTRADA: 'Incidencia registrada',
+    };
+    return labels[notificacion.tipo];
   }
 
   protected isInternalUrl(url: string): boolean {
@@ -405,10 +419,10 @@ export class NotificacionesPage implements OnInit {
 function notificationErrorMessage(error: unknown): string {
   if (error instanceof HttpErrorResponse) {
     if (error.status === 401) {
-      return 'Inicia sesión con tu cuenta de alumno para ver tus notificaciones.';
+      return 'Inicia sesión para ver tus notificaciones.';
     }
     if (error.status === 403) {
-      return 'Solo el alumnado puede consultar esta bandeja.';
+      return 'No tienes permisos para consultar esta bandeja.';
     }
     if (error.status === 0) {
       return 'No se pudo contactar con el backend. Comprueba que el servidor esté disponible.';

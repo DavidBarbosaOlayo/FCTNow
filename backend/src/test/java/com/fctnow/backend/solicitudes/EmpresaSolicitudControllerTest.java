@@ -14,6 +14,7 @@ import com.fctnow.backend.empresas.Empresa;
 import com.fctnow.backend.empresas.EmpresaEstado;
 import com.fctnow.backend.empresas.EmpresaRepository;
 import com.fctnow.backend.empresas.IdentificadorFiscalTipo;
+import com.fctnow.backend.notificaciones.NotificacionRepository;
 import com.fctnow.backend.ofertas.OfertaEstado;
 import com.fctnow.backend.ofertas.OfertaFct;
 import com.fctnow.backend.ofertas.OfertaFctRepository;
@@ -70,6 +71,9 @@ class EmpresaSolicitudControllerTest {
   @Autowired
   private AsignacionFctExternaRepository asignacionFctExternaRepository;
 
+  @Autowired
+  private NotificacionRepository notificacionRepository;
+
   private Long ofertaEmpresaAId;
   private Long solicitudEmpresaAFromAlumnoAId;
   private Long solicitudEmpresaBId;
@@ -78,6 +82,7 @@ class EmpresaSolicitudControllerTest {
   void setUp() {
     asignacionFctRepository.deleteAll();
     asignacionFctExternaRepository.deleteAll();
+    notificacionRepository.deleteAll();
     solicitudFctRepository.deleteAll();
     solicitudExternaRepository.deleteAll();
     ofertaFctRepository.deleteAll();
@@ -136,6 +141,12 @@ class EmpresaSolicitudControllerTest {
         "Empresa Sin Vinculo",
         Set.of(UserRole.EMPRESA),
         null));
+
+    userAccountRepository.save(new UserAccount(
+        "tutor@example.com",
+        passwordEncoder.encode("CorrectPassword123!"),
+        "Tutor Centro",
+        Set.of(UserRole.TUTOR_CENTRO)));
 
     UserAccount alumnoA = userAccountRepository.save(new UserAccount(
         "alumno-a@example.com",
@@ -236,6 +247,49 @@ class EmpresaSolicitudControllerTest {
             .content("{\"estado\":\"ACEPTADA\"}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.estado").value("ACEPTADA"));
+  }
+
+  @Test
+  void changeEstadoAceptadaNotifiesAlumnoAndTutor() throws Exception {
+    mockMvc.perform(patch("/api/empresas/me/solicitudes/{id}/estado", solicitudEmpresaAFromAlumnoAId)
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("empresa-a@example.com"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"estado\":\"ACEPTADA\"}"))
+        .andExpect(status().isOk());
+
+    mockMvc.perform(get("/api/notificaciones/me")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("alumno-a@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(jsonPath("$[0].tipo").value("SOLICITUD_ACEPTADA"))
+        .andExpect(jsonPath("$[0].leida").value(false));
+
+    mockMvc.perform(get("/api/notificaciones/me")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(jsonPath("$[0].tipo").value("SOLICITUD_ACEPTADA_PENDIENTE_ASIGNACION"))
+        .andExpect(jsonPath("$[0].actionUrl").value("/asignaciones"));
+  }
+
+  @Test
+  void changeEstadoRechazadaNotifiesAlumnoOnly() throws Exception {
+    mockMvc.perform(patch("/api/empresas/me/solicitudes/{id}/estado", solicitudEmpresaAFromAlumnoAId)
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("empresa-a@example.com"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"estado\":\"RECHAZADA\"}"))
+        .andExpect(status().isOk());
+
+    mockMvc.perform(get("/api/notificaciones/me")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("alumno-a@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(jsonPath("$[0].tipo").value("SOLICITUD_RECHAZADA"));
+
+    mockMvc.perform(get("/api/notificaciones/me")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(0));
   }
 
   @Test
