@@ -187,6 +187,11 @@
   font-size: clamp(1.05rem, 1.6vw, 1.25rem);
 }
 
+.feed-column > .section-heading,
+.side-section > .section-heading {
+  min-height: 3.8rem;
+}
+
 .section-heading .eyebrow {
   font-size: 0.7rem;
   text-transform: uppercase;

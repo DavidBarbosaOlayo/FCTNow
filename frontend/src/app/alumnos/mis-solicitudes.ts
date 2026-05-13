@@ -6,6 +6,7 @@ import {
   DestroyRef,
   OnInit,
   PLATFORM_ID,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -17,6 +18,7 @@ import {
   SolicitudExterna,
   SolicitudExternaEstado,
 } from '../practicas/solicitudes-externas.models';
+import { PracticasCacheService } from '../practicas/practicas-cache.service';
 import { SolicitudesExternasService } from '../practicas/solicitudes-externas.service';
 import { SolicitudEstado, SolicitudFct } from '../practicas/solicitudes.models';
 import { SolicitudesService } from '../practicas/solicitudes.service';
@@ -149,69 +151,88 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
               </p>
             </div>
           } @else {
-            <div class="solicitudes-grid">
-              @for (item of solicitudesExternas(); track item.id) {
-                <article class="solicitud-card solicitud-card-externa">
-                  <div class="solicitud-card-heading">
-                    <span class="origen-badge">Adzuna</span>
-                    <p class="solicitud-company">
-                      {{ item.empresaNombre || 'Empresa no especificada' }}
-                    </p>
-                    <h3>{{ item.titulo }}</h3>
-                  </div>
+            <div class="solicitudes-grid solicitudes-grid-externas">
+              @for (item of sortedSolicitudesExternas(); track item.id) {
+                <div class="solicitud-externa-row" [class.is-retirada]="item.estado === 'RETIRADA'">
+                  <article
+                    class="solicitud-card solicitud-card-externa"
+                    [class.is-aceptada]="item.estado === 'ACEPTADA'"
+                    [class.is-retirada]="item.estado === 'RETIRADA'"
+                  >
+                    <div class="solicitud-card-heading">
+                      <span class="origen-badge">Adzuna</span>
+                      <p class="solicitud-company">
+                        {{ item.empresaNombre || 'Empresa no especificada' }}
+                      </p>
+                      <h3>{{ item.titulo }}</h3>
+                    </div>
 
-                  <dl class="solicitud-details" aria-label="Datos de la solicitud externa">
-                    @if (item.localidad) {
+                    <dl class="solicitud-details" aria-label="Datos de la solicitud externa">
+                      @if (item.localidad) {
+                        <div>
+                          <dt>Localidad</dt>
+                          <dd>{{ item.localidad }}{{ item.region ? ', ' + item.region : '' }}</dd>
+                        </div>
+                      }
                       <div>
-                        <dt>Localidad</dt>
-                        <dd>{{ item.localidad }}{{ item.region ? ', ' + item.region : '' }}</dd>
+                        <dt>Estado</dt>
+                        <dd class="estado-cell">
+                          <span class="estado-pill" [attr.data-estado]="item.estado">
+                            {{ estadoExternaLabel(item.estado) }}
+                          </span>
+                        </dd>
                       </div>
-                    }
-                    <div>
-                      <dt>Estado</dt>
-                      <dd class="estado-cell">
-                        <span class="estado-pill" [attr.data-estado]="item.estado">
-                          {{ estadoExternaLabel(item.estado) }}
-                        </span>
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Última actualización</dt>
-                      <dd>{{ formatFecha(item.updatedAt) }}</dd>
-                    </div>
-                  </dl>
+                      <div>
+                        <dt>Última actualización</dt>
+                        <dd>{{ formatFecha(item.updatedAt) }}</dd>
+                      </div>
+                    </dl>
 
-                  <div class="externa-actions">
-                    @if (item.estado === 'SOLICITADA') {
-                      <button
-                        type="button"
-                        class="solicitud-link"
-                        [disabled]="externalActionInFlight() === item.id"
-                        (click)="markExternaAceptada(item)"
-                      >
-                        Marcar como aceptada
-                      </button>
-                    }
-                    @if (item.estado === 'SOLICITADA' || item.estado === 'ACEPTADA') {
-                      <button
-                        type="button"
+                    <div class="externa-actions">
+                      @if (item.estado === 'SOLICITADA') {
+                        <button
+                          type="button"
+                          class="solicitud-link"
+                          [disabled]="externalActionInFlight() === item.id"
+                          (click)="markExternaAceptada(item)"
+                        >
+                          Aceptada
+                        </button>
+                      }
+                      @if (item.estado === 'SOLICITADA' || item.estado === 'ACEPTADA') {
+                        <button
+                          type="button"
+                          class="solicitud-link danger"
+                          [disabled]="externalActionInFlight() === item.id"
+                          (click)="anularExterna(item)"
+                        >
+                          {{ item.estado === 'ACEPTADA' ? 'Anular aceptación' : 'No seleccionado' }}
+                        </button>
+                      }
+                      <a
                         class="solicitud-link secondary"
-                        [disabled]="externalActionInFlight() === item.id"
-                        (click)="anularExterna(item)"
+                        [href]="item.urlAplicacion"
+                        target="_blank"
+                        rel="noopener noreferrer"
                       >
-                        Anular solicitud
-                      </button>
-                    }
-                    <a
-                      class="solicitud-link secondary"
-                      [href]="item.urlAplicacion"
-                      target="_blank"
-                      rel="noopener noreferrer"
+                        Ver en Adzuna
+                      </a>
+                    </div>
+                  </article>
+                  @if (item.estado === 'RETIRADA') {
+                    <button
+                      type="button"
+                      class="delete-solicitud"
+                      [disabled]="externalActionInFlight() === item.id"
+                      [attr.aria-label]="'Eliminar registro de ' + item.titulo"
+                      (click)="deleteExterna(item)"
                     >
-                      Solicitar en Adzuna
-                    </a>
-                  </div>
-                </article>
+                      <svg aria-hidden="true" viewBox="0 0 24 24">
+                        <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2 .3 7h1.4l-.2-7H10Zm3.5 0-.2 7h1.4l.3-7h-1.5Z" />
+                      </svg>
+                    </button>
+                  }
+                </div>
               }
             </div>
           }
@@ -273,6 +294,16 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
         gap: 0.75rem;
+      }
+
+      .solicitudes-grid-externas {
+        grid-template-columns: 1fr;
+        overflow: visible;
+      }
+
+      .solicitud-externa-row {
+        position: relative;
+        min-width: 0;
       }
 
       .solicitud-card {
@@ -449,8 +480,38 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
       }
 
       .solicitud-card-externa {
+        grid-template-columns: minmax(16rem, 1.15fr) minmax(20rem, 1.35fr) auto;
+        align-items: center;
         background: var(--surface);
         border-left: 3px solid var(--accent);
+      }
+
+      .solicitud-card-externa.is-aceptada {
+        border-color: rgba(29, 107, 74, 0.34);
+        border-left-color: var(--success);
+        background: rgba(227, 246, 236, 0.8);
+      }
+
+      .solicitud-card-externa.is-retirada {
+        border-color: rgba(179, 38, 30, 0.32);
+        border-left-color: var(--danger);
+        background: rgba(255, 246, 241, 0.96);
+      }
+
+      .solicitud-card-externa .solicitud-card-heading {
+        min-width: 0;
+      }
+
+      .solicitud-card-externa .solicitud-details {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .solicitud-card-externa .solicitud-details div {
+        border-right: 1px solid var(--line);
+      }
+
+      .solicitud-card-externa .solicitud-details div:last-child {
+        border-right: 0;
       }
 
       .origen-badge {
@@ -474,6 +535,47 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         gap: 0.4rem;
       }
 
+      .solicitud-card-externa .externa-actions {
+        justify-content: flex-end;
+        margin-top: 0;
+      }
+
+      .delete-solicitud {
+        width: 2.75rem;
+        height: 2.75rem;
+        position: absolute;
+        top: 50%;
+        right: -3.35rem;
+        z-index: 1;
+        transform: translateY(-50%);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(179, 38, 30, 0.34);
+        border-radius: var(--radius-md);
+        color: #8f3324;
+        background: var(--danger-soft);
+        cursor: pointer;
+      }
+
+      .delete-solicitud:hover,
+      .delete-solicitud:focus-visible {
+        border-color: rgba(179, 38, 30, 0.54);
+        background: rgba(255, 226, 218, 0.95);
+        outline: none;
+      }
+
+      .delete-solicitud:disabled {
+        cursor: progress;
+        opacity: 0.64;
+      }
+
+      .delete-solicitud svg {
+        width: 1.1rem;
+        height: 1.1rem;
+        fill: currentColor;
+      }
+
       .externa-actions .solicitud-link {
         justify-self: start;
       }
@@ -491,13 +593,49 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         outline: none;
       }
 
+      .solicitud-link.danger {
+        border: 1px solid rgba(179, 38, 30, 0.34);
+        color: #8f3324;
+        background: var(--danger-soft);
+      }
+
+      .solicitud-link.danger:hover,
+      .solicitud-link.danger:focus-visible {
+        border-color: rgba(179, 38, 30, 0.54);
+        background: rgba(255, 226, 218, 0.95);
+        outline: none;
+      }
+
       @media (max-width: 620px) {
         .mis-solicitudes-page {
           padding-top: 1rem;
         }
 
+        .solicitud-card-externa {
+          grid-template-columns: 1fr;
+        }
+
+        .solicitud-card-externa .externa-actions {
+          justify-content: flex-start;
+        }
+
+        .delete-solicitud {
+          top: 0.75rem;
+          right: -3.1rem;
+          transform: none;
+        }
+
         .solicitud-details {
           grid-template-columns: 1fr;
+        }
+
+        .solicitud-card-externa .solicitud-details {
+          grid-template-columns: 1fr;
+        }
+
+        .solicitud-card-externa .solicitud-details div,
+        .solicitud-card-externa .solicitud-details div:last-child {
+          border-right: 0;
         }
       }
     `,
@@ -508,6 +646,7 @@ export class MisSolicitudesPage implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly solicitudesService = inject(SolicitudesService);
   private readonly solicitudesExternasService = inject(SolicitudesExternasService);
+  private readonly practicasCache = inject(PracticasCacheService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
 
@@ -519,6 +658,9 @@ export class MisSolicitudesPage implements OnInit {
   protected readonly solicitudesExternas = signal<SolicitudExterna[]>([]);
   protected readonly externasErrorMessage = signal<string | null>(null);
   protected readonly externalActionInFlight = signal<number | null>(null);
+  protected readonly sortedSolicitudesExternas = computed(() =>
+    this.solicitudesExternas().slice().sort(compareSolicitudesExternas),
+  );
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) {
@@ -618,8 +760,17 @@ export class MisSolicitudesPage implements OnInit {
     this.runExternalAction(
       solicitud,
       this.solicitudesExternasService.changeEstado(solicitud.id, 'RETIRADA'),
-      { removeOnSuccess: true },
     );
+  }
+
+  protected deleteExterna(solicitud: SolicitudExterna): void {
+    if (this.externalActionInFlight() === solicitud.id || solicitud.estado !== 'RETIRADA') {
+      return;
+    }
+    if (!this.confirmDelete()) {
+      return;
+    }
+    this.runExternalDelete(solicitud);
   }
 
   private confirmAnular(estado: SolicitudExternaEstado): boolean {
@@ -628,8 +779,9 @@ export class MisSolicitudesPage implements OnInit {
     }
     const detalle = estado === 'ACEPTADA'
       ? 'Esta solicitud está marcada como aceptada. Si la anulas, deberás volver a marcarla desde el listado de prácticas si la empresa te confirma de nuevo.'
-      : 'La solicitud quedará anulada y desaparecerá de esta lista.';
-    return window.confirm(`¿Anular la solicitud? ${detalle}`);
+      : 'Usa esta opción cuando la empresa te comunique que no has sido seleccionado. La solicitud desaparecerá de esta lista.';
+    const title = estado === 'ACEPTADA' ? '¿Anular la aceptación?' : '¿Marcar como no seleccionado?';
+    return window.confirm(`${title} ${detalle}`);
   }
 
   private loadExternas(): void {
@@ -638,9 +790,9 @@ export class MisSolicitudesPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (solicitudes) => {
-          const activas = solicitudes.filter((item) => item.estado !== 'RETIRADA');
-          this.solicitudesExternas.set(activas);
-          this.externasStatus.set(activas.length === 0 ? 'empty' : 'loaded');
+          this.solicitudesExternas.set(solicitudes);
+          this.practicasCache.setMineExternas(solicitudes);
+          this.externasStatus.set(solicitudes.length === 0 ? 'empty' : 'loaded');
         },
         error: (error: unknown) => {
           this.solicitudesExternas.set([]);
@@ -653,7 +805,6 @@ export class MisSolicitudesPage implements OnInit {
   private runExternalAction(
     solicitud: SolicitudExterna,
     request$: Observable<SolicitudExterna>,
-    options: { removeOnSuccess?: boolean } = {},
   ): void {
     this.externalActionInFlight.set(solicitud.id);
     this.externasErrorMessage.set(null);
@@ -661,13 +812,37 @@ export class MisSolicitudesPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (updated) => {
+          let nextSolicitudes: SolicitudExterna[] = [];
           this.solicitudesExternas.update((current) => {
-            if (options.removeOnSuccess) {
-              return current.filter((item) => item.id !== updated.id);
-            }
-            return current.map((item) => (item.id === updated.id ? updated : item));
+            nextSolicitudes = current.map((item) => (item.id === updated.id ? updated : item));
+            return nextSolicitudes;
           });
+          this.practicasCache.setMineExternas(nextSolicitudes);
           if (this.solicitudesExternas().length === 0) {
+            this.externasStatus.set('empty');
+          }
+          this.externalActionInFlight.set(null);
+        },
+        error: (error: unknown) => {
+          this.externasErrorMessage.set(listErrorMessage(error));
+          this.externasStatus.set('error');
+          this.externalActionInFlight.set(null);
+        },
+      });
+  }
+
+  private runExternalDelete(solicitud: SolicitudExterna): void {
+    this.externalActionInFlight.set(solicitud.id);
+    this.externasErrorMessage.set(null);
+    this.solicitudesExternasService
+      .delete(solicitud.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          const nextSolicitudes = this.solicitudesExternas().filter((item) => item.id !== solicitud.id);
+          this.solicitudesExternas.set(nextSolicitudes);
+          this.practicasCache.setMineExternas(nextSolicitudes);
+          if (nextSolicitudes.length === 0) {
             this.externasStatus.set('empty');
           }
           this.externalActionInFlight.set(null);
@@ -688,6 +863,30 @@ export class MisSolicitudesPage implements OnInit {
       'Confirma solo si la empresa externa te ha aceptado. Tu tutor podra crear la asignacion FCT desde esta solicitud.',
     );
   }
+
+  private confirmDelete(): boolean {
+    if (!isPlatformBrowser(this.platformId)) {
+      return false;
+    }
+    return window.confirm('¿Eliminar este registro? Esta acción quitará la solicitud retirada de tu historial.');
+  }
+}
+
+function compareSolicitudesExternas(a: SolicitudExterna, b: SolicitudExterna): number {
+  const stateDiff = estadoSortWeight(a.estado) - estadoSortWeight(b.estado);
+  if (stateDiff !== 0) {
+    return stateDiff;
+  }
+  return Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
+}
+
+function estadoSortWeight(estado: SolicitudExternaEstado): number {
+  switch (estado) {
+    case 'ACEPTADA': return 0;
+    case 'SOLICITADA': return 1;
+    case 'RECHAZADA': return 2;
+    case 'RETIRADA': return 3;
+  }
 }
 
 const ESTADO_LABELS: Record<SolicitudEstado, string> = {
@@ -700,7 +899,7 @@ const ESTADO_EXTERNA_LABELS: Record<SolicitudExternaEstado, string> = {
   SOLICITADA: 'Solicitada',
   ACEPTADA: 'Aceptada',
   RECHAZADA: 'Rechazada',
-  RETIRADA: 'Retirada',
+  RETIRADA: 'No seleccionado',
 };
 
 function isUnauthorized(error: unknown): boolean {

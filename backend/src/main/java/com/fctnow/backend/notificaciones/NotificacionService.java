@@ -83,6 +83,17 @@ public class NotificacionService {
     return NotificacionResponse.from(notificacion);
   }
 
+  @Transactional
+  public void delete(Long id, JwtAuthenticationToken authentication) {
+    UserAccount alumno = currentUser(authentication);
+    requireAnyRole(alumno, Set.of(UserRole.ALUMNO), "Solo los alumnos pueden eliminar notificaciones");
+    Notificacion notificacion = notificacionRepository.findByIdAndAlumnoId(id, alumno.getId())
+        .orElseThrow(() -> new ResponseStatusException(
+            HttpStatus.NOT_FOUND,
+            "Notificacion no encontrada"));
+    notificacionRepository.delete(notificacion);
+  }
+
   private Notificacion buildInternalRecommendation(
       UserAccount alumno,
       UserAccount centro,

@@ -108,10 +108,21 @@ type ModalidadOption = {
         </div>
 
         @if (externasStatus() === 'loading') {
-          <div class="state-panel">
-            <p class="eyebrow">Cargando</p>
-            <h2>Buscando ofertas reales</h2>
-            <p>Estamos consultando ofertas reales de Adzuna para España.</p>
+          <div class="state-panel loading-panel">
+            <div class="loading-visual" aria-hidden="true">
+              <span class="loading-orbit"></span>
+              <span class="loading-core"></span>
+            </div>
+            <div>
+              <p class="eyebrow">Cargando</p>
+              <h2>Buscando ofertas reales</h2>
+              <p>Estamos consultando ofertas reales de Adzuna para España.</p>
+              <div class="loading-lines" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
           </div>
         } @else if (externasStatus() === 'error') {
           <div class="state-panel alert" role="alert">
@@ -199,11 +210,11 @@ type ModalidadOption = {
                             type="button"
                             class="tracking-toggle is-estado-solicitada"
                             [disabled]="isExternalActionInFlight(oferta)"
-                            aria-label="Solicitada — pulsa para cancelar"
+                            aria-label="Solicitada — marcar como no seleccionado"
                             (click)="anularSolicitud(oferta)"
                           >
                             <span class="state">Solicitada</span>
-                            <span class="hover">Cancelar</span>
+                            <span class="hover">No seleccionado</span>
                           </button>
                           <button
                             type="button"
@@ -340,10 +351,21 @@ type ModalidadOption = {
 
       <section class="catalog-results" aria-live="polite" aria-label="Ofertas FCT publicadas">
         @if (status() === 'loading') {
-          <div class="state-panel">
-            <p class="eyebrow">Cargando</p>
-            <h2>Buscando ofertas publicadas</h2>
-            <p>Estamos consultando el catálogo disponible para este ciclo FCT.</p>
+          <div class="state-panel loading-panel">
+            <div class="loading-visual" aria-hidden="true">
+              <span class="loading-orbit"></span>
+              <span class="loading-core"></span>
+            </div>
+            <div>
+              <p class="eyebrow">Cargando</p>
+              <h2>Buscando ofertas publicadas</h2>
+              <p>Estamos consultando el catálogo disponible para este ciclo FCT.</p>
+              <div class="loading-lines" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
           </div>
         } @else if (status() === 'error') {
           <div class="state-panel alert" role="alert">
@@ -1392,8 +1414,9 @@ export class PracticasPage implements OnInit {
     }
     const detalle = estado === 'ACEPTADA'
       ? 'Esta solicitud está marcada como aceptada. Si la anulas, deberás volver a marcarla si la empresa te confirma de nuevo.'
-      : 'La solicitud quedará marcada como retirada y se ocultará del seguimiento activo.';
-    return window.confirm(`¿Anular la solicitud? ${detalle}`);
+      : 'Usa esta opción cuando la empresa te comunique que no has sido seleccionado. La solicitud quedará fuera del seguimiento activo.';
+    const title = estado === 'ACEPTADA' ? '¿Anular la aceptación?' : '¿Marcar como no seleccionado?';
+    return window.confirm(`${title} ${detalle}`);
   }
 
   private runExternalAction(

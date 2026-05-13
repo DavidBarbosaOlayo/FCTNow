@@ -37,6 +37,12 @@ export class SolicitudesExternasService {
     );
   }
 
+  delete(id: number): Observable<void> {
+    return this.withAuth((headers) =>
+      this.http.delete<void>(`${this.baseUrl()}/${id}`, { headers }),
+    );
+  }
+
   private baseUrl(): string {
     return `${this.apiBaseUrl}/alumno/solicitudes-externas`;
   }

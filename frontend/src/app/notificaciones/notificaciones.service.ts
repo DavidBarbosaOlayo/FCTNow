@@ -58,6 +58,16 @@ export class NotificacionesService {
     );
   }
 
+  delete(id: number): Observable<void> {
+    return this.withAuth((headers) =>
+      this.http.delete<void>(`${this.baseUrl()}/me/${id}`, { headers }).pipe(
+        tap(() => {
+          this.mineState.update((items) => items.filter((item) => item.id !== id));
+        }),
+      ),
+    );
+  }
+
   private baseUrl(): string {
     return `${this.apiBaseUrl}/notificaciones`;
   }

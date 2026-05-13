@@ -6,15 +6,17 @@ public record MensajeResponse(
     Long id,
     Long remitenteId,
     String remitenteNombre,
+    String remitentePhotoDataUrl,
     String contenido,
     boolean propio,
     Instant createdAt) {
 
-  static MensajeResponse from(Mensaje mensaje, Long currentUserId) {
+  static MensajeResponse from(Mensaje mensaje, Long currentUserId, String remitentePhotoDataUrl) {
     return new MensajeResponse(
         mensaje.getId(),
         mensaje.getRemitente().getId(),
         mensaje.getRemitente().getDisplayName(),
+        remitentePhotoDataUrl,
         mensaje.getContenido(),
         mensaje.getRemitente().getId().equals(currentUserId),
         mensaje.getCreatedAt());

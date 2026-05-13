@@ -161,7 +161,7 @@ import {
               [disabled]="actionInFlight"
               (click)="anular.emit()"
             >
-              <span class="state">{{ estadoLabel(solicitud!.estado) }} · pulsa para anular</span>
+              <span class="state">{{ estadoLabel(solicitud!.estado) }} · {{ anularActionLabel(solicitud!.estado) }}</span>
             </button>
           } @else {
             <button
@@ -484,6 +484,10 @@ export class ExternalOfferDetailDialog {
   protected canAnular(): boolean {
     const estado = this.solicitud?.estado;
     return estado === 'SOLICITADA' || estado === 'ACEPTADA';
+  }
+
+  protected anularActionLabel(estado: SolicitudExternaEstado): string {
+    return estado === 'ACEPTADA' ? 'anular aceptación' : 'marcar no seleccionado';
   }
 
   protected isRecommendationInFlight(alumno: TutorAlumno): boolean {

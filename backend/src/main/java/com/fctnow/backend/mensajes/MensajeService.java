@@ -2,10 +2,12 @@ package com.fctnow.backend.mensajes;
 
 import com.fctnow.backend.alumnos.AlumnoPreferencias;
 import com.fctnow.backend.alumnos.AlumnoPreferenciasRepository;
+import com.fctnow.backend.alumnos.AlumnoPreferenciasResponse;
 import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
 import com.fctnow.backend.user.UserRole;
 import java.util.Comparator;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,12 +44,19 @@ public class MensajeService {
   @Transactional(readOnly = true)
   public List<ConversacionResponse> listConversaciones(JwtAuthenticationToken authentication) {
     UserAccount currentUser = currentUser(authentication);
-    return conversacionRepository.findMineOrderByUpdatedAtDesc(currentUser.getId()).stream()
+    List<Conversacion> conversaciones =
+        conversacionRepository.findMineOrderByUpdatedAtDesc(currentUser.getId());
+    Map<Long, String> photoDataUrls = photoDataUrlsByUserIds(conversaciones.stream()
+        .map(conversacion -> conversacion.otherParticipant(currentUser.getId()).getId())
+        .toList());
+
+    return conversaciones.stream()
         .map(conversacion -> ConversacionResponse.from(
             conversacion,
             currentUser.getId(),
             mensajeRepository.findFirstByConversacionIdOrderByCreatedAtDescIdDesc(
-                conversacion.getId()).orElse(null)))
+                conversacion.getId()).orElse(null),
+            photoDataUrls.get(conversacion.otherParticipant(currentUser.getId()).getId())))
         .toList();
   }
 
@@ -74,7 +83,8 @@ public class MensajeService {
               contacto.getId(),
               contacto.getDisplayName(),
               preferencias == null ? null : preferencias.getFamiliaProfesional(),
-              preferencias == null ? null : preferencias.getCicloFormativo());
+              preferencias == null ? null : preferencias.getCicloFormativo(),
+              AlumnoPreferenciasResponse.photoDataUrl(preferencias));
         })
         .toList();
   }
@@ -96,7 +106,8 @@ public class MensajeService {
         conversacion,
         currentUser.getId(),
         mensajeRepository.findFirstByConversacionIdOrderByCreatedAtDescIdDesc(
-            conversacion.getId()).orElse(null));
+            conversacion.getId()).orElse(null),
+        photoDataUrl(conversacion.otherParticipant(currentUser.getId()).getId()));
   }
 
   @Transactional(readOnly = true)
@@ -105,8 +116,17 @@ public class MensajeService {
       JwtAuthenticationToken authentication) {
     UserAccount currentUser = currentUser(authentication);
     requireConversacion(conversacionId, currentUser.getId());
-    return mensajeRepository.findByConversacionIdOrderByCreatedAtAsc(conversacionId).stream()
-        .map(mensaje -> MensajeResponse.from(mensaje, currentUser.getId()))
+    List<Mensaje> mensajes = mensajeRepository.findByConversacionIdOrderByCreatedAtAsc(conversacionId);
+    Map<Long, String> photoDataUrls = photoDataUrlsByUserIds(mensajes.stream()
+        .map(mensaje -> mensaje.getRemitente().getId())
+        .distinct()
+        .toList());
+
+    return mensajes.stream()
+        .map(mensaje -> MensajeResponse.from(
+            mensaje,
+            currentUser.getId(),
+            photoDataUrls.get(mensaje.getRemitente().getId())))
         .toList();
   }
 
@@ -122,7 +142,7 @@ public class MensajeService {
         currentUser,
         request.contenido()));
     conversacion.touch();
-    return MensajeResponse.from(mensaje, currentUser.getId());
+    return MensajeResponse.from(mensaje, currentUser.getId(), photoDataUrl(currentUser.getId()));
   }
 
   private Conversacion requireConversacion(Long conversacionId, Long currentUserId) {
@@ -206,6 +226,23 @@ public class MensajeService {
             preferencias.getAlumno().getId(),
             preferencias));
     return preferenciasPorAlumno;
+  }
+
+  private Map<Long, String> photoDataUrlsByUserIds(Collection<Long> userIds) {
+    if (userIds.isEmpty()) {
+      return Map.of();
+    }
+
+    Map<Long, String> photoDataUrls = new LinkedHashMap<>();
+    alumnoPreferenciasRepository.findByAlumnoIdIn(userIds)
+        .forEach(preferencias -> photoDataUrls.put(
+            preferencias.getAlumno().getId(),
+            AlumnoPreferenciasResponse.photoDataUrl(preferencias)));
+    return photoDataUrls;
+  }
+
+  private String photoDataUrl(Long userId) {
+    return photoDataUrlsByUserIds(List.of(userId)).get(userId);
   }
 
   private void requireSameProfessionalFamily(UserAccount currentUser, UserAccount contacto) {
