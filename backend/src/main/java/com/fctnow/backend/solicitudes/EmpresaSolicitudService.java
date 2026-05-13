@@ -1,5 +1,6 @@
 package com.fctnow.backend.solicitudes;
 
+import com.fctnow.backend.notificaciones.NotificacionService;
 import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
 import com.fctnow.backend.user.UserRole;
@@ -28,12 +29,15 @@ public class EmpresaSolicitudService {
 
   private final SolicitudFctRepository solicitudFctRepository;
   private final UserAccountRepository userAccountRepository;
+  private final NotificacionService notificacionService;
 
   public EmpresaSolicitudService(
       SolicitudFctRepository solicitudFctRepository,
-      UserAccountRepository userAccountRepository) {
+      UserAccountRepository userAccountRepository,
+      NotificacionService notificacionService) {
     this.solicitudFctRepository = solicitudFctRepository;
     this.userAccountRepository = userAccountRepository;
+    this.notificacionService = notificacionService;
   }
 
   @Transactional(readOnly = true)
@@ -71,6 +75,7 @@ public class EmpresaSolicitudService {
     }
 
     solicitud.changeEstado(destino);
+    notificacionService.notifyRespuestaSolicitud(solicitud, destino);
     return EmpresaSolicitudResponse.from(solicitud);
   }
 

@@ -11,6 +11,7 @@ import com.fctnow.backend.empresas.Empresa;
 import com.fctnow.backend.empresas.EmpresaEstado;
 import com.fctnow.backend.empresas.EmpresaRepository;
 import com.fctnow.backend.empresas.IdentificadorFiscalTipo;
+import com.fctnow.backend.notificaciones.NotificacionRepository;
 import com.fctnow.backend.ofertas.OfertaEstado;
 import com.fctnow.backend.ofertas.OfertaFct;
 import com.fctnow.backend.ofertas.OfertaFctRepository;
@@ -63,6 +64,9 @@ class AsignacionFctControllerTest {
   @Autowired
   private AsignacionFctRepository asignacionFctRepository;
 
+  @Autowired
+  private NotificacionRepository notificacionRepository;
+
   private Long solicitudAceptadaId;
   private Long segundaSolicitudAceptadaMismoAlumnoId;
   private Long solicitudPendienteId;
@@ -71,6 +75,7 @@ class AsignacionFctControllerTest {
   @BeforeEach
   void setUp() {
     asignacionFctRepository.deleteAll();
+    notificacionRepository.deleteAll();
     solicitudFctRepository.deleteAll();
     ofertaFctRepository.deleteAll();
     userAccountRepository.deleteAll();
@@ -223,6 +228,22 @@ class AsignacionFctControllerTest {
         .andExpect(jsonPath("$.oferta.titulo").value("Practicas DAW"))
         .andExpect(jsonPath("$.empresa.nombre").value("Tech Norte Formacion"))
         .andExpect(jsonPath("$.observaciones").value("Inicia el lunes"));
+  }
+
+  @Test
+  void createNotifiesAssignedAlumno() throws Exception {
+    mockMvc.perform(post("/api/asignaciones")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"solicitudId\":" + solicitudAceptadaId + "}"))
+        .andExpect(status().isCreated());
+
+    mockMvc.perform(get("/api/notificaciones/me")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("alumno-a@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(jsonPath("$[0].tipo").value("ASIGNACION_CREADA"))
+        .andExpect(jsonPath("$[0].actionUrl").value("/alumno/solicitudes"));
   }
 
   @Test

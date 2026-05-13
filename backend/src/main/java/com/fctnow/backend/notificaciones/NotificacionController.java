@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/notificaciones")
-@Tag(name = "Notificaciones", description = "Avisos y recomendaciones para alumnado")
+@Tag(name = "Notificaciones", description = "Avisos funcionales para usuarios FCTNow")
 public class NotificacionController {
 
   private final NotificacionService notificacionService;
@@ -39,7 +39,7 @@ public class NotificacionController {
   }
 
   @GetMapping("/me")
-  @Operation(summary = "List authenticated student's notifications")
+  @Operation(summary = "List authenticated user's notifications")
   @SecurityRequirement(name = "bearerAuth")
   public List<NotificacionResponse> mine(JwtAuthenticationToken authentication) {
     return notificacionService.listMine(authentication);

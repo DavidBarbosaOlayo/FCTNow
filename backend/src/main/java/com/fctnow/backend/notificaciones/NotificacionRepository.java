@@ -13,22 +13,33 @@ public interface NotificacionRepository extends JpaRepository<Notificacion, Long
       from Notificacion n
       left join fetch n.oferta o
       left join fetch o.empresa
-      where n.alumno.id = :alumnoId
+      where n.destinatario.id = :alumnoId
       order by n.createdAt desc, n.id desc
       """)
   List<Notificacion> findByAlumnoIdWithOfertaOrderByCreatedAtDesc(@Param("alumnoId") Long alumnoId);
 
-  Optional<Notificacion> findByIdAndAlumnoId(Long id, Long alumnoId);
+  @Query("""
+      select n
+      from Notificacion n
+      left join fetch n.oferta o
+      left join fetch o.empresa
+      where n.destinatario.id = :destinatarioId
+      order by n.createdAt desc, n.id desc
+      """)
+  List<Notificacion> findByDestinatarioIdWithOfertaOrderByCreatedAtDesc(
+      @Param("destinatarioId") Long destinatarioId);
 
-  boolean existsByAlumnoIdAndTipoAndOfertaId(
-      Long alumnoId,
+  Optional<Notificacion> findByIdAndDestinatarioId(Long id, Long destinatarioId);
+
+  boolean existsByDestinatarioIdAndTipoAndOfertaId(
+      Long destinatarioId,
       NotificacionTipo tipo,
       Long ofertaId);
 
   @Query("""
       select count(n) > 0
       from Notificacion n
-      where n.alumno.id = :alumnoId
+      where n.destinatario.id = :alumnoId
         and n.tipo = :tipo
         and lower(n.ofertaExternaUrl) = lower(:url)
       """)
