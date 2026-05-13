@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, Input, PLATFORM_ID, provideZonelessChangeDetection } from '@angular/core';
+import { Component, EventEmitter, Input, Output, PLATFORM_ID, provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
@@ -7,6 +7,8 @@ import { PreferenciasAlumnoPage } from '../alumnos/preferencias';
 import { AuthenticatedUser, UserRole } from '../auth/auth.models';
 import { AuthService } from '../auth/auth.service';
 import { EmpresaPerfilPage } from '../empresas/empresa-perfil';
+import { AlumnoPreferencias } from '../alumnos/preferencias.models';
+import { AlumnoPreferenciasService } from '../alumnos/preferencias.service';
 import { PerfilPage } from './perfil';
 
 @Component({
@@ -15,6 +17,9 @@ import { PerfilPage } from './perfil';
 })
 class PreferenciasAlumnoStub {
   @Input() embedded = false;
+  @Input() showPhoto = true;
+  @Output() editingChange = new EventEmitter<boolean>();
+  @Output() photoChange = new EventEmitter<string | null>();
 }
 
 @Component({
@@ -28,7 +33,27 @@ class EmpresaPerfilStub {
 describe('PerfilPage', () => {
   let fixture: ComponentFixture<PerfilPage>;
   let authService: jasmine.SpyObj<AuthService>;
+  let preferenciasService: jasmine.SpyObj<AlumnoPreferenciasService>;
   let navigateSpy: jasmine.Spy;
+
+  const samplePreferences: AlumnoPreferencias = {
+    familiaProfesional: 'Informática y comunicaciones',
+    cicloFormativo: 'Desarrollo de Aplicaciones Web',
+    localidadPreferida: 'Valencia',
+    modalidadPreferida: 'HIBRIDA',
+    fechaDisponibilidad: '2026-09-15',
+    observaciones: 'Preferencia por desarrollo web.',
+    hasCv: true,
+    cvFileName: 'cv-alumno.pdf',
+    cvContentType: 'application/pdf',
+    cvSize: 2048,
+    cvUpdatedAt: '2026-05-07T12:00:00Z',
+    hasPhoto: true,
+    photoDataUrl: 'data:image/png;base64,aW1n',
+    photoContentType: 'image/png',
+    photoSize: 1024,
+    photoUpdatedAt: '2026-05-08T12:00:00Z',
+  };
 
   function buildUser(roles: UserRole[]): AuthenticatedUser {
     return {
@@ -55,6 +80,11 @@ describe('PerfilPage', () => {
     ]);
     authService.accessToken.and.returnValue(accessToken);
     authService.loadAuthenticatedUser.and.returnValue(result as never);
+    preferenciasService = jasmine.createSpyObj<AlumnoPreferenciasService>(
+      'AlumnoPreferenciasService',
+      ['getMine'],
+    );
+    preferenciasService.getMine.and.returnValue(of(samplePreferences));
 
     TestBed.configureTestingModule({
       imports: [PerfilPage],
@@ -62,6 +92,7 @@ describe('PerfilPage', () => {
         provideZonelessChangeDetection(),
         provideRouter([]),
         { provide: AuthService, useValue: authService },
+        { provide: AlumnoPreferenciasService, useValue: preferenciasService },
         { provide: PLATFORM_ID, useValue: platformId },
       ],
     });
@@ -87,7 +118,12 @@ describe('PerfilPage', () => {
     expect(authService.loadAuthenticatedUser).toHaveBeenCalled();
     expect(compiled.textContent).toContain('Demo Usuario');
     expect(compiled.textContent).toContain('demo@example.com');
-    expect(compiled.textContent).toContain('Alumno, Administración');
+    expect(compiled.textContent).toContain('Alumno');
+    expect(compiled.textContent).toContain('Administración');
+    expect(compiled.textContent).toContain('no se editan desde este formulario');
+    expect(compiled.querySelector<HTMLImageElement>('.profile-avatar img')?.src).toContain(
+      samplePreferences.photoDataUrl,
+    );
   });
 
   it('should render the not authenticated state when there is no session', async () => {
@@ -175,7 +211,24 @@ describe('PerfilPage', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('app-preferencias-alumno-page')).not.toBeNull();
     expect(compiled.querySelector('app-empresa-perfil-page')).toBeNull();
-    expect(compiled.querySelector('section[aria-label="Preferencias del alumno"]')).not.toBeNull();
+    expect(compiled.querySelector('section[aria-label="Datos editables del alumno"]')).not.toBeNull();
+  });
+
+  it('should enable photo editing when alumno preferences enter edit mode', async () => {
+    await configure({ result: of(buildUser(['ALUMNO'])) });
+
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const preferencias = compiled.querySelector('app-preferencias-alumno-page') as HTMLElement;
+    expect(compiled.querySelector('.profile-avatar-button.is-editable')).toBeNull();
+
+    preferencias.dispatchEvent(new CustomEvent('editingChange', { detail: true }));
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('.profile-avatar-button.is-editable')).not.toBeNull();
+    expect(compiled.querySelector('.photo-edit-icon')).not.toBeNull();
   });
 
   it('should embed the empresa perfil section for an EMPRESA user', async () => {
