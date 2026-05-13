@@ -412,7 +412,7 @@ describe('PracticasPage', () => {
     const solicitadaToggle = compiled.querySelector<HTMLButtonElement>('.tracking-toggle.is-estado-solicitada');
     expect(solicitadaToggle).not.toBeNull();
     expect(solicitadaToggle?.querySelector('.state')?.textContent?.trim()).toBe('Solicitada');
-    expect(solicitadaToggle?.querySelector('.hover')?.textContent?.trim()).toBe('Cancelar');
+    expect(solicitadaToggle?.querySelector('.hover')?.textContent?.trim()).toBe('No seleccionado');
 
     const aceptarBtn = compiled.querySelector<HTMLButtonElement>('.tracking-label.is-primary');
     expect(aceptarBtn).not.toBeNull();

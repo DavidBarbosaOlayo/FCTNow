@@ -1,6 +1,7 @@
 package com.fctnow.backend.solicitudes.externas;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -187,6 +188,34 @@ class SolicitudExternaControllerTest {
         .andExpect(jsonPath("$.id").value(id))
         .andExpect(jsonPath("$.estado").value("SOLICITADA"))
         .andExpect(jsonPath("$.titulo").value("Becario backend (reactivada)"));
+  }
+
+  @Test
+  void deletesRetiradaSolicitud() throws Exception {
+    String token = loginAs("alumno@example.com");
+
+    String createResponse = mockMvc.perform(post("/api/alumno/solicitudes-externas")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(samplePayload("ext-delete", "QA Becario")))
+        .andExpect(status().isCreated())
+        .andReturn().getResponse().getContentAsString();
+    Long id = objectMapper.readTree(createResponse).get("id").asLong();
+
+    mockMvc.perform(patch("/api/alumno/solicitudes-externas/{id}/estado", id)
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"estado\":\"RETIRADA\"}"))
+        .andExpect(status().isOk());
+
+    mockMvc.perform(delete("/api/alumno/solicitudes-externas/{id}", id)
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+        .andExpect(status().isNoContent());
+
+    mockMvc.perform(get("/api/alumno/solicitudes-externas")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(0));
   }
 
   private String samplePayload(String idExterno, String titulo) {

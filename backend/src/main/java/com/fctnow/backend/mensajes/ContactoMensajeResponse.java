@@ -4,5 +4,6 @@ public record ContactoMensajeResponse(
     Long id,
     String displayName,
     String familiaProfesional,
-    String cicloFormativo) {
+    String cicloFormativo,
+    String photoDataUrl) {
 }

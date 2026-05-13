@@ -20,10 +20,21 @@
     </section>
   } @else {
     @if (status() === 'loading') {
-      <section class="state-panel" aria-live="polite" aria-labelledby="loading-title">
-        <p class="eyebrow">Cargando</p>
-        <h2 id="loading-title">Preparando tus oportunidades</h2>
-        <p>Estamos consultando recomendaciones, actividad del ciclo y avisos recientes.</p>
+      <section class="state-panel loading-panel" aria-live="polite" aria-labelledby="loading-title">
+        <div class="loading-visual" aria-hidden="true">
+          <span class="loading-orbit"></span>
+          <span class="loading-core"></span>
+        </div>
+        <div>
+          <p class="eyebrow">Cargando</p>
+          <h2 id="loading-title">Preparando tus oportunidades</h2>
+          <p>Estamos consultando recomendaciones, actividad del ciclo y avisos recientes.</p>
+          <div class="loading-lines" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
       </section>
     } @else if (status() === 'error') {
       <section class="state-panel error-panel" role="alert" aria-labelledby="error-title">

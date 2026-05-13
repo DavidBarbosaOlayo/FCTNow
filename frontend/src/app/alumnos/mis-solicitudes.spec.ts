@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { SolicitudExterna } from '../practicas/solicitudes-externas.models';
+import { PracticasCacheService } from '../practicas/practicas-cache.service';
 import { SolicitudesExternasService } from '../practicas/solicitudes-externas.service';
 import { SolicitudFct } from '../practicas/solicitudes.models';
 import { SolicitudesService } from '../practicas/solicitudes.service';
@@ -15,6 +16,7 @@ describe('MisSolicitudesPage', () => {
   let authService: jasmine.SpyObj<AuthService>;
   let solicitudesService: jasmine.SpyObj<SolicitudesService>;
   let solicitudesExternasService: jasmine.SpyObj<SolicitudesExternasService>;
+  let practicasCache: jasmine.SpyObj<PracticasCacheService>;
 
   const sampleSolicitudes: SolicitudFct[] = [
     {
@@ -47,7 +49,7 @@ describe('MisSolicitudesPage', () => {
     solicitudesService.mine.and.returnValue(result);
     solicitudesExternasService = jasmine.createSpyObj<SolicitudesExternasService>(
       'SolicitudesExternasService',
-      ['mine', 'changeEstado'],
+      ['mine', 'changeEstado', 'delete'],
     );
     solicitudesExternasService.mine.and.returnValue(externasResult);
     solicitudesExternasService.changeEstado.and.callFake((id, estado) =>
@@ -58,6 +60,8 @@ describe('MisSolicitudesPage', () => {
         updatedAt: '2026-05-09T11:00:00Z',
       }),
     );
+    solicitudesExternasService.delete.and.returnValue(of(void 0));
+    practicasCache = jasmine.createSpyObj<PracticasCacheService>('PracticasCacheService', ['setMineExternas']);
 
     await TestBed.configureTestingModule({
       imports: [MisSolicitudesPage],
@@ -67,6 +71,7 @@ describe('MisSolicitudesPage', () => {
         { provide: AuthService, useValue: authService },
         { provide: SolicitudesService, useValue: solicitudesService },
         { provide: SolicitudesExternasService, useValue: solicitudesExternasService },
+        { provide: PracticasCacheService, useValue: practicasCache },
         { provide: PLATFORM_ID, useValue: platformId },
       ],
     }).compileComponents();
@@ -234,15 +239,88 @@ describe('MisSolicitudesPage', () => {
     expect(compiled.textContent).toContain('Becario QA');
     expect(compiled.textContent).toContain('Logistica Levante');
     expect(compiled.querySelector('.origen-badge')?.textContent).toContain('Adzuna');
+    expect(compiled.textContent).toContain('No seleccionado');
+    expect(compiled.textContent).toContain('Ver en Adzuna');
+    expect(compiled.textContent).not.toContain('Marcar no seleccionado');
+    expect(compiled.textContent).not.toContain('Solicitar en Adzuna');
 
     const aceptarBtn = Array.from(compiled.querySelectorAll<HTMLButtonElement>('button')).find(
-      (button) => button.textContent?.trim() === 'Marcar como aceptada',
+      (button) => button.textContent?.trim() === 'Aceptada',
     );
     aceptarBtn!.click();
     fixture.detectChanges();
 
     expect(window.confirm).toHaveBeenCalled();
     expect(solicitudesExternasService.changeEstado).toHaveBeenCalledWith(20, 'ACEPTADA');
+    expect(practicasCache.setMineExternas).toHaveBeenCalledWith([
+      jasmine.objectContaining({ id: 20, estado: 'ACEPTADA' }),
+    ]);
     expect(compiled.textContent).toContain('Aceptada');
+  });
+
+  it('should keep a not selected external solicitud visible and sync prácticas cache', async () => {
+    await configure({ externasResult: of([sampleSolicitudExterna]) });
+    spyOn(window, 'confirm').and.returnValue(true);
+
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const notSelectedBtn = Array.from(compiled.querySelectorAll<HTMLButtonElement>('button')).find(
+      (button) => button.textContent?.trim() === 'No seleccionado',
+    );
+
+    notSelectedBtn!.click();
+    fixture.detectChanges();
+
+    expect(solicitudesExternasService.changeEstado).toHaveBeenCalledWith(20, 'RETIRADA');
+    expect(practicasCache.setMineExternas).toHaveBeenCalledWith([
+      jasmine.objectContaining({ id: 20, estado: 'RETIRADA' }),
+    ]);
+    expect(compiled.textContent).toContain('Becario QA');
+    expect(compiled.textContent).toContain('No seleccionado');
+    expect(compiled.querySelector('.solicitud-card-externa.is-retirada')).not.toBeNull();
+    expect(compiled.querySelector('.delete-solicitud')).not.toBeNull();
+  });
+
+  it('should order accepted external solicitudes first and retired ones last', async () => {
+    await configure({
+      externasResult: of([
+        { ...sampleSolicitudExterna, id: 1, titulo: 'Solicitud pendiente', estado: 'SOLICITADA' },
+        { ...sampleSolicitudExterna, id: 2, titulo: 'Solicitud retirada', estado: 'RETIRADA' },
+        { ...sampleSolicitudExterna, id: 3, titulo: 'Solicitud aceptada', estado: 'ACEPTADA' },
+      ]),
+    });
+
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const rows = Array.from(
+      fixture.nativeElement.querySelectorAll('.solicitud-externa-row'),
+    ) as HTMLElement[];
+
+    expect(rows[0].textContent).toContain('Solicitud aceptada');
+    expect(rows[0].querySelector('.solicitud-card-externa.is-aceptada')).not.toBeNull();
+    expect(rows[2].textContent).toContain('Solicitud retirada');
+    expect(rows[2].querySelector('.solicitud-card-externa.is-retirada')).not.toBeNull();
+  });
+
+  it('should delete a not selected external solicitud from the list and cache', async () => {
+    await configure({
+      externasResult: of([{ ...sampleSolicitudExterna, estado: 'RETIRADA' }]),
+    });
+    spyOn(window, 'confirm').and.returnValue(true);
+
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const deleteBtn = compiled.querySelector<HTMLButtonElement>('.delete-solicitud');
+    deleteBtn!.click();
+    fixture.detectChanges();
+
+    expect(solicitudesExternasService.delete).toHaveBeenCalledWith(20);
+    expect(practicasCache.setMineExternas).toHaveBeenCalledWith([]);
+    expect(compiled.textContent).not.toContain('Becario QA');
   });
 });

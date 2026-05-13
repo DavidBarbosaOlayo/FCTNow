@@ -39,50 +39,64 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
       } @else {
         <section class="notifications-list" aria-label="Notificaciones recientes">
           @for (notificacion of notificaciones(); track notificacion.id) {
-            <article class="notification-card" [class.is-read]="notificacion.leida">
-              <div class="notification-copy">
-                <p class="eyebrow">{{ tipoLabel(notificacion) }}</p>
-                <h2>{{ notificacion.titulo }}</h2>
-                @if (notificacion.mensaje) {
-                  <p>{{ notificacion.mensaje }}</p>
-                }
-                <time [attr.datetime]="notificacion.createdAt">
-                  {{ dateLabel(notificacion.createdAt) }}
-                </time>
-              </div>
-
-              <div class="notification-actions">
-                @if (notificacion.actionUrl) {
-                  @if (isInternalUrl(notificacion.actionUrl)) {
-                    <a class="primary-action" [routerLink]="notificacion.actionUrl">
-                      {{ notificacion.actionLabel || 'Ir a la oferta' }}
-                    </a>
-                  } @else {
-                    <a
-                      class="primary-action"
-                      [href]="notificacion.actionUrl"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {{ notificacion.actionLabel || 'Ir a la oferta' }}
-                    </a>
+            <div class="notification-row">
+              <article class="notification-card" [class.is-read]="notificacion.leida">
+                <div class="notification-copy">
+                  <p class="eyebrow">{{ tipoLabel(notificacion) }}</p>
+                  <h2>{{ notificacion.titulo }}</h2>
+                  @if (notificacion.mensaje) {
+                    <p>{{ notificacion.mensaje }}</p>
                   }
-                }
+                  <time [attr.datetime]="notificacion.createdAt">
+                    {{ dateLabel(notificacion.createdAt) }}
+                  </time>
+                </div>
 
-                @if (!notificacion.leida) {
-                  <button
-                    type="button"
-                    class="secondary-action"
-                    [disabled]="markingRead() === notificacion.id"
-                    (click)="marcarLeida(notificacion)"
-                  >
-                    Marcar como leída
-                  </button>
-                } @else {
-                  <span class="read-badge">Leída</span>
-                }
-              </div>
-            </article>
+                <div class="notification-actions">
+                  @if (notificacion.actionUrl) {
+                    @if (isInternalUrl(notificacion.actionUrl)) {
+                      <a class="primary-action" [routerLink]="notificacion.actionUrl">
+                        {{ notificacion.actionLabel || 'Ir a la oferta' }}
+                      </a>
+                    } @else {
+                      <a
+                        class="primary-action"
+                        [href]="notificacion.actionUrl"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {{ notificacion.actionLabel || 'Ir a la oferta' }}
+                      </a>
+                    }
+                  }
+
+                  @if (!notificacion.leida) {
+                    <button
+                      type="button"
+                      class="secondary-action"
+                      [disabled]="markingRead() === notificacion.id || deletingNotification() === notificacion.id"
+                      (click)="marcarLeida(notificacion)"
+                    >
+                      Marcar como leída
+                    </button>
+                  } @else {
+                    <span class="read-badge">Leída</span>
+                  }
+                </div>
+              </article>
+
+              <button
+                type="button"
+                class="delete-notification"
+                [disabled]="deletingNotification() === notificacion.id"
+                [attr.aria-label]="'Eliminar notificación ' + notificacion.titulo"
+                (click)="deleteNotification(notificacion)"
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2 .3 7h1.4l-.2-7H10Zm3.5 0-.2 7h1.4l.3-7h-1.5Z" />
+                </svg>
+              </button>
+            </div>
           }
         </section>
       }
@@ -99,6 +113,12 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
       .notifications-list {
         display: grid;
         gap: 0.85rem;
+        overflow: visible;
+      }
+
+      .notification-row {
+        position: relative;
+        min-width: 0;
       }
 
       .notification-card,
@@ -230,6 +250,42 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
         border: 1px solid rgba(17, 78, 74, 0.22);
       }
 
+      .delete-notification {
+        width: 2.75rem;
+        height: 2.75rem;
+        position: absolute;
+        top: 50%;
+        right: -3.35rem;
+        z-index: 1;
+        transform: translateY(-50%);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(179, 38, 30, 0.34);
+        border-radius: var(--radius-md);
+        color: #8f3324;
+        background: var(--danger-soft);
+        cursor: pointer;
+      }
+
+      .delete-notification:hover,
+      .delete-notification:focus-visible {
+        border-color: rgba(179, 38, 30, 0.54);
+        background: rgba(255, 226, 218, 0.95);
+        outline: none;
+      }
+
+      .delete-notification:disabled {
+        cursor: progress;
+        opacity: 0.64;
+      }
+
+      .delete-notification svg {
+        width: 1.1rem;
+        height: 1.1rem;
+        fill: currentColor;
+      }
+
       @media (max-width: 720px) {
         .notification-card {
           grid-template-columns: 1fr;
@@ -237,6 +293,12 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
 
         .notification-actions {
           justify-content: flex-start;
+        }
+
+        .delete-notification {
+          top: 0.75rem;
+          right: -3.1rem;
+          transform: none;
         }
       }
     `,
@@ -251,13 +313,14 @@ export class NotificacionesPage implements OnInit {
   protected readonly notificaciones = signal<Notificacion[]>([]);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly markingRead = signal<number | null>(null);
+  protected readonly deletingNotification = signal<number | null>(null);
 
   ngOnInit(): void {
     this.load();
   }
 
   protected marcarLeida(notificacion: Notificacion): void {
-    if (this.markingRead() !== null) {
+    if (this.markingRead() !== null || this.deletingNotification() === notificacion.id) {
       return;
     }
     this.markingRead.set(notificacion.id);
@@ -273,6 +336,27 @@ export class NotificacionesPage implements OnInit {
         },
         error: (error: unknown) => {
           this.markingRead.set(null);
+          this.errorMessage.set(notificationErrorMessage(error));
+          this.status.set('error');
+        },
+      });
+  }
+
+  protected deleteNotification(notificacion: Notificacion): void {
+    if (this.deletingNotification() !== null) {
+      return;
+    }
+    this.deletingNotification.set(notificacion.id);
+    this.notificacionesService
+      .delete(notificacion.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.deletingNotification.set(null);
+          this.notificaciones.update((items) => items.filter((item) => item.id !== notificacion.id));
+        },
+        error: (error: unknown) => {
+          this.deletingNotification.set(null);
           this.errorMessage.set(notificationErrorMessage(error));
           this.status.set('error');
         },

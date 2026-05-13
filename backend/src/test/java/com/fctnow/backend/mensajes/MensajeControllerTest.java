@@ -14,6 +14,7 @@ import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
 import com.fctnow.backend.user.UserRole;
 import java.time.LocalDate;
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -98,8 +99,8 @@ class MensajeControllerTest {
         "Alumno Otra Familia",
         Set.of(UserRole.ALUMNO)));
 
-    savePreferences(alumno, "Informatica y comunicaciones");
-    savePreferences(alumnoCompatible, "Informatica y comunicaciones");
+    savePreferences(alumno, "Informatica y comunicaciones", true);
+    savePreferences(alumnoCompatible, "Informatica y comunicaciones", true);
     savePreferences(alumnoOtraFamilia, "Administracion y gestion");
 
     Conversacion conversacion = conversacionRepository.save(new Conversacion(
@@ -125,6 +126,7 @@ class MensajeControllerTest {
         .andExpect(jsonPath("$[0].id").value(alumnoCompatibleId))
         .andExpect(jsonPath("$[0].displayName").value("Ana Compatible"))
         .andExpect(jsonPath("$[0].familiaProfesional").value("Informatica y comunicaciones"))
+        .andExpect(jsonPath("$[0].photoDataUrl").value(org.hamcrest.Matchers.startsWith("data:image/png;base64,")))
         .andExpect(jsonPath("$[1].id").value(profesorId))
         .andExpect(jsonPath("$[1].displayName").value("Profesor Demo"))
         .andExpect(jsonPath("$[1].familiaProfesional").doesNotExist())
@@ -153,6 +155,7 @@ class MensajeControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(4))
         .andExpect(jsonPath("$[0].displayName").value("Alumno Demo"))
+        .andExpect(jsonPath("$[0].photoDataUrl").value(org.hamcrest.Matchers.startsWith("data:image/png;base64,")))
         .andExpect(jsonPath("$[1].displayName").value("Alumno Otra Familia"))
         .andExpect(jsonPath("$[2].displayName").value("Ana Compatible"))
         .andExpect(jsonPath("$[3].displayName").value("Profesor Demo"));
@@ -169,6 +172,7 @@ class MensajeControllerTest {
             .content(body))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.otroParticipanteNombre").value("Ana Compatible"))
+        .andExpect(jsonPath("$.otroParticipantePhotoDataUrl").value(org.hamcrest.Matchers.startsWith("data:image/png;base64,")))
         .andReturn()
         .getResponse()
         .getContentAsString();
@@ -242,6 +246,7 @@ class MensajeControllerTest {
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.contenido").value("Gracias, quedo atento."))
         .andExpect(jsonPath("$.remitenteNombre").value("Alumno Demo"))
+        .andExpect(jsonPath("$.remitentePhotoDataUrl").value(org.hamcrest.Matchers.startsWith("data:image/png;base64,")))
         .andExpect(jsonPath("$.propio").value(true));
 
     mockMvc.perform(get("/api/mensajes/conversaciones/{id}", conversacionId)
@@ -278,6 +283,10 @@ class MensajeControllerTest {
   }
 
   private void savePreferences(UserAccount alumno, String familiaProfesional) {
+    savePreferences(alumno, familiaProfesional, false);
+  }
+
+  private void savePreferences(UserAccount alumno, String familiaProfesional, boolean withPhoto) {
     AlumnoPreferencias preferencias = new AlumnoPreferencias(alumno);
     preferencias.update(
         familiaProfesional,
@@ -286,6 +295,9 @@ class MensajeControllerTest {
         OfertaModalidad.PRESENCIAL,
         LocalDate.of(2026, 9, 1),
         null);
+    if (withPhoto) {
+      preferencias.updatePhoto("foto.png", "image/png", "img".getBytes(StandardCharsets.UTF_8));
+    }
     preferenciasRepository.save(preferencias);
   }
 }

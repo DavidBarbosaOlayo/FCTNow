@@ -7,6 +7,7 @@ public record ConversacionResponse(
     String titulo,
     Long otroParticipanteId,
     String otroParticipanteNombre,
+    String otroParticipantePhotoDataUrl,
     String ultimoMensaje,
     Instant ultimoMensajeAt,
     Boolean ultimoMensajePropio,
@@ -15,7 +16,8 @@ public record ConversacionResponse(
   static ConversacionResponse from(
       Conversacion conversacion,
       Long currentUserId,
-      Mensaje ultimoMensaje) {
+      Mensaje ultimoMensaje,
+      String otroParticipantePhotoDataUrl) {
     var other = conversacion.otherParticipant(currentUserId);
     String title = conversacion.getTitulo() == null
         ? other.getDisplayName()
@@ -25,6 +27,7 @@ public record ConversacionResponse(
         title,
         other.getId(),
         other.getDisplayName(),
+        otroParticipantePhotoDataUrl,
         ultimoMensaje == null ? null : ultimoMensaje.getContenido(),
         ultimoMensaje == null ? null : ultimoMensaje.getCreatedAt(),
         ultimoMensaje == null ? null : ultimoMensaje.getRemitente().getId().equals(currentUserId),

@@ -3,6 +3,7 @@ export type Conversacion = {
   titulo: string;
   otroParticipanteId: number;
   otroParticipanteNombre: string;
+  otroParticipantePhotoDataUrl: string | null;
   ultimoMensaje: string | null;
   ultimoMensajeAt: string | null;
   ultimoMensajePropio: boolean | null;
@@ -13,6 +14,7 @@ export type Mensaje = {
   id: number;
   remitenteId: number;
   remitenteNombre: string;
+  remitentePhotoDataUrl: string | null;
   contenido: string;
   propio: boolean;
   createdAt: string;
@@ -27,6 +29,7 @@ export type ContactoMensaje = {
   displayName: string;
   familiaProfesional: string | null;
   cicloFormativo: string | null;
+  photoDataUrl: string | null;
 };
 
 export type ConversacionCreateRequest = {

@@ -3,8 +3,11 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   OnInit,
+  ViewChild,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -72,8 +75,12 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
                         [disabled]="creatingConversation() === contacto.id"
                         (click)="startConversation(contacto)"
                       >
-                        <span class="avatar" aria-hidden="true">
-                          {{ initials(contacto.displayName) }}
+                        <span class="avatar" [class.has-photo]="!!contacto.photoDataUrl">
+                          @if (contacto.photoDataUrl) {
+                            <img [src]="contacto.photoDataUrl" [alt]="'Foto de ' + contacto.displayName" />
+                          } @else {
+                            <span aria-hidden="true">{{ initials(contacto.displayName) }}</span>
+                          }
                         </span>
                         <span>
                           <strong>{{ contacto.displayName }}</strong>
@@ -109,8 +116,15 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
                     [class.is-active]="selectedConversationId() === conversacion.id"
                     (click)="selectConversation(conversacion)"
                   >
-                    <span class="avatar" aria-hidden="true">
-                      {{ initials(conversacion.otroParticipanteNombre) }}
+                    <span class="avatar" [class.has-photo]="!!conversacion.otroParticipantePhotoDataUrl">
+                      @if (conversacion.otroParticipantePhotoDataUrl) {
+                        <img
+                          [src]="conversacion.otroParticipantePhotoDataUrl"
+                          [alt]="'Foto de ' + conversacion.otroParticipanteNombre"
+                        />
+                      } @else {
+                        <span aria-hidden="true">{{ initials(conversacion.otroParticipanteNombre) }}</span>
+                      }
                     </span>
                     <span class="conversation-copy">
                       <strong>{{ conversacion.titulo }}</strong>
@@ -135,8 +149,17 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
             </div>
           } @else {
             <header class="thread-header">
-              <span class="avatar large" aria-hidden="true">
-                {{ initials(selectedConversation()?.otroParticipanteNombre || '') }}
+              <span
+                class="avatar large"
+                [class.has-photo]="!!selectedConversation()?.otroParticipantePhotoDataUrl"
+              >
+                @if (selectedConversation()?.otroParticipantePhotoDataUrl; as photo) {
+                  <img [src]="photo" [alt]="'Foto de ' + (selectedConversation()?.otroParticipanteNombre || 'contacto')" />
+                } @else {
+                  <span aria-hidden="true">
+                    {{ initials(selectedConversation()?.otroParticipanteNombre || '') }}
+                  </span>
+                }
               </span>
               <div>
                 <p class="eyebrow">Conversacion</p>
@@ -144,7 +167,7 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
               </div>
             </header>
 
-            <div class="thread-body" aria-live="polite">
+            <div #threadBody class="thread-body" aria-live="polite">
               @if (messageStatus() === 'loading') {
                 <p class="state-copy">Cargando mensajes...</p>
               } @else if (messageStatus() === 'error') {
@@ -153,22 +176,45 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
                   <span>{{ threadErrorMessage() }}</span>
                 </div>
               } @else if (mensajes().length === 0) {
-                <div class="empty-panel">
-                  <strong>Empieza la conversacion</strong>
-                  <span>Escribe el primer mensaje de este chat.</span>
-                </div>
+                <p class="empty-thread-copy">
+                  <span>
+                    Escribe el primer mensaje para iniciar una conversacion con
+                    <strong>{{ selectedConversation()?.otroParticipanteNombre }}</strong>.
+                  </span>
+                </p>
               } @else {
                 <ol class="message-list">
                   @for (mensaje of mensajes(); track mensaje.id) {
-                    <li class="message-row" [class.is-own]="mensaje.propio">
+                    @let grouped = isGroupedMessage($index);
+                    <li class="message-row" [class.is-own]="mensaje.propio" [class.is-grouped]="grouped">
+                      @if (!grouped) {
+                        <span class="avatar message-avatar" [class.has-photo]="!!mensaje.remitentePhotoDataUrl">
+                          @if (mensaje.remitentePhotoDataUrl) {
+                            <img [src]="mensaje.remitentePhotoDataUrl" [alt]="'Foto de ' + mensaje.remitenteNombre" />
+                          } @else {
+                            <span aria-hidden="true">{{ initials(mensaje.remitenteNombre) }}</span>
+                          }
+                        </span>
+                      } @else {
+                        <span class="message-avatar-spacer" aria-hidden="true"></span>
+                      }
                       <article class="message-bubble">
-                        <div class="message-meta">
-                          <strong>{{ mensaje.propio ? 'Tu' : mensaje.remitenteNombre }}</strong>
-                          <time [attr.datetime]="mensaje.createdAt">
-                            {{ fullDate(mensaje.createdAt) }}
-                          </time>
-                        </div>
-                        <p>{{ mensaje.contenido }}</p>
+                        @if (!grouped) {
+                          <div class="message-meta">
+                            <strong>{{ mensaje.propio ? 'Tu' : mensaje.remitenteNombre }}</strong>
+                            <time [attr.datetime]="mensaje.createdAt">
+                              {{ fullDate(mensaje.createdAt) }}
+                            </time>
+                          </div>
+                        }
+                        <p>
+                          <span>{{ mensaje.contenido }}</span>
+                          @if (grouped) {
+                            <time class="message-time-only" [attr.datetime]="mensaje.createdAt">
+                              {{ messageTime(mensaje.createdAt) }}
+                            </time>
+                          }
+                        </p>
                       </article>
                     </li>
                   }
@@ -184,14 +230,20 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
                   rows="2"
                   [formControl]="messageControl"
                   placeholder="Escribe una respuesta..."
-                  [attr.aria-invalid]="messageControl.invalid && messageControl.touched"
+                  [attr.aria-invalid]="showEmptyMessageError()"
                   (keydown.enter)="sendWithEnter($event)"
+                  (input)="hideEmptyMessageError()"
                 ></textarea>
-                <button type="submit" [disabled]="!canSend()">
+                <button
+                  type="submit"
+                  [disabled]="sending()"
+                  [class.is-disabled]="!canSend()"
+                  [attr.aria-disabled]="!canSend()"
+                >
                   {{ sending() ? 'Enviando' : 'Enviar' }}
                 </button>
               </div>
-              @if (messageControl.invalid && messageControl.touched) {
+              @if (showEmptyMessageError()) {
                 <p class="field-error">Escribe un mensaje antes de enviarlo.</p>
               }
             </form>
@@ -203,17 +255,24 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
   styles: [
     `
       .mensajes-page {
-        align-content: start;
-        padding-top: 2rem;
+        min-height: calc(100dvh - 3.5rem - 1px);
+        height: calc(100dvh - 3.5rem - 1px);
+        max-height: calc(100dvh - 3.5rem - 1px);
+        align-content: stretch;
+        padding: 0;
+        overflow: hidden;
       }
 
       .messages-shell {
-        min-height: min(72vh, 44rem);
+        --messages-toolbar-height: 5rem;
+        height: 100%;
+        max-height: 100%;
+        min-height: 0;
         display: grid;
         grid-template-columns: minmax(18rem, 0.36fr) minmax(0, 1fr);
         overflow: hidden;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: 0;
         background: var(--surface);
         box-shadow: var(--shadow-soft);
       }
@@ -224,6 +283,10 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
       }
 
       .chat-list {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
         border-right: 1px solid var(--line);
         background: rgba(255, 255, 255, 0.35);
       }
@@ -235,10 +298,12 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
       }
 
       .messages-heading {
+        min-height: var(--messages-toolbar-height);
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 0.75rem;
+        border-bottom: 1px solid var(--line);
       }
 
       .messages-heading h2,
@@ -251,14 +316,18 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
       }
 
       .new-chat-button {
-        width: 2.35rem;
-        height: 2.35rem;
+        width: 2rem;
+        height: 2rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         border: 0;
-        border-radius: 999px;
+        border-radius: 0;
         color: #f7fbf8;
         background: var(--accent);
         font: inherit;
-        font-size: 1.35rem;
+        line-height: 1;
+        font-size: 1.05rem;
         font-weight: 900;
         cursor: pointer;
       }
@@ -284,7 +353,7 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
         min-height: 2.65rem;
         padding: 0 0.75rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: 0;
         color: var(--ink);
         background: rgba(255, 255, 255, 0.82);
         font: inherit;
@@ -306,6 +375,11 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
       .conversation-list {
         display: grid;
+        align-content: start;
+        grid-auto-rows: max-content;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;
       }
 
       .contact-list {
@@ -332,6 +406,10 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
         cursor: pointer;
       }
 
+      .conversation-list li:first-child .conversation-button {
+        border-top: 0;
+      }
+
       .contact-button {
         width: 100%;
         display: grid;
@@ -340,7 +418,7 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
         align-items: center;
         padding: 0.55rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: 0;
         color: var(--ink);
         background: rgba(255, 255, 255, 0.62);
         font: inherit;
@@ -381,11 +459,24 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        overflow: hidden;
+        flex: 0 0 auto;
         border-radius: 999px;
         color: #f7fbf8;
         background: var(--accent);
         font-size: 0.82rem;
         font-weight: 900;
+      }
+
+      .avatar.has-photo {
+        color: inherit;
+        background: var(--accent-soft);
+      }
+
+      .avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
       }
 
       .avatar.large {
@@ -424,9 +515,12 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
       .chat-panel {
         display: grid;
         grid-template-rows: auto minmax(0, 1fr) auto;
+        min-height: 0;
+        overflow: hidden;
       }
 
       .thread-header {
+        min-height: var(--messages-toolbar-height);
         display: flex;
         align-items: center;
         gap: 0.8rem;
@@ -434,6 +528,8 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
       }
 
       .thread-body {
+        display: flex;
+        flex-direction: column;
         min-height: 0;
         overflow: auto;
         padding: 1rem;
@@ -442,10 +538,13 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
       .message-list {
         display: grid;
         gap: 0.65rem;
+        margin-top: auto;
       }
 
       .message-row {
         display: flex;
+        align-items: flex-end;
+        gap: 0.6rem;
         justify-content: flex-start;
       }
 
@@ -453,11 +552,27 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
         justify-content: flex-end;
       }
 
+      .message-row.is-grouped {
+        margin-top: -0.35rem;
+      }
+
+      .message-avatar {
+        width: 2rem;
+        height: 2rem;
+        font-size: 0.72rem;
+      }
+
+      .message-avatar-spacer {
+        width: 2rem;
+        height: 2rem;
+        flex: 0 0 auto;
+      }
+
       .message-bubble {
         max-width: min(36rem, 82%);
         padding: 0.72rem 0.85rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: 0;
         background: rgba(255, 255, 255, 0.78);
       }
 
@@ -471,12 +586,25 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
         color: rgba(247, 251, 248, 0.78);
       }
 
+      .message-row.is-own .message-time-only {
+        color: rgba(247, 251, 248, 0.78);
+      }
+
       .message-meta {
         display: flex;
         flex-wrap: wrap;
         gap: 0.45rem;
         align-items: baseline;
         margin-bottom: 0.35rem;
+      }
+
+      .message-time-only {
+        display: inline-block;
+        margin-left: 0.75rem;
+        color: var(--muted);
+        font-size: 0.78rem;
+        line-height: 1;
+        white-space: nowrap;
       }
 
       .message-bubble p {
@@ -511,7 +639,7 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
         resize: vertical;
         padding: 0.72rem 0.85rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: 0;
         color: var(--ink);
         background: rgba(255, 255, 255, 0.82);
         font: inherit;
@@ -527,7 +655,7 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
         min-height: 3rem;
         padding: 0 1rem;
         border: 0;
-        border-radius: 0.5rem;
+        border-radius: 0;
         color: #f7fbf8;
         background: var(--accent);
         font: inherit;
@@ -535,7 +663,8 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
         cursor: pointer;
       }
 
-      .composer button:disabled {
+      .composer button:disabled,
+      .composer button.is-disabled {
         color: rgba(25, 36, 47, 0.52);
         background: rgba(25, 36, 47, 0.12);
         cursor: not-allowed;
@@ -548,8 +677,27 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
         margin: 1rem;
       }
 
+      .empty-thread-copy {
+        align-self: center;
+        margin: 1rem;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .empty-thread-copy strong {
+        color: var(--ink);
+      }
+
       .compact {
         margin: 0;
+      }
+
+      .chat-list > .state-copy,
+      .chat-list > .empty-panel,
+      .chat-list > .message-alert {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;
       }
 
       .empty-thread,
@@ -557,7 +705,7 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
       .message-alert {
         padding: 1rem;
         border: 1px solid var(--line);
-        border-radius: 0.5rem;
+        border-radius: 0;
         background: rgba(255, 255, 255, 0.56);
       }
 
@@ -579,24 +727,16 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
       @media (max-width: 860px) {
         .messages-shell {
           grid-template-columns: 1fr;
+          grid-template-rows: minmax(16rem, 0.92fr) minmax(0, 1.08fr);
         }
 
         .chat-list {
           border-right: 0;
           border-bottom: 1px solid var(--line);
         }
-
-        .conversation-list {
-          max-height: 18rem;
-          overflow: auto;
-        }
       }
 
       @media (max-width: 560px) {
-        .messages-shell {
-          min-height: auto;
-        }
-
         .composer-row {
           grid-template-columns: 1fr;
         }
@@ -612,6 +752,10 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
 export class MensajesPage implements OnInit {
   private readonly mensajesService = inject(MensajesService);
   private readonly destroyRef = inject(DestroyRef);
+  private scrollTaskQueued = false;
+
+  @ViewChild('threadBody')
+  private readonly threadBody?: ElementRef<HTMLElement>;
 
   protected readonly status = signal<LoadStatus>('loading');
   protected readonly messageStatus = signal<MessageStatus>('idle');
@@ -621,6 +765,7 @@ export class MensajesPage implements OnInit {
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly threadErrorMessage = signal<string | null>(null);
   protected readonly contactErrorMessage = signal<string | null>(null);
+  protected readonly showEmptyMessageError = signal(false);
   protected readonly sending = signal(false);
   protected readonly creatingChat = signal(false);
   protected readonly contactStatus = signal<ContactStatus>('idle');
@@ -634,6 +779,16 @@ export class MensajesPage implements OnInit {
   protected readonly selectedConversation = computed(() =>
     this.conversaciones().find((item) => item.id === this.selectedConversationId()) ?? null,
   );
+
+  constructor() {
+    effect(() => {
+      this.selectedConversationId();
+      this.messageStatus();
+      this.mensajes().length;
+
+      this.scheduleThreadScrollToBottom();
+    });
+  }
 
   ngOnInit(): void {
     this.loadConversaciones();
@@ -715,6 +870,12 @@ export class MensajesPage implements OnInit {
     this.sendMessage();
   }
 
+  protected hideEmptyMessageError(): void {
+    if (this.messageControl.value.trim().length > 0) {
+      this.showEmptyMessageError.set(false);
+    }
+  }
+
   protected handleSubmit(event: Event): void {
     event.preventDefault();
     this.sendMessage();
@@ -723,11 +884,22 @@ export class MensajesPage implements OnInit {
   protected sendMessage(): void {
     const conversacion = this.selectedConversation();
     const contenido = this.messageControl.value.trim();
-    if (!conversacion || contenido.length === 0 || this.sending()) {
+    if (!conversacion || this.sending()) {
+      return;
+    }
+
+    if (contenido.length === 0) {
+      this.showEmptyMessageError.set(true);
       this.messageControl.markAsTouched();
       return;
     }
 
+    if (this.messageControl.invalid) {
+      this.messageControl.markAsTouched();
+      return;
+    }
+
+    this.showEmptyMessageError.set(false);
     this.sending.set(true);
     this.mensajesService
       .enviarMensaje(conversacion.id, { contenido })
@@ -739,6 +911,7 @@ export class MensajesPage implements OnInit {
           this.messageControl.markAsUntouched();
           this.mensajes.update((items) => [...items, mensaje]);
           this.conversaciones.update((items) => moveConversationToTop(items, conversacion.id, mensaje));
+          this.scheduleThreadScrollToBottom();
         },
         error: (error: unknown) => {
           this.sending.set(false);
@@ -762,6 +935,23 @@ export class MensajesPage implements OnInit {
 
   protected fullDate(value: string): string {
     return formatDate(value, { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  protected messageTime(value: string): string {
+    return formatDate(value, { timeStyle: 'short' });
+  }
+
+  protected isGroupedMessage(index: number): boolean {
+    if (index <= 0) {
+      return false;
+    }
+
+    const current = this.mensajes()[index];
+    const previous = this.mensajes()[index - 1];
+    return (
+      current.remitenteId === previous.remitenteId &&
+      isSameLocalDay(current.createdAt, previous.createdAt)
+    );
   }
 
   private loadConversaciones(): void {
@@ -796,6 +986,7 @@ export class MensajesPage implements OnInit {
         next: (items) => {
           this.mensajes.set(items);
           this.messageStatus.set('idle');
+          this.scheduleThreadScrollToBottom();
         },
         error: (error: unknown) => {
           this.mensajes.set([]);
@@ -803,6 +994,31 @@ export class MensajesPage implements OnInit {
           this.messageStatus.set('error');
         },
       });
+  }
+
+  private scrollThreadToBottom(): void {
+    const element = this.threadBody?.nativeElement;
+    if (!element || this.messageStatus() === 'loading') {
+      return;
+    }
+
+    const top = element.scrollHeight;
+    element.scrollTo({ top, behavior: 'auto' });
+  }
+
+  private scheduleThreadScrollToBottom(): void {
+    if (this.scrollTaskQueued) {
+      return;
+    }
+
+    this.scrollTaskQueued = true;
+    setTimeout(() => {
+      this.scrollTaskQueued = false;
+      this.scrollThreadToBottom();
+      setTimeout(() => {
+        this.scrollThreadToBottom();
+      });
+    });
   }
 }
 
@@ -841,6 +1057,19 @@ function formatDate(value: string, options: Intl.DateTimeFormatOptions): string 
     return value;
   }
   return new Intl.DateTimeFormat('es-ES', options).format(date);
+}
+
+function isSameLocalDay(first: string, second: string): boolean {
+  const firstDate = new Date(first);
+  const secondDate = new Date(second);
+  if (Number.isNaN(firstDate.getTime()) || Number.isNaN(secondDate.getTime())) {
+    return false;
+  }
+  return (
+    firstDate.getFullYear() === secondDate.getFullYear() &&
+    firstDate.getMonth() === secondDate.getMonth() &&
+    firstDate.getDate() === secondDate.getDate()
+  );
 }
 
 function messageErrorMessage(error: unknown): string {

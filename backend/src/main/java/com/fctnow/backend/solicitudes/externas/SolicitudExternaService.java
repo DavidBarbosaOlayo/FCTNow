@@ -93,6 +93,32 @@ public class SolicitudExternaService {
     return SolicitudExternaResponse.from(solicitud);
   }
 
+  @Transactional
+  public void delete(Long solicitudId, JwtAuthenticationToken authentication) {
+    UserAccount alumno = requireAlumno(authentication);
+    SolicitudExterna solicitud = repository.findById(solicitudId)
+        .orElseThrow(() -> new ResponseStatusException(
+            HttpStatus.NOT_FOUND,
+            "Solicitud externa no encontrada"));
+
+    if (!solicitud.getAlumno().getId().equals(alumno.getId())) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No es tu solicitud");
+    }
+    if (solicitud.getEstado() != SolicitudExternaEstado.RETIRADA
+        && solicitud.getEstado() != SolicitudExternaEstado.RECHAZADA) {
+      throw new ResponseStatusException(
+          HttpStatus.CONFLICT,
+          "Solo se pueden eliminar solicitudes externas retiradas o rechazadas");
+    }
+    if (asignacionExternaRepository.existsBySolicitudId(solicitud.getId())) {
+      throw new ResponseStatusException(
+          HttpStatus.CONFLICT,
+          "No se puede eliminar una solicitud externa ya asignada");
+    }
+
+    repository.delete(solicitud);
+  }
+
   private Set<SolicitudExternaEstado> transitionsFrom(SolicitudExternaEstado estado) {
     return switch (estado) {
       case SOLICITADA -> TRANSITIONS_FROM_SOLICITADA;

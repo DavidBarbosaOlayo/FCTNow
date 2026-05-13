@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -51,5 +52,15 @@ public class NotificacionController {
       @PathVariable Long id,
       JwtAuthenticationToken authentication) {
     return notificacionService.marcarLeida(id, authentication);
+  }
+
+  @DeleteMapping("/me/{id}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  @Operation(summary = "Delete a notification")
+  @SecurityRequirement(name = "bearerAuth")
+  public void delete(
+      @PathVariable Long id,
+      JwtAuthenticationToken authentication) {
+    notificacionService.delete(id, authentication);
   }
 }
