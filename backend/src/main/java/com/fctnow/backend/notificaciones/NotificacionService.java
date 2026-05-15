@@ -5,6 +5,7 @@ import com.fctnow.backend.ofertas.OfertaFct;
 import com.fctnow.backend.ofertas.OfertaFctRepository;
 import com.fctnow.backend.solicitudes.SolicitudEstado;
 import com.fctnow.backend.solicitudes.SolicitudFct;
+import com.fctnow.backend.solicitudes.externas.SolicitudExterna;
 import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
 import com.fctnow.backend.user.UserRole;
@@ -138,6 +139,7 @@ public class NotificacionService {
 
   @Transactional
   public void notifyAsignacionCreada(SolicitudFct solicitud) {
+    clearPendingAssignmentNotifications(solicitud.getAlumno());
     save(
         solicitud.getAlumno(),
         null,
@@ -149,6 +151,13 @@ public class NotificacionService {
         "/alumno/solicitudes",
         "Ver asignacion",
         solicitud.getOferta());
+  }
+
+  @Transactional
+  public void clearPendingAssignmentNotifications(UserAccount alumno) {
+    notificacionRepository.deleteByTipoAndRecomendadaPorId(
+        NotificacionTipo.SOLICITUD_ACEPTADA_PENDIENTE_ASIGNACION,
+        alumno.getId());
   }
 
   @Transactional
@@ -239,18 +248,52 @@ public class NotificacionService {
   }
 
   private void notifyCentroSolicitudAceptada(SolicitudFct solicitud) {
+    UserAccount alumno = solicitud.getAlumno();
+    String actionUrl = "/tutor?asignar=" + alumno.getId();
     forEachCentro(destinatario -> save(
         destinatario,
-        solicitud.getAlumno(),
+        alumno,
         NotificacionTipo.SOLICITUD_ACEPTADA_PENDIENTE_ASIGNACION,
         "Solicitud aceptada pendiente de asignacion",
         "%s ha sido aceptado por %s para \"%s\". Revisa la asignacion de practicas.".formatted(
-            solicitud.getAlumno().getDisplayName(),
+            alumno.getDisplayName(),
             solicitud.getOferta().getEmpresa().getNombre(),
             solicitud.getOferta().getTitulo()),
-        "/asignaciones",
+        actionUrl,
         "Asignar practica",
         solicitud.getOferta()));
+  }
+
+  @Transactional
+  public void notifyCentroSolicitudExternaAceptada(SolicitudExterna solicitud) {
+    UserAccount alumno = solicitud.getAlumno();
+    String empresa = hasText(solicitud.getEmpresaNombre())
+        ? solicitud.getEmpresaNombre()
+        : "una empresa externa";
+    String actionUrl = "/tutor?asignar=" + alumno.getId();
+    String titulo = "Solicitud externa aceptada pendiente de asignacion";
+    String mensaje = "%s ha sido aceptado por %s para \"%s\". Revisa la asignacion de practicas.".formatted(
+        alumno.getDisplayName(),
+        empresa,
+        solicitud.getTitulo());
+
+    forEachCentro(destinatario -> notificacionRepository.save(new Notificacion(
+        destinatario,
+        alumno,
+        NotificacionTipo.SOLICITUD_ACEPTADA_PENDIENTE_ASIGNACION,
+        titulo,
+        mensaje,
+        actionUrl,
+        "Asignar practica",
+        null,
+        solicitud.getTitulo(),
+        solicitud.getEmpresaNombre(),
+        solicitud.getUrlAplicacion(),
+        solicitud.getLocalidad())));
+  }
+
+  private boolean hasText(String value) {
+    return value != null && !value.isBlank();
   }
 
   private void forEachCentro(java.util.function.Consumer<UserAccount> action) {

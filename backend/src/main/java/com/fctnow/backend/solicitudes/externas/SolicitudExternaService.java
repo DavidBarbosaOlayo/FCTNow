@@ -1,6 +1,7 @@
 package com.fctnow.backend.solicitudes.externas;
 
 import com.fctnow.backend.asignaciones.externas.AsignacionFctExternaRepository;
+import com.fctnow.backend.notificaciones.NotificacionService;
 import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
 import com.fctnow.backend.user.UserRole;
@@ -26,14 +27,17 @@ public class SolicitudExternaService {
   private final SolicitudExternaRepository repository;
   private final AsignacionFctExternaRepository asignacionExternaRepository;
   private final UserAccountRepository userAccountRepository;
+  private final NotificacionService notificacionService;
 
   public SolicitudExternaService(
       SolicitudExternaRepository repository,
       AsignacionFctExternaRepository asignacionExternaRepository,
-      UserAccountRepository userAccountRepository) {
+      UserAccountRepository userAccountRepository,
+      NotificacionService notificacionService) {
     this.repository = repository;
     this.asignacionExternaRepository = asignacionExternaRepository;
     this.userAccountRepository = userAccountRepository;
+    this.notificacionService = notificacionService;
   }
 
   @Transactional
@@ -90,6 +94,9 @@ public class SolicitudExternaService {
     }
 
     solicitud.changeEstado(nuevoEstado, alumno);
+    if (nuevoEstado == SolicitudExternaEstado.ACEPTADA) {
+      notificacionService.notifyCentroSolicitudExternaAceptada(solicitud);
+    }
     return SolicitudExternaResponse.from(solicitud);
   }
 

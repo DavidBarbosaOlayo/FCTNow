@@ -1,5 +1,6 @@
 package com.fctnow.backend.solicitudes;
 
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -269,7 +270,7 @@ class EmpresaSolicitudControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(1))
         .andExpect(jsonPath("$[0].tipo").value("SOLICITUD_ACEPTADA_PENDIENTE_ASIGNACION"))
-        .andExpect(jsonPath("$[0].actionUrl").value("/asignaciones"));
+        .andExpect(jsonPath("$[0].actionUrl").value(startsWith("/tutor?asignar=")));
   }
 
   @Test

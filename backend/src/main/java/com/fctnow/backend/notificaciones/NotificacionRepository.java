@@ -3,6 +3,7 @@ package com.fctnow.backend.notificaciones;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -47,4 +48,14 @@ public interface NotificacionRepository extends JpaRepository<Notificacion, Long
       @Param("alumnoId") Long alumnoId,
       @Param("tipo") NotificacionTipo tipo,
       @Param("url") String url);
+
+  @Modifying
+  @Query("""
+      delete from Notificacion n
+      where n.tipo = :tipo
+        and n.recomendadaPor.id = :actorId
+      """)
+  int deleteByTipoAndRecomendadaPorId(
+      @Param("tipo") NotificacionTipo tipo,
+      @Param("actorId") Long actorId);
 }
