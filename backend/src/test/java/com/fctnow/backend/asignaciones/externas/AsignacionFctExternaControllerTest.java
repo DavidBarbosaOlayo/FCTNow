@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fctnow.backend.asignaciones.AsignacionFctRepository;
 import com.fctnow.backend.auth.LoginRequest;
+import com.fctnow.backend.notificaciones.NotificacionRepository;
 import com.fctnow.backend.solicitudes.externas.SolicitudExternaRepository;
 import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
@@ -51,10 +52,14 @@ class AsignacionFctExternaControllerTest {
   @Autowired
   private AsignacionFctRepository asignacionFctRepository;
 
+  @Autowired
+  private NotificacionRepository notificacionRepository;
+
   @BeforeEach
   void setUp() {
     asignacionRepository.deleteAll();
     asignacionFctRepository.deleteAll();
+    notificacionRepository.deleteAll();
     solicitudExternaRepository.deleteAll();
     userAccountRepository.deleteAll();
     userAccountRepository.save(new UserAccount(
@@ -111,6 +116,11 @@ class AsignacionFctExternaControllerTest {
         .andExpect(jsonPath("$.solicitudExternaId").value(solicitudId))
         .andExpect(jsonPath("$.estado").value("ACTIVA"))
         .andExpect(jsonPath("$.titulo").value("Becario backend"));
+
+    mockMvc.perform(get("/api/notificaciones/me")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + tutorToken))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(0));
 
     mockMvc.perform(post("/api/asignaciones/externas")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + tutorToken)

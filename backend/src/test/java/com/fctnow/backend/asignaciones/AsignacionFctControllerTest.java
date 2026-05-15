@@ -11,7 +11,9 @@ import com.fctnow.backend.empresas.Empresa;
 import com.fctnow.backend.empresas.EmpresaEstado;
 import com.fctnow.backend.empresas.EmpresaRepository;
 import com.fctnow.backend.empresas.IdentificadorFiscalTipo;
+import com.fctnow.backend.notificaciones.Notificacion;
 import com.fctnow.backend.notificaciones.NotificacionRepository;
+import com.fctnow.backend.notificaciones.NotificacionTipo;
 import com.fctnow.backend.ofertas.OfertaEstado;
 import com.fctnow.backend.ofertas.OfertaFct;
 import com.fctnow.backend.ofertas.OfertaFctRepository;
@@ -247,6 +249,34 @@ class AsignacionFctControllerTest {
   }
 
   @Test
+  void createRemovesPendingAssignmentNotificationsForAlumno() throws Exception {
+    UserAccount tutor = userAccountRepository.findByEmailIgnoreCase("tutor@example.com").orElseThrow();
+    UserAccount coordinador = userAccountRepository.findByEmailIgnoreCase("coordinador@example.com").orElseThrow();
+    UserAccount alumno = userAccountRepository.findByEmailIgnoreCase("alumno-a@example.com").orElseThrow();
+
+    Notificacion readPending = pendingAssignmentNotification(tutor, alumno);
+    readPending.marcarLeida();
+    notificacionRepository.save(readPending);
+    notificacionRepository.save(pendingAssignmentNotification(coordinador, alumno));
+
+    mockMvc.perform(post("/api/asignaciones")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"solicitudId\":" + solicitudAceptadaId + "}"))
+        .andExpect(status().isCreated());
+
+    mockMvc.perform(get("/api/notificaciones/me")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(0));
+
+    mockMvc.perform(get("/api/notificaciones/me")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("coordinador@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(0));
+  }
+
+  @Test
   void createListsAfterwards() throws Exception {
     mockMvc.perform(post("/api/asignaciones")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
@@ -395,5 +425,21 @@ class AsignacionFctControllerTest {
         .getContentAsString();
 
     return objectMapper.readTree(loginResponse).get("accessToken").asText();
+  }
+
+  private Notificacion pendingAssignmentNotification(UserAccount destinatario, UserAccount alumno) {
+    return new Notificacion(
+        destinatario,
+        alumno,
+        NotificacionTipo.SOLICITUD_ACEPTADA_PENDIENTE_ASIGNACION,
+        "Solicitud aceptada pendiente de asignacion",
+        "Revisa la asignacion de practicas.",
+        "/tutor?asignar=" + alumno.getId(),
+        "Asignar practica",
+        null,
+        null,
+        null,
+        null,
+        null);
   }
 }

@@ -2,6 +2,7 @@ package com.fctnow.backend.asignaciones.externas;
 
 import com.fctnow.backend.asignaciones.AsignacionEstado;
 import com.fctnow.backend.asignaciones.AsignacionFctRepository;
+import com.fctnow.backend.notificaciones.NotificacionService;
 import com.fctnow.backend.solicitudes.externas.SolicitudExterna;
 import com.fctnow.backend.solicitudes.externas.SolicitudExternaEstado;
 import com.fctnow.backend.solicitudes.externas.SolicitudExternaRepository;
@@ -27,16 +28,19 @@ public class AsignacionFctExternaService {
   private final AsignacionFctRepository asignacionFctRepository;
   private final SolicitudExternaRepository solicitudRepository;
   private final UserAccountRepository userAccountRepository;
+  private final NotificacionService notificacionService;
 
   public AsignacionFctExternaService(
       AsignacionFctExternaRepository repository,
       AsignacionFctRepository asignacionFctRepository,
       SolicitudExternaRepository solicitudRepository,
-      UserAccountRepository userAccountRepository) {
+      UserAccountRepository userAccountRepository,
+      NotificacionService notificacionService) {
     this.repository = repository;
     this.asignacionFctRepository = asignacionFctRepository;
     this.solicitudRepository = solicitudRepository;
     this.userAccountRepository = userAccountRepository;
+    this.notificacionService = notificacionService;
   }
 
   @Transactional(readOnly = true)
@@ -88,6 +92,7 @@ public class AsignacionFctExternaService {
 
     AsignacionFctExterna asignacion =
         repository.save(new AsignacionFctExterna(solicitud, normaliseObservaciones(request.observaciones())));
+    notificacionService.clearPendingAssignmentNotifications(solicitud.getAlumno());
     return AsignacionFctExternaResponse.from(asignacion);
   }
 
