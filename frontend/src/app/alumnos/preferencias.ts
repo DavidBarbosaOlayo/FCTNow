@@ -18,8 +18,10 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
+import { HomeCacheService } from '../home/home-cache.service';
 import { OfertaModalidad } from '../practicas/ofertas.models';
 import { CicloFormativoOption, GRADO_LABELS, GradoFp, getCiclosByFamilia } from '../practicas/ciclos-formativos';
+import { PracticasCacheService } from '../practicas/practicas-cache.service';
 import { FAMILIAS_PROFESIONALES, LOCALIDADES_ES } from '../practicas/practicas-options';
 import { AlumnoPreferencias, AlumnoPreferenciasRequest } from './preferencias.models';
 import { AlumnoPreferenciasService } from './preferencias.service';
@@ -691,6 +693,8 @@ export class PreferenciasAlumnoPage implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly preferenciasService = inject(AlumnoPreferenciasService);
+  private readonly homeCache = inject(HomeCacheService);
+  private readonly practicasCache = inject(PracticasCacheService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
 
@@ -828,6 +832,8 @@ export class PreferenciasAlumnoPage implements OnInit {
           this.saveStatus.set('saved');
           this.editing.set(false);
           this.editingChange.emit(false);
+          this.homeCache.invalidate();
+          this.practicasCache.invalidate();
         },
         error: (error: unknown) => {
           this.saveError.set(errorMessage(error));

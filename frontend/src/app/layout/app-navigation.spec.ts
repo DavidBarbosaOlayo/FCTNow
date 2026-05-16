@@ -9,6 +9,9 @@ import { AppNavigation } from './app-navigation';
 
 describe('AppNavigation', () => {
   function configure(roles: UserRole[] | null) {
+    document.documentElement.classList.remove('theme-dark');
+    localStorage.removeItem('fctnow-theme');
+
     const user = roles
       ? ({ id: 1, email: 'demo@example.com', displayName: 'Demo', roles } as AuthenticatedUser)
       : null;
@@ -205,6 +208,26 @@ describe('AppNavigation', () => {
       expect(icon).withContext('each nav link should expose an inline SVG icon').not.toBeNull();
       expect(label?.textContent?.trim()).withContext('each nav link should keep a text label').toBeTruthy();
     });
+  });
+
+  it('should toggle the document dark theme with an icon-only button', () => {
+    configure(['ALUMNO']);
+
+    const fixture = TestBed.createComponent(AppNavigation);
+    fixture.detectChanges();
+
+    const toggle = fixture.nativeElement.querySelector('.app-theme-toggle') as HTMLButtonElement;
+    expect(toggle).not.toBeNull();
+    expect(toggle.textContent?.trim()).toBe('');
+    expect(toggle.getAttribute('aria-label')).toBe('Activar modo oscuro');
+    expect(document.documentElement.classList.contains('theme-dark')).toBeFalse();
+
+    toggle.click();
+    fixture.detectChanges();
+
+    expect(document.documentElement.classList.contains('theme-dark')).toBeTrue();
+    expect(localStorage.getItem('fctnow-theme')).toBe('dark');
+    expect(toggle.getAttribute('aria-label')).toBe('Activar modo claro');
   });
 
   it('should render a notification badge when there are unread notifications', () => {

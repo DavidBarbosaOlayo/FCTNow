@@ -252,7 +252,11 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
       .state-panel.alert {
         border-color: rgba(179, 38, 30, 0.28);
-        background: rgba(255, 246, 241, 0.9);
+        background: var(--danger-soft);
+      }
+
+      :host-context(.theme-dark) .state-panel.alert {
+        border-color: rgba(255, 138, 128, 0.4);
       }
 
       .state-panel p:not(.eyebrow),
@@ -296,7 +300,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
         border-radius: var(--radius-md);
         padding: 0.65rem 0.75rem;
         color: var(--ink);
-        background: rgba(255, 255, 255, 0.74);
+        background: var(--canvas-deep);
         font: inherit;
       }
 
@@ -337,7 +341,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
       .text-link {
         color: var(--ink);
-        background: rgba(255, 255, 255, 0.68);
+        background: var(--surface-muted);
         border-color: var(--line);
       }
 
@@ -380,7 +384,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
         padding: 0.75rem 0.85rem;
         border: 1px solid var(--line);
         border-radius: var(--radius-md);
-        background: rgba(255, 255, 255, 0.55);
+        background: var(--surface-muted);
       }
 
       .profile-view-grid .full-row {

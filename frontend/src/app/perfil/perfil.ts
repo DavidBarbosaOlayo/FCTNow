@@ -35,7 +35,7 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
           <p class="eyebrow">Sesión no disponible</p>
           <h2>Inicia sesión para ver tu perfil</h2>
           <p>Necesitas una sesión activa para consultar los datos del usuario autenticado.</p>
-          <a class="back-link" routerLink="/login">Ir al acceso</a>
+          <a class="back-link" routerLink="/login">Iniciar Sesión</a>
         </section>
       } @else if (status() === 'error') {
         <section class="state-panel alert" role="alert">
@@ -118,20 +118,21 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
               Cerrar sesión
             </button>
           </div>
-        }
-
-        @if (user.roles.includes('EMPRESA')) {
-          <section class="profile-role-section" aria-label="Perfil de empresa">
-            <app-empresa-perfil-page [embedded]="true" />
-          </section>
-        }
-
-        @if (!user.roles.includes('ALUMNO')) {
-          <footer class="profile-footer">
+        } @else if (user.roles.includes('EMPRESA')) {
+          <div class="profile-role-row">
+            <section class="profile-role-section" aria-label="Perfil de empresa">
+              <app-empresa-perfil-page [embedded]="true" />
+            </section>
             <button type="button" class="logout-action" (click)="logout()">
               Cerrar sesión
             </button>
-          </footer>
+          </div>
+        } @else {
+          <div class="profile-role-row">
+            <button type="button" class="logout-action" (click)="logout()">
+              Cerrar sesión
+            </button>
+          </div>
         }
       }
     </main>
@@ -167,7 +168,11 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
 
       .state-panel.alert {
         border-color: rgba(179, 38, 30, 0.28);
-        background: rgba(255, 246, 241, 0.9);
+        background: var(--danger-soft);
+      }
+
+      :host-context(.theme-dark) .state-panel.alert {
+        border-color: rgba(255, 138, 128, 0.4);
       }
 
       .state-panel h2,
@@ -334,7 +339,7 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
 
       .profile-footer {
         display: flex;
-        justify-content: flex-start;
+        justify-content: flex-end;
         gap: 0.5rem;
         flex-wrap: wrap;
         padding-top: 0.25rem;
@@ -345,8 +350,8 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
         padding: 0 0.95rem;
         border: 1px solid rgba(179, 38, 30, 0.4);
         border-radius: var(--radius-md);
-        background: rgba(255, 246, 241, 0.92);
-        color: #8a3a25;
+        background: var(--danger-soft);
+        color: var(--danger);
         font: inherit;
         font-weight: 800;
         cursor: pointer;
@@ -355,7 +360,18 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
       .logout-action:hover,
       .logout-action:focus-visible {
         border-color: rgba(179, 38, 30, 0.65);
+        filter: brightness(0.96);
         outline: none;
+      }
+
+      :host-context(.theme-dark) .logout-action {
+        border-color: rgba(255, 138, 128, 0.42);
+      }
+
+      :host-context(.theme-dark) .logout-action:hover,
+      :host-context(.theme-dark) .logout-action:focus-visible {
+        border-color: rgba(255, 138, 128, 0.62);
+        filter: brightness(1.1);
       }
 
       .profile-details {
@@ -370,7 +386,7 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
         padding: 0.7rem 0.8rem;
         border: 1px solid var(--line);
         border-radius: var(--radius-md);
-        background: rgba(255, 255, 255, 0.52);
+        background: var(--canvas-deep);
       }
 
       .profile-details dt {
@@ -420,9 +436,13 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
         border: 1px solid var(--line);
         border-radius: var(--radius-md);
         color: var(--ink);
-        background: rgba(255, 255, 255, 0.62);
+        background: var(--surface-muted);
         font-weight: 800;
         text-decoration: none;
+      }
+
+      .state-panel.alert .back-link {
+        margin-top: 0.85rem;
       }
 
       .back-link:hover,

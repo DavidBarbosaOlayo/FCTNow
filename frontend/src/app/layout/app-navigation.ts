@@ -36,9 +36,12 @@ type NavigationItem = {
   hideForRole?: UserRole | UserRole[];
 };
 
+type ThemeMode = 'light' | 'dark';
+
 const SCROLL_THRESHOLD_PX = 12;
 const MOBILE_BREAKPOINT_PX = 560;
 const ANONYMOUS_NAVIGATION_PATHS = new Set(['/', '/practicas', '/perfil']);
+const THEME_STORAGE_KEY = 'fctnow-theme';
 
 @Component({
   selector: 'app-navigation',
@@ -170,6 +173,34 @@ const ANONYMOUS_NAVIGATION_PATHS = new Set(['/', '/practicas', '/perfil']);
             <span class="app-nav-label">{{ item.label }}</span>
           </a>
         }
+
+        <button
+          type="button"
+          class="app-theme-toggle"
+          [attr.aria-label]="themeToggleLabel()"
+          [attr.title]="themeToggleLabel()"
+          (click)="toggleTheme()"
+        >
+          @if (themeMode() === 'dark') {
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4.2" />
+              <path d="M12 2.5v2.2" />
+              <path d="M12 19.3v2.2" />
+              <path d="M4.7 4.7l1.55 1.55" />
+              <path d="M17.75 17.75l1.55 1.55" />
+              <path d="M2.5 12h2.2" />
+              <path d="M19.3 12h2.2" />
+              <path d="M4.7 19.3l1.55-1.55" />
+              <path d="M17.75 6.25l1.55-1.55" />
+            </svg>
+          } @else {
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20.5 14.8a8.5 8.5 0 0 1-11.3-11.3 1 1 0 0 0-1.31-1.27 10.5 10.5 0 1 0 13.88 13.88 1 1 0 0 0-1.27-1.31z" />
+            </svg>
+          }
+        </button>
       </nav>
     </header>
   `,
@@ -186,11 +217,12 @@ export class AppNavigation {
 
   protected readonly isScrolled = signal(false);
   protected readonly isMenuOpen = signal(false);
+  protected readonly themeMode = signal<ThemeMode>('light');
   protected readonly unreadMessages = this.mensajesService.unreadCount;
   protected readonly unreadNotifications = this.notificacionesService.unreadCount;
 
   private readonly navigationItems: NavigationItem[] = [
-    { label: 'Inicio', path: '/', exact: true, icon: 'home' },
+    { label: 'Inicio', path: '/', exact: true, icon: 'home', hideForRole: ['EMPRESA', 'TUTOR_CENTRO'] },
     { label: 'Prácticas', path: '/practicas', exact: true, icon: 'briefcase', hideForRole: 'EMPRESA' },
     {
       label: 'Mis solicitudes',
@@ -262,7 +294,11 @@ export class AppNavigation {
         this.mensajesService.clearMine();
       }
 
-      if (roles.includes('ALUMNO')) {
+      if (
+        roles.includes('ALUMNO') ||
+        roles.includes('TUTOR_CENTRO') ||
+        roles.includes('COORDINADOR')
+      ) {
         this.notificacionesService.refreshMine();
       } else {
         this.notificacionesService.clearMine();
@@ -285,6 +321,9 @@ export class AppNavigation {
       return;
     }
 
+    const initialTheme = this.readStoredTheme(view);
+    this.themeMode.set(initialTheme);
+    this.applyTheme(initialTheme);
     this.updateScrolled(view.scrollY ?? 0);
 
     fromEvent(view, 'scroll', { passive: true })
@@ -310,12 +349,26 @@ export class AppNavigation {
     }
   }
 
+  protected toggleTheme(): void {
+    const next = this.themeMode() === 'dark' ? 'light' : 'dark';
+    this.themeMode.set(next);
+    this.applyTheme(next);
+  }
+
+  protected themeToggleLabel(): string {
+    return this.themeMode() === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro';
+  }
+
   protected notificationBadge(item: NavigationItem): string | null {
     if (item.path !== '/notificaciones') {
       return null;
     }
     const roles = this.currentUser()?.roles ?? [];
-    if (!roles.includes('ALUMNO')) {
+    const eligible =
+      roles.includes('ALUMNO') ||
+      roles.includes('TUTOR_CENTRO') ||
+      roles.includes('COORDINADOR');
+    if (!eligible) {
       return null;
     }
     const count = this.unreadNotifications();
@@ -340,6 +393,30 @@ export class AppNavigation {
     const next = scrollY > SCROLL_THRESHOLD_PX;
     if (this.isScrolled() !== next) {
       this.isScrolled.set(next);
+    }
+  }
+
+  private readStoredTheme(view: Window): ThemeMode {
+    try {
+      return view.localStorage.getItem(THEME_STORAGE_KEY) === 'dark' ? 'dark' : 'light';
+    } catch {
+      return 'light';
+    }
+  }
+
+  private applyTheme(mode: ThemeMode): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    const root = this.document.documentElement;
+    root.classList.toggle('theme-dark', mode === 'dark');
+    root.style.colorScheme = mode === 'dark' ? 'dark' : 'light';
+
+    try {
+      this.document.defaultView?.localStorage.setItem(THEME_STORAGE_KEY, mode);
+    } catch {
+      // Ignore storage errors in restricted browser contexts.
     }
   }
 }

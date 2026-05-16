@@ -487,7 +487,7 @@ export class ExternalOfferDetailDialog {
   }
 
   protected anularActionLabel(estado: SolicitudExternaEstado): string {
-    return estado === 'ACEPTADA' ? 'anular aceptación' : 'marcar no seleccionado';
+    return estado === 'ACEPTADA' ? 'anular aceptación' : 'marcar denegada';
   }
 
   protected isRecommendationInFlight(alumno: TutorAlumno): boolean {

@@ -239,9 +239,9 @@ describe('MisSolicitudesPage', () => {
     expect(compiled.textContent).toContain('Becario QA');
     expect(compiled.textContent).toContain('Logistica Levante');
     expect(compiled.querySelector('.origen-badge')?.textContent).toContain('Adzuna');
-    expect(compiled.textContent).toContain('No seleccionado');
+    expect(compiled.textContent).toContain('Denegada');
     expect(compiled.textContent).toContain('Ver en Adzuna');
-    expect(compiled.textContent).not.toContain('Marcar no seleccionado');
+    expect(compiled.textContent).not.toContain('Marcar como denegada');
     expect(compiled.textContent).not.toContain('Solicitar en Adzuna');
 
     const aceptarBtn = Array.from(compiled.querySelectorAll<HTMLButtonElement>('button')).find(
@@ -267,7 +267,7 @@ describe('MisSolicitudesPage', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const notSelectedBtn = Array.from(compiled.querySelectorAll<HTMLButtonElement>('button')).find(
-      (button) => button.textContent?.trim() === 'No seleccionado',
+      (button) => button.textContent?.trim() === 'Denegada',
     );
 
     notSelectedBtn!.click();
@@ -278,7 +278,7 @@ describe('MisSolicitudesPage', () => {
       jasmine.objectContaining({ id: 20, estado: 'RETIRADA' }),
     ]);
     expect(compiled.textContent).toContain('Becario QA');
-    expect(compiled.textContent).toContain('No seleccionado');
+    expect(compiled.textContent).toContain('Denegada');
     expect(compiled.querySelector('.solicitud-card-externa.is-retirada')).not.toBeNull();
     expect(compiled.querySelector('.delete-solicitud')).not.toBeNull();
   });

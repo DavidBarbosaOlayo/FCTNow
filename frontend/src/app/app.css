@@ -1,6 +1,6 @@
 :host {
-  --canvas: #eef0f1;
-  --canvas-deep: #e6e9eb;
+  --canvas: #ffffff;
+  --canvas-deep: #f6f7f8;
   --surface: #ffffff;
   --surface-strong: #ffffff;
   --surface-muted: #f6f7f8;
@@ -32,6 +32,33 @@
   min-height: 100dvh;
   color: var(--ink);
   background: var(--canvas);
+}
+
+:host-context(.theme-dark) {
+  --canvas: #10151c;
+  --canvas-deep: #0c1117;
+  --surface: #171d25;
+  --surface-strong: #1c232d;
+  --surface-muted: #202833;
+  --surface-deep: #080c11;
+  --ink: #eef3f7;
+  --ink-soft: #d8e0e7;
+  --muted: #a1acb8;
+  --muted-strong: #c0c8d0;
+  --line: #303945;
+  --line-strong: #46515f;
+  --accent: #67c6b7;
+  --accent-hover: #8bd8cc;
+  --accent-soft: #18332f;
+  --accent-warm: #d9e4ea;
+  --danger: #ff8a80;
+  --danger-soft: #3d1e1d;
+  --success: #8bd8a9;
+  --success-soft: #173327;
+  --warning: #f1c56a;
+  --warning-soft: #392f18;
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --shadow-deep: 0 8px 24px rgba(0, 0, 0, 0.36);
 }
 
 .route-host {

@@ -14,8 +14,7 @@ export class NotificacionesService {
   private readonly mineState = signal<Notificacion[]>([]);
 
   readonly unreadCount = computed(() => {
-    const roles = this.authService.currentUser()?.roles ?? [];
-    if (!roles.includes('ALUMNO')) {
+    if (!this.hasNotificationsRole()) {
       return 0;
     }
     return this.mineState().filter((notificacion) => !notificacion.leida).length;
@@ -25,10 +24,18 @@ export class NotificacionesService {
     return this.withAuth((headers) =>
       this.http.get<Notificacion[]>(`${this.baseUrl()}/me`, { headers }).pipe(
         tap((items) => {
-          const roles = this.authService.currentUser()?.roles ?? [];
-          this.mineState.set(roles.includes('ALUMNO') ? items : []);
+          this.mineState.set(this.hasNotificationsRole() ? items : []);
         }),
       ),
+    );
+  }
+
+  private hasNotificationsRole(): boolean {
+    const roles = this.authService.currentUser()?.roles ?? [];
+    return (
+      roles.includes('ALUMNO') ||
+      roles.includes('TUTOR_CENTRO') ||
+      roles.includes('COORDINADOR')
     );
   }
 
