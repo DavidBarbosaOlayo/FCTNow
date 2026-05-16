@@ -74,8 +74,8 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
               <p class="eyebrow">Sesión activa</p>
               <div class="profile-title-row">
                 <h2 id="profile-title">{{ user.displayName }}</h2>
-                <div class="role-cloud" aria-label="Roles de usuario">
-                  @for (role of user.roles; track role) {
+                <div class="role-cloud" aria-label="Rol de usuario">
+                  @if (user.roles[0]; as role) {
                     <span>{{ roleLabel(role) }}</span>
                   }
                 </div>
@@ -94,12 +94,12 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
               <dd>{{ user.displayName }}</dd>
             </div>
             <div>
-              <dt>Email</dt>
+              <dt>Usuario</dt>
               <dd>{{ user.email }}</dd>
             </div>
             <div>
-              <dt>Rol o roles</dt>
-              <dd>{{ rolesText(user.roles) }}</dd>
+              <dt>Rol</dt>
+              <dd>{{ user.roles[0] ? roleLabel(user.roles[0]) : '—' }}</dd>
             </div>
           </dl>
         </section>
@@ -140,10 +140,9 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
   styles: [
     `
       .profile-page {
-        min-height: calc(100dvh - 3.5rem);
         align-content: start;
         gap: 0.75rem;
-        padding: 0.85rem 0 1rem;
+        padding-top: 2rem;
         overflow: visible;
       }
 

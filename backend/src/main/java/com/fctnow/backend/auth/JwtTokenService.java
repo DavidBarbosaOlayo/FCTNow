@@ -31,15 +31,18 @@ public class JwtTokenService {
         .map(Enum::name)
         .toList();
 
-    JwtClaimsSet claims = JwtClaimsSet.builder()
+    JwtClaimsSet.Builder builder = JwtClaimsSet.builder()
         .issuer(jwtProperties.issuer())
         .issuedAt(issuedAt)
         .expiresAt(expiresAt)
         .subject(userAccount.getEmail())
         .claim("user_id", userAccount.getId())
         .claim("display_name", userAccount.getDisplayName())
-        .claim("roles", roles)
-        .build();
+        .claim("roles", roles);
+    if (userAccount.getCentroEmail() != null) {
+      builder.claim("centro_email", userAccount.getCentroEmail());
+    }
+    JwtClaimsSet claims = builder.build();
 
     String accessToken = jwtEncoder.encode(JwtEncoderParameters.from(
         JwsHeader.with(MacAlgorithm.HS256).build(),

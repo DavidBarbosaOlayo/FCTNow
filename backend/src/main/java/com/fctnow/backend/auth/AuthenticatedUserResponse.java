@@ -12,6 +12,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 public record AuthenticatedUserResponse(
     Long id,
     String email,
+    String centroEmail,
     String displayName,
     Set<UserRole> roles) {
 
@@ -19,6 +20,7 @@ public record AuthenticatedUserResponse(
     return new AuthenticatedUserResponse(
         userAccount.getId(),
         userAccount.getEmail(),
+        userAccount.getCentroEmail(),
         userAccount.getDisplayName(),
         orderedRoles(userAccount.getRoles()));
   }
@@ -27,6 +29,7 @@ public record AuthenticatedUserResponse(
     return new AuthenticatedUserResponse(
         jwt.getClaim("user_id"),
         jwt.getSubject(),
+        jwt.getClaimAsString("centro_email"),
         jwt.getClaimAsString("display_name"),
         rolesFromClaim(jwt.getClaimAsStringList("roles")));
   }

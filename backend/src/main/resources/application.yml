@@ -18,6 +18,20 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 12MB
+  mail:
+    host: ${FCTNOW_MAIL_HOST:smtp.gmail.com}
+    port: ${FCTNOW_MAIL_PORT:587}
+    username: ${FCTNOW_MAIL_USERNAME:}
+    password: ${FCTNOW_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+        transport:
+          protocol: smtp
 
 springdoc:
   api-docs:
@@ -37,3 +51,7 @@ fctnow:
     app-id: ${ADZUNA_APP_ID:}
     app-key: ${ADZUNA_APP_KEY:}
     timeout: ${ADZUNA_TIMEOUT:PT8S}
+  mail:
+    from: ${FCTNOW_MAIL_FROM:fctnow.noreply@gmail.com}
+    from-name: ${FCTNOW_MAIL_FROM_NAME:FCTNow}
+    login-url: ${FCTNOW_MAIL_LOGIN_URL:http://localhost:4200/login}

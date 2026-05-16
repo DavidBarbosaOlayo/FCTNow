@@ -20,6 +20,7 @@ describe('TutorPage', () => {
     {
       id: 1,
       email: 'ana@example.com',
+      centroEmail: 'agarcia@elpuig.xeill.net',
       displayName: 'Ana Garcia',
       enabled: true,
       photoDataUrl: 'data:image/png;base64,aW1n',
@@ -50,6 +51,7 @@ describe('TutorPage', () => {
     {
       id: 2,
       email: 'luis@example.com',
+      centroEmail: 'lmartinez@elpuig.xeill.net',
       displayName: 'Luis Martinez',
       enabled: true,
       photoDataUrl: null,
@@ -66,6 +68,7 @@ describe('TutorPage', () => {
     {
       id: 3,
       email: 'marta@example.com',
+      centroEmail: 'mlopez@elpuig.xeill.net',
       displayName: 'Marta Lopez',
       enabled: true,
       photoDataUrl: null,
@@ -99,9 +102,53 @@ describe('TutorPage', () => {
   async function configure(
     listResult: Observable<TutorAlumno[]> = of(sampleAlumnos),
   ): Promise<ComponentFixture<TutorPage>> {
-    service = jasmine.createSpyObj<TutorAlumnosService>('TutorAlumnosService', ['list', 'downloadCv']);
+    service = jasmine.createSpyObj<TutorAlumnosService>('TutorAlumnosService', [
+      'list',
+      'downloadCv',
+      'createAlumno',
+      'downloadImportTemplate',
+      'importAlumnos',
+    ]);
     service.list.and.returnValue(listResult);
     service.downloadCv.and.returnValue(of(new Blob(['pdf'], { type: 'application/pdf' })));
+    service.createAlumno.and.returnValue(
+      of({
+        id: 4,
+        email: 'nuevo@fctnow.com',
+        centroEmail: 'nalumno@elpuig.xeill.net',
+        displayName: 'Nuevo Alumno',
+        enabled: true,
+        photoDataUrl: null,
+        hasCv: false,
+        cvFileName: null,
+        cvContentType: null,
+        cvSize: null,
+        cvUpdatedAt: null,
+        preferencias: null,
+        solicitudes: { total: 0, solicitadas: 0, aceptadas: 0, rechazadas: 0 },
+        asignacionActual: null,
+        asignacionPendiente: null,
+      }),
+    );
+    service.downloadImportTemplate.and.returnValue(
+      of(new Blob(['xlsx'], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })),
+    );
+    service.importAlumnos.and.returnValue(
+      of({
+        creados: 1,
+        omitidos: 1,
+        errores: 1,
+        filas: [
+          {
+            fila: 2,
+            email: 'excel@example.com',
+            displayName: 'Excel Alumno',
+            estado: 'CREADO',
+            mensaje: 'Alumno creado correctamente',
+          },
+        ],
+      }),
+    );
     asignacionesService = jasmine.createSpyObj<AsignacionesService>('AsignacionesService', ['create']);
     asignacionesService.create.and.returnValue(
       of({
@@ -180,6 +227,63 @@ describe('TutorPage', () => {
     expect(text).toContain('Marta Lopez');
     expect((fixture.nativeElement as HTMLElement).querySelector('.alumno-list')).not.toBeNull();
     expect((fixture.nativeElement as HTMLElement).querySelector('.alumno-grid')).toBeNull();
+  });
+
+  it('creates an alumno account from the tutor modal', async () => {
+    await configure();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const createButton = Array.from(compiled.querySelectorAll<HTMLButtonElement>('.primary-button'))
+      .find((button) => button.textContent?.includes('Crear alumno'))!;
+    createButton.click();
+    fixture.detectChanges();
+
+    const nameInput = compiled.querySelector<HTMLInputElement>('input[formcontrolname="displayName"]')!;
+    const usernameInput = compiled.querySelector<HTMLInputElement>('input[formcontrolname="username"]')!;
+    const passwordInput = compiled.querySelector<HTMLInputElement>('input[formcontrolname="password"]')!;
+    const centroEmailInput = compiled.querySelector<HTMLInputElement>('input[formcontrolname="centroEmail"]')!;
+    nameInput.value = 'Nuevo Alumno';
+    usernameInput.value = 'nuevo';
+    passwordInput.value = 'CorrectPassword123!';
+    centroEmailInput.value = 'nalumno';
+    nameInput.dispatchEvent(new Event('input'));
+    usernameInput.dispatchEvent(new Event('input'));
+    passwordInput.dispatchEvent(new Event('input'));
+    centroEmailInput.dispatchEvent(new Event('input'));
+
+    const submitButton = compiled.querySelector<HTMLButtonElement>('.create-modal button[type="submit"]')!;
+    submitButton.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(service.createAlumno).toHaveBeenCalledOnceWith(
+      jasmine.objectContaining({
+        displayName: 'Nuevo Alumno',
+        username: 'nuevo',
+        password: 'CorrectPassword123!',
+        centroEmail: 'nalumno@elpuig.xeill.net',
+      }),
+    );
+    expect(service.list).toHaveBeenCalledTimes(2);
+  });
+
+  it('imports alumnos from an Excel file and shows the row result', async () => {
+    await configure();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const input = compiled.querySelector<HTMLInputElement>('input[type="file"]')!;
+    const file = new File(['xlsx'], 'alumnos.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    Object.defineProperty(input, 'files', { value: [file] });
+
+    input.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(service.importAlumnos).toHaveBeenCalledOnceWith(file);
+    expect(compiled.textContent).toContain('1 creados');
+    expect(compiled.textContent).toContain('Alumno creado correctamente');
+    expect(service.list).toHaveBeenCalledTimes(2);
   });
 
   it('counts assignment KPIs correctly', async () => {

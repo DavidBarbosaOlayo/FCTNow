@@ -6,6 +6,18 @@ spring:
     driver-class-name: org.h2.Driver
   flyway:
     init-sqls: CREATE DOMAIN IF NOT EXISTS TIMESTAMPTZ AS TIMESTAMP WITH TIME ZONE
+  mail:
+    host: localhost
+    port: 25
+    username: test
+    password: test
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+            required: false
 
 fctnow:
   security:
@@ -19,3 +31,7 @@ fctnow:
     app-id: test-app-id
     app-key: test-app-key
     timeout: PT2S
+  mail:
+    from: noreply@fctnow.test
+    from-name: FCTNow Tests
+    login-url: http://localhost:4200/login

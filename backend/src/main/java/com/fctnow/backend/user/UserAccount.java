@@ -39,6 +39,9 @@ public class UserAccount {
   @Column(name = "empresa_id")
   private Long empresaId;
 
+  @Column(name = "centro_email", length = 254)
+  private String centroEmail;
+
   @ElementCollection(fetch = FetchType.EAGER)
   @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
   @Enumerated(EnumType.STRING)
@@ -56,7 +59,7 @@ public class UserAccount {
       String passwordHash,
       String displayName,
       Set<UserRole> roles) {
-    this(email, passwordHash, displayName, roles, null);
+    this(email, passwordHash, displayName, roles, null, null);
   }
 
   public UserAccount(
@@ -65,15 +68,30 @@ public class UserAccount {
       String displayName,
       Set<UserRole> roles,
       Long empresaId) {
+    this(email, passwordHash, displayName, roles, empresaId, null);
+  }
+
+  public UserAccount(
+      String email,
+      String passwordHash,
+      String displayName,
+      Set<UserRole> roles,
+      Long empresaId,
+      String centroEmail) {
     this.email = email;
     this.passwordHash = passwordHash;
     this.displayName = displayName;
     this.roles = new LinkedHashSet<>(roles);
     this.empresaId = empresaId;
+    this.centroEmail = centroEmail;
   }
 
   public void linkToEmpresa(Long empresaId) {
     this.empresaId = empresaId;
+  }
+
+  public void updateCentroEmail(String centroEmail) {
+    this.centroEmail = centroEmail;
   }
 
   public Long getId() {
@@ -102,6 +120,10 @@ public class UserAccount {
 
   public Long getEmpresaId() {
     return empresaId;
+  }
+
+  public String getCentroEmail() {
+    return centroEmail;
   }
 
   public Instant getCreatedAt() {

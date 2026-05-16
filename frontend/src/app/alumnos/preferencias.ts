@@ -283,6 +283,10 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
                 <dt>Disponibilidad aproximada</dt>
                 <dd>{{ formatStoredDate(preferences()?.fechaDisponibilidad) }}</dd>
               </div>
+              <div>
+                <dt>Correo del centro</dt>
+                <dd>{{ centroEmail() || '—' }}</dd>
+              </div>
               <div class="full-row">
                 <dt>Observaciones</dt>
                 <dd>{{ preferences()?.observaciones || '—' }}</dd>
@@ -707,6 +711,7 @@ export class PreferenciasAlumnoPage implements OnInit {
   protected readonly uploadError = signal<string | null>(null);
   protected readonly photoUploadError = signal<string | null>(null);
   protected readonly preferences = signal<AlumnoPreferencias | null>(null);
+  protected readonly centroEmail = computed(() => this.authService.currentUser()?.centroEmail ?? null);
   protected readonly selectedFile = signal<File | null>(null);
   protected readonly selectedPhoto = signal<File | null>(null);
   protected readonly editing = signal(false);

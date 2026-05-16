@@ -9,18 +9,24 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { AsignacionesExternasService } from '../asignaciones/asignaciones-externas.service';
 import { AsignacionesService } from '../asignaciones/asignaciones.service';
-import { TutorAlumno } from './tutor-alumnos.models';
+import {
+  TutorAlumno,
+  TutorAlumnoCreateRequest,
+  TutorAlumnoImportResult,
+} from './tutor-alumnos.models';
 import { TutorAlumnosService } from './tutor-alumnos.service';
 
 type LoadStatus = 'loading' | 'loaded' | 'error';
 type AssignStatus = 'idle' | 'assigning' | 'error' | 'success';
 type CvActionStatus = 'idle' | 'loading' | 'error';
+type CreateAlumnoStatus = 'idle' | 'saving' | 'error' | 'success';
+type ImportStatus = 'idle' | 'uploading' | 'error' | 'success';
 type ViewMode = 'list' | 'cards';
 
 @Component({
@@ -49,6 +55,54 @@ type ViewMode = 'list' | 'cards';
           <p class="eyebrow">Solicitudes pendientes</p>
           <p class="kpi-value">{{ totalSolicitudesPendientes() }}</p>
         </article>
+      </section>
+
+      <section class="actions-panel" aria-label="Gestion de cuentas de alumno">
+        <div>
+          <p class="eyebrow">Gestion de cuentas</p>
+          <h2>Alta de alumnos</h2>
+        </div>
+        <div class="actions-row">
+          <button type="button" class="primary-button" (click)="openCreateAlumnoModal()">
+            Crear alumno
+          </button>
+          <button
+            type="button"
+            class="secondary-button"
+            [disabled]="importStatus() === 'uploading'"
+            (click)="downloadImportTemplate()"
+          >
+            Descargar plantilla
+          </button>
+          <label class="secondary-button file-import-label" [class.is-disabled]="importStatus() === 'uploading'">
+            {{ importStatus() === 'uploading' ? 'Importando...' : 'Importar Excel' }}
+            <input
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              [disabled]="importStatus() === 'uploading'"
+              (change)="importExcel($event)"
+            />
+          </label>
+        </div>
+        @if (importStatus() === 'error') {
+          <p class="modal-error compact-alert" role="alert">{{ importError() }}</p>
+        }
+        @if (importResult(); as result) {
+          <div class="import-result" aria-live="polite">
+            <strong>{{ result.creados }} creados</strong>
+            <span>{{ result.omitidos }} omitidos</span>
+            <span>{{ result.errores }} errores</span>
+            @if (importPreviewRows().length > 0) {
+              <ul>
+                @for (row of importPreviewRows(); track row.fila) {
+                  <li [attr.data-estado]="row.estado">
+                    Fila {{ row.fila }} · {{ row.email || row.displayName || 'sin datos' }} · {{ row.mensaje }}
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        }
       </section>
 
       <section class="filters-panel" aria-label="Filtros de alumnado">
@@ -360,6 +414,10 @@ type ViewMode = 'list' | 'cards';
 
             <dl class="detail-grid">
               <div>
+                <dt>Correo del centro</dt>
+                <dd>{{ alumno.centroEmail || '—' }}</dd>
+              </div>
+              <div>
                 <dt>Estado de cuenta</dt>
                 <dd>{{ alumno.enabled ? 'Activa' : 'Deshabilitada' }}</dd>
               </div>
@@ -529,6 +587,94 @@ type ViewMode = 'list' | 'cards';
           </article>
         </section>
       }
+      @if (isCreateAlumnoModalOpen()) {
+        <section class="modal-backdrop" role="presentation" (click)="closeCreateAlumnoModal()">
+          <article
+            class="confirm-modal create-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-alumno-title"
+            (click)="$event.stopPropagation()"
+          >
+            <form [formGroup]="createAlumnoForm" (ngSubmit)="submitCreateAlumno()">
+              <p class="eyebrow">Nueva cuenta</p>
+              <h2 id="create-alumno-title">Crear alumno</h2>
+              <div class="create-form-grid">
+                <label class="filter-control create-field">
+                  <span>Nombre completo</span>
+                  <input type="text" formControlName="displayName" autocomplete="name" />
+                  <small
+                    class="field-hint"
+                    [class.is-empty]="!(createAlumnoForm.controls.displayName.touched && createAlumnoForm.controls.displayName.invalid)"
+                  >El nombre es obligatorio.</small>
+                </label>
+                <label class="filter-control create-field">
+                  <span>Username</span>
+                  <div class="username-field">
+                    <input
+                      type="text"
+                      formControlName="username"
+                      placeholder="nombre.apellido"
+                      autocomplete="username"
+                    />
+                    <span>@fctnow.com</span>
+                  </div>
+                  <small
+                    class="field-hint"
+                    [class.is-empty]="!(createAlumnoForm.controls.username.touched && createAlumnoForm.controls.username.invalid)"
+                  >Usa solo letras, numeros, punto, guion o guion bajo.</small>
+                </label>
+                <label class="filter-control create-field">
+                  <span>Password inicial</span>
+                  <input type="password" formControlName="password" autocomplete="new-password" />
+                  <small
+                    class="field-hint"
+                    [class.is-empty]="!(createAlumnoForm.controls.password.touched && createAlumnoForm.controls.password.invalid)"
+                  >Minimo 8 caracteres.</small>
+                </label>
+                <label class="filter-control create-field">
+                  <span>Correo del centro</span>
+                  <div class="centro-email-field">
+                    <input
+                      type="text"
+                      formControlName="centroEmail"
+                      placeholder="ialumno"
+                      autocomplete="off"
+                      [attr.aria-describedby]="'centro-email-hint'"
+                    />
+                    <span>&#64;elpuig.xeill.net</span>
+                  </div>
+                  <small
+                    id="centro-email-hint"
+                    class="field-hint"
+                    [class.is-empty]="!(createAlumnoForm.controls.centroEmail.touched && createAlumnoForm.controls.centroEmail.invalid)"
+                  >Inicial del nombre + primer apellido. Aquí se enviarán los datos de acceso.</small>
+                </label>
+              </div>
+              @if (createAlumnoStatus() === 'error') {
+                <p class="modal-error" role="alert">{{ createAlumnoError() }}</p>
+              }
+              <div class="modal-actions">
+                <button
+                  type="button"
+                  class="secondary-button"
+                  [disabled]="createAlumnoStatus() === 'saving'"
+                  (click)="closeCreateAlumnoModal()"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  class="primary-button"
+                  [disabled]="createAlumnoStatus() === 'saving'"
+                >
+                  {{ createAlumnoStatus() === 'saving' ? 'Creando...' : 'Crear alumno' }}
+                </button>
+              </div>
+            </form>
+          </article>
+        </section>
+      }
     </main>
   `,
   styles: [
@@ -537,6 +683,7 @@ type ViewMode = 'list' | 'cards';
         display: grid;
         align-content: start;
         gap: 1.4rem;
+        padding-top: 2rem;
       }
 
       .kpi-grid {
@@ -580,11 +727,77 @@ type ViewMode = 'list' | 'cards';
       }
 
       .filters-panel,
+      .actions-panel,
       .state-panel {
         padding: 1.1rem 1.2rem;
         border-radius: var(--radius-md);
         background: var(--surface);
         border: 1px solid rgba(17, 78, 74, 0.15);
+      }
+
+      .actions-panel {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 0.85rem;
+      }
+
+      .actions-panel h2 {
+        margin: 0.15rem 0 0;
+        font-size: 1.2rem;
+      }
+
+      .actions-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0.55rem;
+      }
+
+      .file-import-label {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .file-import-label input {
+        position: absolute;
+        inline-size: 1px;
+        block-size: 1px;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .file-import-label.is-disabled {
+        cursor: progress;
+        opacity: 0.7;
+      }
+
+      .compact-alert {
+        grid-column: 1 / -1;
+      }
+
+      .import-result {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 0.85rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .import-result strong {
+        color: var(--success);
+      }
+
+      .import-result ul {
+        flex: 1 0 100%;
+        margin: 0.15rem 0 0;
+        padding-left: 1.1rem;
+      }
+
+      .import-result li[data-estado='ERROR'] {
+        color: #8a3a26;
       }
 
       .state-panel.alert {
@@ -1026,6 +1239,73 @@ type ViewMode = 'list' | 'cards';
         gap: 0.75rem;
       }
 
+      .create-modal {
+        width: min(46rem, calc(100vw - 2rem));
+      }
+
+      .create-modal form {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .create-form-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem;
+        align-items: start;
+      }
+
+      .create-field {
+        align-content: start;
+        grid-template-rows: auto auto auto;
+      }
+
+      .create-field .field-hint {
+        min-height: 1.05rem;
+        line-height: 1.05rem;
+      }
+
+      .create-field .field-hint.is-empty {
+        visibility: hidden;
+      }
+
+      .username-field,
+      .centro-email-field {
+        min-height: 2.4rem;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--line);
+        background: var(--canvas-deep);
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+      }
+
+      .username-field input,
+      .centro-email-field input {
+        border: 0;
+        border-radius: 0;
+      }
+
+      .username-field input:focus,
+      .centro-email-field input:focus {
+        outline: none;
+      }
+
+      .username-field span,
+      .centro-email-field span {
+        padding: 0 0.65rem;
+        color: var(--muted);
+        font-weight: 800;
+        white-space: nowrap;
+        border-left: 1px solid var(--line);
+      }
+
+
+      .filter-control small {
+        color: #8a3a26;
+        font-weight: 700;
+      }
+
       .confirm-modal h2 {
         margin: 0;
       }
@@ -1081,6 +1361,14 @@ type ViewMode = 'list' | 'cards';
       }
 
       @media (max-width: 980px) {
+        .actions-panel {
+          grid-template-columns: 1fr;
+        }
+
+        .actions-row {
+          justify-content: flex-start;
+        }
+
         .filters-row {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
@@ -1107,6 +1395,16 @@ type ViewMode = 'list' | 'cards';
       }
 
       @media (max-width: 680px) {
+        .actions-row,
+        .actions-row button,
+        .file-import-label {
+          width: 100%;
+        }
+
+        .create-form-grid {
+          grid-template-columns: 1fr;
+        }
+
         .filter-control,
         .view-toggle {
           width: 100%;
@@ -1152,6 +1450,12 @@ export class TutorPage implements OnInit {
   protected readonly assignError = signal<string>('');
   protected readonly cvActionStatus = signal<CvActionStatus>('idle');
   protected readonly cvActionError = signal<string>('');
+  protected readonly isCreateAlumnoModalOpen = signal(false);
+  protected readonly createAlumnoStatus = signal<CreateAlumnoStatus>('idle');
+  protected readonly createAlumnoError = signal<string>('');
+  protected readonly importStatus = signal<ImportStatus>('idle');
+  protected readonly importError = signal<string>('');
+  protected readonly importResult = signal<TutorAlumnoImportResult | null>(null);
   protected readonly viewMode = signal<ViewMode>('list');
 
   protected readonly searchFilter = new FormControl<string>('', { nonNullable: true });
@@ -1160,6 +1464,32 @@ export class TutorPage implements OnInit {
   >('TODOS', { nonNullable: true });
   protected readonly familiaFilter = new FormControl<string>('TODAS', { nonNullable: true });
   protected readonly cicloFilter = new FormControl<string>('TODOS', { nonNullable: true });
+  protected readonly createAlumnoForm = new FormGroup({
+    displayName: new FormControl<string>('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.maxLength(150)],
+    }),
+    username: new FormControl<string>('', {
+      nonNullable: true,
+      validators: [
+        Validators.required,
+        Validators.maxLength(180),
+        Validators.pattern(/^[a-zA-Z0-9._-]+$/),
+      ],
+    }),
+    password: new FormControl<string>('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.minLength(8), Validators.maxLength(100)],
+    }),
+    centroEmail: new FormControl<string>('', {
+      nonNullable: true,
+      validators: [
+        Validators.required,
+        Validators.maxLength(180),
+        Validators.pattern(/^[a-zA-Z0-9._-]+$/),
+      ],
+    }),
+  });
   private readonly searchValue = signal<string>('');
   private readonly estadoValue = signal<
     'TODOS' | 'ASIGNADO' | 'SIN_ASIGNAR' | 'LISTO_PARA_ASIGNAR'
@@ -1189,6 +1519,7 @@ export class TutorPage implements OnInit {
       this.familiaValue() !== 'TODAS' ||
       this.cicloValue() !== 'TODOS',
   );
+  protected readonly importPreviewRows = computed(() => this.importResult()?.filas.slice(0, 6) ?? []);
 
   protected readonly filteredAlumnos = computed(() => {
     const q = this.searchValue().trim().toLowerCase();
@@ -1283,6 +1614,102 @@ export class TutorPage implements OnInit {
     this.selectedDetailAlumno.set(null);
     this.cvActionStatus.set('idle');
     this.cvActionError.set('');
+  }
+
+  protected openCreateAlumnoModal(): void {
+    this.createAlumnoForm.reset({
+      displayName: '',
+      username: '',
+      password: '',
+      centroEmail: '',
+    });
+    this.isCreateAlumnoModalOpen.set(true);
+    this.createAlumnoStatus.set('idle');
+    this.createAlumnoError.set('');
+  }
+
+  protected closeCreateAlumnoModal(): void {
+    if (this.createAlumnoStatus() === 'saving') return;
+    this.isCreateAlumnoModalOpen.set(false);
+    this.createAlumnoStatus.set('idle');
+    this.createAlumnoError.set('');
+  }
+
+  protected submitCreateAlumno(): void {
+    if (this.createAlumnoStatus() === 'saving') return;
+    if (this.createAlumnoForm.invalid) {
+      this.createAlumnoForm.markAllAsTouched();
+      return;
+    }
+
+    const raw = this.createAlumnoForm.getRawValue();
+    const centroLocal = raw.centroEmail.trim().toLowerCase();
+    const request: TutorAlumnoCreateRequest = {
+      displayName: raw.displayName.trim(),
+      username: raw.username.trim(),
+      password: raw.password,
+      centroEmail: centroLocal.endsWith('@elpuig.xeill.net')
+        ? centroLocal
+        : `${centroLocal}@elpuig.xeill.net`,
+    };
+
+    this.createAlumnoStatus.set('saving');
+    this.createAlumnoError.set('');
+    this.tutorService
+      .createAlumno(request)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (alumno) => {
+          this.alumnos.update((current) => [...current, alumno]);
+          this.createAlumnoStatus.set('success');
+          this.isCreateAlumnoModalOpen.set(false);
+          this.load();
+        },
+        error: (err: unknown) => {
+          this.createAlumnoStatus.set('error');
+          this.createAlumnoError.set(this.describeCreateAlumnoError(err));
+        },
+      });
+  }
+
+  protected downloadImportTemplate(): void {
+    if (this.importStatus() === 'uploading') return;
+    this.tutorService
+      .downloadImportTemplate()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (blob) => this.downloadBlob(blob, 'plantilla-alumnos-fctnow.xlsx'),
+        error: (err: unknown) => {
+          this.importStatus.set('error');
+          this.importError.set(this.describeImportError(err));
+        },
+      });
+  }
+
+  protected importExcel(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || this.importStatus() === 'uploading') return;
+
+    this.importStatus.set('uploading');
+    this.importError.set('');
+    this.importResult.set(null);
+    this.tutorService
+      .importAlumnos(file)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          this.importResult.set(result);
+          this.importStatus.set('success');
+          input.value = '';
+          this.load();
+        },
+        error: (err: unknown) => {
+          this.importStatus.set('error');
+          this.importError.set(this.describeImportError(err));
+          input.value = '';
+        },
+      });
   }
 
   protected setViewMode(mode: ViewMode): void {
@@ -1418,6 +1845,15 @@ export class TutorPage implements OnInit {
       });
   }
 
+  private downloadBlob(blob: Blob, fileName: string): void {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  }
+
   private describeError(err: unknown): string {
     if (err instanceof HttpErrorResponse) {
       if (err.status === 401 || err.status === 403) {
@@ -1432,6 +1868,47 @@ export class TutorPage implements OnInit {
       return err.message;
     }
     return 'Error desconocido al cargar datos.';
+  }
+
+  private describeCreateAlumnoError(err: unknown): string {
+    if (err instanceof HttpErrorResponse) {
+      if (err.status === 409) {
+        return 'Ya existe una cuenta con ese email.';
+      }
+      if (err.status === 400) {
+        return 'Revisa los datos obligatorios antes de crear la cuenta.';
+      }
+      if (err.status === 401 || err.status === 403) {
+        return 'Tu sesion no tiene permisos para crear alumnos.';
+      }
+      if (err.status === 0) {
+        return 'No se pudo contactar con el servidor.';
+      }
+      return `Error ${err.status} al crear el alumno.`;
+    }
+    if (err instanceof Error) {
+      return err.message;
+    }
+    return 'Error desconocido al crear el alumno.';
+  }
+
+  private describeImportError(err: unknown): string {
+    if (err instanceof HttpErrorResponse) {
+      if (err.status === 400) {
+        return 'No se pudo leer el Excel. Usa la plantilla descargada.';
+      }
+      if (err.status === 401 || err.status === 403) {
+        return 'Tu sesion no tiene permisos para importar alumnos.';
+      }
+      if (err.status === 0) {
+        return 'No se pudo contactar con el servidor.';
+      }
+      return `Error ${err.status} al importar alumnos.`;
+    }
+    if (err instanceof Error) {
+      return err.message;
+    }
+    return 'Error desconocido al importar alumnos.';
   }
 
   private describeAssignError(err: unknown): string {

@@ -3,7 +3,11 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { API_BASE_URL } from '../core/api/api.config';
-import { TutorAlumno } from './tutor-alumnos.models';
+import {
+  TutorAlumno,
+  TutorAlumnoCreateRequest,
+  TutorAlumnoImportResult,
+} from './tutor-alumnos.models';
 
 @Injectable({ providedIn: 'root' })
 export class TutorAlumnosService {
@@ -23,6 +27,33 @@ export class TutorAlumnosService {
         headers,
         responseType: 'blob',
       }),
+    );
+  }
+
+  createAlumno(request: TutorAlumnoCreateRequest): Observable<TutorAlumno> {
+    return this.withAuth((headers) =>
+      this.http.post<TutorAlumno>(`${this.apiBaseUrl}/tutor/alumnos`, request, { headers }),
+    );
+  }
+
+  downloadImportTemplate(): Observable<Blob> {
+    return this.withAuth((headers) =>
+      this.http.get(`${this.apiBaseUrl}/tutor/alumnos/import-template`, {
+        headers,
+        responseType: 'blob',
+      }),
+    );
+  }
+
+  importAlumnos(file: File): Observable<TutorAlumnoImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.withAuth((headers) =>
+      this.http.post<TutorAlumnoImportResult>(
+        `${this.apiBaseUrl}/tutor/alumnos/import`,
+        formData,
+        { headers },
+      ),
     );
   }
 

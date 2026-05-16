@@ -922,7 +922,7 @@ app-root .actor-card {
 app-root .route-page {
   min-height: 100dvh;
   display: grid;
-  align-content: center;
+  align-content: start;
   gap: 1rem;
 }
 
@@ -987,7 +987,7 @@ app-root .route-actions a:focus-visible {
 
 app-root .login-page {
   align-content: start;
-  padding-top: 3rem;
+  padding-top: 2rem;
 }
 
 app-root .login-panel {

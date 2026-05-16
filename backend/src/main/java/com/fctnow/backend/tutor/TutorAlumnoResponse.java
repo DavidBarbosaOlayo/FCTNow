@@ -7,6 +7,7 @@ import java.time.LocalDate;
 public record TutorAlumnoResponse(
     Long id,
     String email,
+    String centroEmail,
     String displayName,
     boolean enabled,
     String photoDataUrl,
