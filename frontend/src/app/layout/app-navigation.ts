@@ -58,7 +58,12 @@ const THEME_STORAGE_KEY = 'fctnow-theme';
         aria-label="Ir al inicio de FCTNow"
         (click)="closeMenu()"
       >
-        <img class="app-brand-logo" src="/logo.png" alt="" aria-hidden="true" />
+        <img
+          class="app-brand-logo"
+          [src]="themeMode() === 'dark' ? '/darkLogo.png' : '/lightLogo.png'"
+          alt=""
+          aria-hidden="true"
+        />
         <span class="app-brand-name">FCTNow</span>
       </a>
 

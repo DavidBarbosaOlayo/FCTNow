@@ -38,6 +38,7 @@ export type TutorAlumnoAsignacionPendiente = {
 export type TutorAlumno = {
   id: number;
   email: string;
+  centroEmail: string | null;
   displayName: string;
   enabled: boolean;
   photoDataUrl: string | null;
@@ -50,4 +51,26 @@ export type TutorAlumno = {
   solicitudes: TutorAlumnoSolicitudes;
   asignacionActual: TutorAlumnoAsignacion | null;
   asignacionPendiente: TutorAlumnoAsignacionPendiente | null;
+};
+
+export type TutorAlumnoCreateRequest = {
+  displayName: string;
+  username: string;
+  password: string;
+  centroEmail: string;
+};
+
+export type TutorAlumnoImportRow = {
+  fila: number;
+  email: string | null;
+  displayName: string | null;
+  estado: 'CREADO' | 'OMITIDO' | 'ERROR';
+  mensaje: string;
+};
+
+export type TutorAlumnoImportResult = {
+  creados: number;
+  omitidos: number;
+  errores: number;
+  filas: TutorAlumnoImportRow[];
 };

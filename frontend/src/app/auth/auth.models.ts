@@ -8,6 +8,7 @@ export type LoginRequest = {
 export type AuthenticatedUser = {
   id: number;
   email: string;
+  centroEmail?: string | null;
   displayName: string;
   roles: UserRole[];
 };

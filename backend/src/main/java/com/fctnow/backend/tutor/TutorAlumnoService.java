@@ -21,16 +21,33 @@ import com.fctnow.backend.tutor.TutorAlumnoResponse.SolicitudesResumen;
 import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
 import com.fctnow.backend.user.UserRole;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -38,6 +55,14 @@ public class TutorAlumnoService {
 
   private static final Set<UserRole> ROLES_PERMITIDOS =
       EnumSet.of(UserRole.TUTOR_CENTRO, UserRole.COORDINADOR);
+  private static final String STUDENT_EMAIL_DOMAIN = "@fctnow.com";
+  private static final String CENTRO_EMAIL_DOMAIN = "@elpuig.xeill.net";
+  private static final String[] IMPORT_HEADERS = {
+      "nombre",
+      "username",
+      "password",
+      "correo_centro",
+  };
 
   private final UserAccountRepository userAccountRepository;
   private final AlumnoPreferenciasRepository preferenciasRepository;
@@ -45,6 +70,8 @@ public class TutorAlumnoService {
   private final SolicitudExternaRepository solicitudExternaRepository;
   private final AsignacionFctRepository asignacionFctRepository;
   private final AsignacionFctExternaRepository asignacionFctExternaRepository;
+  private final PasswordEncoder passwordEncoder;
+  private final AlumnoWelcomeMailer welcomeMailer;
 
   public TutorAlumnoService(
       UserAccountRepository userAccountRepository,
@@ -52,13 +79,17 @@ public class TutorAlumnoService {
       SolicitudFctRepository solicitudFctRepository,
       SolicitudExternaRepository solicitudExternaRepository,
       AsignacionFctRepository asignacionFctRepository,
-      AsignacionFctExternaRepository asignacionFctExternaRepository) {
+      AsignacionFctExternaRepository asignacionFctExternaRepository,
+      PasswordEncoder passwordEncoder,
+      AlumnoWelcomeMailer welcomeMailer) {
     this.userAccountRepository = userAccountRepository;
     this.preferenciasRepository = preferenciasRepository;
     this.solicitudFctRepository = solicitudFctRepository;
     this.solicitudExternaRepository = solicitudExternaRepository;
     this.asignacionFctRepository = asignacionFctRepository;
     this.asignacionFctExternaRepository = asignacionFctExternaRepository;
+    this.passwordEncoder = passwordEncoder;
+    this.welcomeMailer = welcomeMailer;
   }
 
   @Transactional(readOnly = true)
@@ -133,6 +164,105 @@ public class TutorAlumnoService {
         .toList();
   }
 
+  @Transactional
+  public TutorAlumnoResponse createAlumno(
+      TutorAlumnoCreateRequest request,
+      JwtAuthenticationToken authentication) {
+    requireCentroRole(authentication);
+
+    String centroEmail = normalizeCentroEmail(request.centroEmail());
+    AlumnoImportData data = new AlumnoImportData(
+        trimToNull(request.displayName()),
+        normalizeFctNowEmail(request.username()),
+        request.password(),
+        centroEmail);
+
+    if (data.email() == null || userAccountRepository.findByEmailIgnoreCase(data.email()).isPresent()) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una cuenta con ese email");
+    }
+
+    UserAccount alumno = createAlumnoAccount(data);
+    welcomeMailer.sendWelcome(
+        alumno.getCentroEmail(),
+        alumno.getDisplayName(),
+        alumno.getEmail(),
+        data.password());
+    return buildResponse(alumno, null, List.of(), List.of(), null, null, null, null);
+  }
+
+  @Transactional(readOnly = true)
+  public byte[] createImportTemplate(JwtAuthenticationToken authentication) {
+    requireCentroRole(authentication);
+
+    try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+      Sheet sheet = workbook.createSheet("alumnos");
+      CellStyle headerStyle = workbook.createCellStyle();
+      Font headerFont = workbook.createFont();
+      headerFont.setBold(true);
+      headerStyle.setFont(headerFont);
+      headerStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+      headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+      Row header = sheet.createRow(0);
+      for (int i = 0; i < IMPORT_HEADERS.length; i++) {
+        Cell cell = header.createCell(i);
+        cell.setCellValue(IMPORT_HEADERS[i]);
+        cell.setCellStyle(headerStyle);
+        sheet.setColumnWidth(i, 24 * 256);
+      }
+
+      Row sample = sheet.createRow(1);
+      sample.createCell(0).setCellValue("Nombre Alumno");
+      sample.createCell(1).setCellValue("nombre.apellido");
+      sample.createCell(2).setCellValue("Password123!");
+      sample.createCell(3).setCellValue("nalumno@elpuig.xeill.net");
+
+      workbook.write(out);
+      return out.toByteArray();
+    } catch (IOException ex) {
+      throw new ResponseStatusException(
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          "No se pudo generar la plantilla de alumnos",
+          ex);
+    }
+  }
+
+  @Transactional
+  public TutorAlumnoImportResultResponse importAlumnos(
+      MultipartFile file,
+      JwtAuthenticationToken authentication) {
+    requireCentroRole(authentication);
+    if (file == null || file.isEmpty()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El archivo Excel no puede estar vacio");
+    }
+
+    List<TutorAlumnoImportRowResponse> rows = new ArrayList<>();
+    Set<String> emailsInFile = new HashSet<>();
+    DataFormatter formatter = new DataFormatter();
+
+    try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+      Sheet sheet = workbook.getNumberOfSheets() == 0 ? null : workbook.getSheetAt(0);
+      if (sheet == null) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El Excel no contiene hojas");
+      }
+
+      for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+        Row row = sheet.getRow(i);
+        if (isBlankRow(row, formatter)) {
+          continue;
+        }
+        rows.add(processImportRow(row, formatter, emailsInFile));
+      }
+    } catch (IOException | IllegalArgumentException ex) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se pudo leer el archivo Excel", ex);
+    }
+
+    int creados = (int) rows.stream().filter(r -> "CREADO".equals(r.estado())).count();
+    int omitidos = (int) rows.stream().filter(r -> "OMITIDO".equals(r.estado())).count();
+    int errores = (int) rows.stream().filter(r -> "ERROR".equals(r.estado())).count();
+    return new TutorAlumnoImportResultResponse(creados, omitidos, errores, rows);
+  }
+
   private TutorAlumnoResponse buildResponse(
       UserAccount alumno,
       AlumnoPreferencias prefs,
@@ -187,6 +317,7 @@ public class TutorAlumnoService {
     return new TutorAlumnoResponse(
         alumno.getId(),
         alumno.getEmail(),
+        alumno.getCentroEmail(),
         alumno.getDisplayName(),
         alumno.isEnabled(),
         AlumnoPreferenciasResponse.photoDataUrl(prefs),
@@ -199,6 +330,181 @@ public class TutorAlumnoService {
         resumen,
         asignacionActual,
         asignacionPendiente);
+  }
+
+  private TutorAlumnoImportRowResponse processImportRow(
+      Row row,
+      DataFormatter formatter,
+      Set<String> emailsInFile) {
+    int rowNumber = row.getRowNum() + 1;
+    String displayName = trimToNull(cellText(row, 0, formatter));
+    String email;
+    try {
+      email = normalizeFctNowEmail(cellText(row, 1, formatter));
+    } catch (ResponseStatusException ex) {
+      return new TutorAlumnoImportRowResponse(
+          rowNumber,
+          null,
+          displayName,
+          "ERROR",
+          ex.getReason() == null ? "El username no tiene un formato valido" : ex.getReason());
+    }
+    String password = cellText(row, 2, formatter);
+    String centroEmail;
+    try {
+      centroEmail = normalizeCentroEmail(cellText(row, 3, formatter));
+    } catch (ResponseStatusException ex) {
+      return new TutorAlumnoImportRowResponse(
+          rowNumber,
+          email,
+          displayName,
+          "ERROR",
+          ex.getReason() == null ? "El correo del centro no tiene un formato valido" : ex.getReason());
+    }
+
+    AlumnoImportData data = new AlumnoImportData(
+        displayName,
+        email,
+        password,
+        centroEmail);
+
+    String validationError = validateImportData(data);
+    if (validationError != null) {
+      return new TutorAlumnoImportRowResponse(rowNumber, email, displayName, "ERROR", validationError);
+    }
+    if (!emailsInFile.add(data.email())) {
+      return new TutorAlumnoImportRowResponse(
+          rowNumber,
+          data.email(),
+          data.displayName(),
+          "OMITIDO",
+          "Email duplicado en el archivo");
+    }
+    if (userAccountRepository.findByEmailIgnoreCase(data.email()).isPresent()) {
+      return new TutorAlumnoImportRowResponse(
+          rowNumber,
+          data.email(),
+          data.displayName(),
+          "OMITIDO",
+          "Ya existe una cuenta con este email");
+    }
+
+    UserAccount alumno = createAlumnoAccount(data);
+    welcomeMailer.sendWelcome(
+        alumno.getCentroEmail(),
+        alumno.getDisplayName(),
+        alumno.getEmail(),
+        data.password());
+    return new TutorAlumnoImportRowResponse(
+        rowNumber,
+        data.email(),
+        data.displayName(),
+        "CREADO",
+        "Alumno creado correctamente");
+  }
+
+  private UserAccount createAlumnoAccount(AlumnoImportData data) {
+    return userAccountRepository.save(new UserAccount(
+        data.email(),
+        passwordEncoder.encode(data.password()),
+        data.displayName(),
+        Set.of(UserRole.ALUMNO),
+        null,
+        data.centroEmail()));
+  }
+
+  private String validateImportData(AlumnoImportData data) {
+    if (data.displayName() == null) {
+      return "El nombre es obligatorio";
+    }
+    if (data.email() == null) {
+      return "El username es obligatorio";
+    }
+    if (data.password() == null || data.password().isBlank()) {
+      return "La password es obligatoria";
+    }
+    if (data.password().length() < 8) {
+      return "La password debe tener al menos 8 caracteres";
+    }
+    if (data.centroEmail() == null) {
+      return "El correo del centro es obligatorio";
+    }
+    return null;
+  }
+
+  private boolean isBlankRow(Row row, DataFormatter formatter) {
+    if (row == null) {
+      return true;
+    }
+    for (int i = 0; i < IMPORT_HEADERS.length; i++) {
+      if (trimToNull(cellText(row, i, formatter)) != null) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private String cellText(Row row, int column, DataFormatter formatter) {
+    Cell cell = row.getCell(column, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+    return cell == null ? null : formatter.formatCellValue(cell);
+  }
+
+  private String normalizeCentroEmail(String value) {
+    String trimmed = trimToNull(value);
+    if (trimmed == null) {
+      return null;
+    }
+    String normalized = trimmed.toLowerCase(Locale.ROOT).replaceAll("\\s+", "");
+    if (!normalized.endsWith(CENTRO_EMAIL_DOMAIN)) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "El correo del centro debe usar el dominio " + CENTRO_EMAIL_DOMAIN);
+    }
+    String localPart = normalized.substring(0, normalized.length() - CENTRO_EMAIL_DOMAIN.length());
+    if (localPart.isBlank()
+        || localPart.contains("@")
+        || localPart.startsWith(".")
+        || localPart.endsWith(".")) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "El correo del centro no tiene un formato valido");
+    }
+    return normalized;
+  }
+
+  private String normalizeFctNowEmail(String username) {
+    String value = trimToNull(username);
+    if (value == null) {
+      return null;
+    }
+    String normalized = value.toLowerCase(Locale.ROOT);
+    normalized = normalized.replaceAll("\\s+", "");
+    if (normalized.contains("@") && !normalized.endsWith(STUDENT_EMAIL_DOMAIN)) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "El username debe usar el dominio @fctnow.com");
+    }
+
+    String localPart = normalized.endsWith(STUDENT_EMAIL_DOMAIN)
+        ? normalized.substring(0, normalized.length() - STUDENT_EMAIL_DOMAIN.length())
+        : normalized;
+    if (localPart.isBlank()
+        || localPart.contains("@")
+        || localPart.startsWith(".")
+        || localPart.endsWith(".")) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El username no tiene un formato valido");
+    }
+    return normalized.endsWith(STUDENT_EMAIL_DOMAIN)
+        ? normalized
+        : normalized + STUDENT_EMAIL_DOMAIN;
+  }
+
+  private String trimToNull(String value) {
+    if (value == null) {
+      return null;
+    }
+    String trimmed = value.trim();
+    return trimmed.isEmpty() ? null : trimmed;
   }
 
   @Transactional(readOnly = true)
@@ -319,5 +625,12 @@ public class TutorAlumnoService {
           HttpStatus.FORBIDDEN,
           "Solo el personal del centro puede consultar el panel de tutor");
     }
+  }
+
+  private record AlumnoImportData(
+      String displayName,
+      String email,
+      String password,
+      String centroEmail) {
   }
 }
