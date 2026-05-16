@@ -173,7 +173,7 @@ type ModalidadOption = {
         padding: 0.5rem 0.8rem;
         border: 1px solid var(--line);
         border-radius: var(--radius-md);
-        background: rgba(255, 255, 255, 0.74);
+        background: var(--canvas-deep);
         font: inherit;
         color: var(--ink);
         outline: none;
@@ -225,7 +225,7 @@ type ModalidadOption = {
       .secondary-action {
         border: 1px solid var(--line);
         color: var(--ink);
-        background: rgba(255, 255, 255, 0.62);
+        background: var(--surface-muted);
       }
 
       [disabled] {

@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { AsignacionesExternasService } from '../asignaciones/asignaciones-externas.service';
@@ -64,6 +65,7 @@ type ViewMode = 'list' | 'cards';
             <span>Estado FCT</span>
             <select [formControl]="estadoFilter">
               <option value="TODOS">Todos</option>
+              <option value="LISTO_PARA_ASIGNAR">Listo para asignar</option>
               <option value="ASIGNADO">Con asignación</option>
               <option value="SIN_ASIGNAR">Sin asignación</option>
             </select>
@@ -554,8 +556,12 @@ type ViewMode = 'list' | 'cards';
       }
 
       .kpi-card.kpi-warn {
-        border-color: rgba(87, 96, 106, 0.45);
-        background: rgba(255, 244, 230, 0.6);
+        border-color: rgba(146, 64, 14, 0.3);
+        background: var(--warning-soft);
+      }
+
+      :host-context(.theme-dark) .kpi-card.kpi-warn {
+        border-color: rgba(241, 197, 106, 0.4);
       }
 
       .kpi-value {
@@ -582,8 +588,12 @@ type ViewMode = 'list' | 'cards';
       }
 
       .state-panel.alert {
-        border-color: rgba(87, 96, 106, 0.45);
-        background: rgba(255, 244, 230, 0.6);
+        border-color: rgba(146, 64, 14, 0.3);
+        background: var(--warning-soft);
+      }
+
+      :host-context(.theme-dark) .state-panel.alert {
+        border-color: rgba(241, 197, 106, 0.4);
       }
 
       .filters-row {
@@ -612,8 +622,9 @@ type ViewMode = 'list' | 'cards';
         min-height: 2.4rem;
         padding: 0 0.6rem;
         border-radius: var(--radius-md);
-        border: 1px solid rgba(17, 78, 74, 0.25);
-        background: #fff;
+        border: 1px solid var(--line);
+        background: var(--canvas-deep);
+        color: var(--ink);
         font: inherit;
         width: 100%;
         min-width: 0;
@@ -656,8 +667,8 @@ type ViewMode = 'list' | 'cards';
         min-height: 2.4rem;
         padding: 0 0.85rem;
         border-radius: var(--radius-md);
-        border: 1px solid rgba(17, 78, 74, 0.25);
-        background: #fff;
+        border: 1px solid var(--line);
+        background: var(--surface-muted);
         color: var(--accent);
         font: inherit;
         font-size: 0.85rem;
@@ -673,7 +684,7 @@ type ViewMode = 'list' | 'cards';
 
       .clear-filters-button:not(:disabled):hover,
       .clear-filters-button:not(:disabled):focus-visible {
-        background: rgba(17, 78, 74, 0.08);
+        background: var(--accent-soft);
         outline: none;
       }
 
@@ -699,8 +710,12 @@ type ViewMode = 'list' | 'cards';
       }
 
       .alumno-row.is-assigned {
-        background: linear-gradient(135deg, rgba(232, 245, 233, 0.96), rgba(255, 255, 255, 0.98));
+        background: var(--success-soft);
         border-color: rgba(29, 107, 74, 0.35);
+      }
+
+      :host-context(.theme-dark) .alumno-row.is-assigned {
+        border-color: rgba(139, 216, 169, 0.42);
       }
 
       .row-main {
@@ -823,9 +838,14 @@ type ViewMode = 'list' | 'cards';
       }
 
       .alumno-card.is-assigned {
-        background: linear-gradient(135deg, rgba(232, 245, 233, 0.96), rgba(255, 255, 255, 0.98));
+        background: var(--success-soft);
         border-color: rgba(29, 107, 74, 0.42);
         box-shadow: 0 12px 28px rgba(29, 107, 74, 0.12);
+      }
+
+      :host-context(.theme-dark) .alumno-card.is-assigned {
+        border-color: rgba(139, 216, 169, 0.42);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
       }
 
       .alumno-card-heading {
@@ -1116,6 +1136,8 @@ export class TutorPage implements OnInit {
   private readonly asignacionesExternasService = inject(AsignacionesExternasService);
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
+  private readonly activatedRoute = inject(ActivatedRoute);
 
   protected readonly currentUserName = computed(
     () => this.authService.currentUser()?.displayName ?? null,
@@ -1133,14 +1155,15 @@ export class TutorPage implements OnInit {
   protected readonly viewMode = signal<ViewMode>('list');
 
   protected readonly searchFilter = new FormControl<string>('', { nonNullable: true });
-  protected readonly estadoFilter = new FormControl<'TODOS' | 'ASIGNADO' | 'SIN_ASIGNAR'>(
-    'TODOS',
-    { nonNullable: true },
-  );
+  protected readonly estadoFilter = new FormControl<
+    'TODOS' | 'ASIGNADO' | 'SIN_ASIGNAR' | 'LISTO_PARA_ASIGNAR'
+  >('TODOS', { nonNullable: true });
   protected readonly familiaFilter = new FormControl<string>('TODAS', { nonNullable: true });
   protected readonly cicloFilter = new FormControl<string>('TODOS', { nonNullable: true });
   private readonly searchValue = signal<string>('');
-  private readonly estadoValue = signal<'TODOS' | 'ASIGNADO' | 'SIN_ASIGNAR'>('TODOS');
+  private readonly estadoValue = signal<
+    'TODOS' | 'ASIGNADO' | 'SIN_ASIGNAR' | 'LISTO_PARA_ASIGNAR'
+  >('TODOS');
   private readonly familiaValue = signal<string>('TODAS');
   private readonly cicloValue = signal<string>('TODOS');
 
@@ -1175,6 +1198,12 @@ export class TutorPage implements OnInit {
     return this.alumnos().filter((a) => {
       if (estado === 'ASIGNADO' && !a.asignacionActual) return false;
       if (estado === 'SIN_ASIGNAR' && a.asignacionActual) return false;
+      if (
+        estado === 'LISTO_PARA_ASIGNAR' &&
+        (!a.asignacionPendiente || !!a.asignacionActual)
+      ) {
+        return false;
+      }
       if (
         familia !== 'TODAS' &&
         normalizeOption(a.preferencias?.familiaProfesional) !== normalizeOption(familia)
@@ -1324,12 +1353,32 @@ export class TutorPage implements OnInit {
         next: (data) => {
           this.alumnos.set(data);
           this.status.set('loaded');
+          this.consumePendingAssignParam();
         },
         error: (err) => {
           this.status.set('error');
           this.errorMessage.set(this.describeError(err));
         },
       });
+  }
+
+  private consumePendingAssignParam(): void {
+    const raw = this.activatedRoute.snapshot.queryParamMap.get('asignar');
+    if (!raw) return;
+    const id = Number(raw);
+    if (!Number.isFinite(id)) return;
+
+    const alumno = this.alumnos().find((a) => a.id === id);
+    if (alumno && alumno.asignacionPendiente && !alumno.asignacionActual) {
+      this.openAssignModal(alumno);
+    }
+
+    this.router.navigate([], {
+      relativeTo: this.activatedRoute,
+      queryParams: { asignar: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   private openCv(alumno: TutorAlumno, mode: 'preview' | 'download'): void {
@@ -1457,7 +1506,12 @@ function normalizeOption(value: string | null | undefined): string {
 }
 
 function compareAlumnosByAssignmentState(a: TutorAlumno, b: TutorAlumno): number {
+  const aReady = !!a.asignacionPendiente && !a.asignacionActual;
+  const bReady = !!b.asignacionPendiente && !b.asignacionActual;
+  if (aReady !== bReady) return aReady ? -1 : 1;
+
   const stateDiff = Number(!!a.asignacionActual) - Number(!!b.asignacionActual);
   if (stateDiff !== 0) return stateDiff;
+
   return a.displayName.localeCompare(b.displayName, 'es', { sensitivity: 'base' });
 }

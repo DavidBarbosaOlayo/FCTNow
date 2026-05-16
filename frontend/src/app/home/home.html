@@ -1,13 +1,13 @@
 <main class="page-shell home-feed">
   @if (!currentUser()) {
-    <section class="state-panel" aria-labelledby="login-required-title">
-      <p class="eyebrow">Sesión requerida</p>
+    <section class="state-panel alert" role="alert" aria-labelledby="login-required-title">
+      <p class="eyebrow">Sesión no disponible</p>
       <h2 id="login-required-title">Inicia sesión para ver tu feed FCT</h2>
       <p>
         El inicio personalizado usa tus preferencias y tu ciclo formativo para ordenar ofertas,
         avisos y señales agregadas del proceso.
       </p>
-      <a class="primary-action" routerLink="/login">Iniciar sesión</a>
+      <a class="back-link" routerLink="/login">Iniciar Sesión</a>
     </section>
   } @else if (!isAlumno()) {
     <section class="state-panel" aria-labelledby="role-limited-title">

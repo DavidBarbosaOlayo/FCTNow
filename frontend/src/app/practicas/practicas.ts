@@ -25,7 +25,7 @@ import { OfertasExternasService } from './ofertas-externas.service';
 import { OfertaFct, OfertaFctFilters, OfertaModalidad } from './ofertas.models';
 import { OfertasService } from './ofertas.service';
 import { PracticasCacheService } from './practicas-cache.service';
-import { FAMILIAS_PROFESIONALES, LOCALIDADES_ES } from './practicas-options';
+import { FAMILIAS_PROFESIONALES, LOCALIDADES_ES, LOCALIDAD_TO_COMUNIDAD } from './practicas-options';
 import {
   SolicitudExterna,
   SolicitudExternaEstado,
@@ -99,13 +99,29 @@ type ModalidadOption = {
         aria-label="Ofertas externas de Adzuna"
       >
         <div class="results-heading">
-          <p class="eyebrow">Ofertas reales · Adzuna</p>
+          <p class="eyebrow">Ofertas de prácticas · Adzuna</p>
           <h2>{{ externasResultsTitle() }}</h2>
           <p class="results-hint">
             Resultados de portales de empleo que coinciden con tu búsqueda. La aplicación se realiza
             en el sitio externo.
           </p>
         </div>
+
+        @if (externasFallbackComunidad()) {
+          <div class="externas-fallback-banner" role="status" aria-live="polite">
+            <span class="externas-fallback-banner-icon" aria-hidden="true">!</span>
+            <p>
+              No hemos encontrado prácticas en
+              @if (externasFallbackComunidadName()) {
+                <strong>{{ externasFallbackComunidadName() }}</strong>
+              } @else {
+                <strong>{{ externasFallbackCity() }}</strong>
+              }
+              para esta búsqueda. Mostramos ofertas del resto de España por si encajan en remoto o
+              fuera de tu comunidad.
+            </p>
+          </div>
+        }
 
         @if (externasStatus() === 'loading') {
           <div class="state-panel loading-panel">
@@ -115,8 +131,8 @@ type ModalidadOption = {
             </div>
             <div>
               <p class="eyebrow">Cargando</p>
-              <h2>Buscando ofertas reales</h2>
-              <p>Estamos consultando ofertas reales de Adzuna para España.</p>
+              <h2>Buscando ofertas de prácticas</h2>
+              <p>Estamos consultando ofertas de prácticas de Adzuna para España.</p>
               <div class="loading-lines" aria-hidden="true">
                 <span></span>
                 <span></span>
@@ -210,11 +226,11 @@ type ModalidadOption = {
                             type="button"
                             class="tracking-toggle is-estado-solicitada"
                             [disabled]="isExternalActionInFlight(oferta)"
-                            aria-label="Solicitada — marcar como no seleccionado"
+                            aria-label="Solicitada — marcar como denegada"
                             (click)="anularSolicitud(oferta)"
                           >
                             <span class="state">Solicitada</span>
-                            <span class="hover">No seleccionado</span>
+                            <span class="hover">Denegada</span>
                           </button>
                           <button
                             type="button"
@@ -297,9 +313,9 @@ type ModalidadOption = {
                     [href]="oferta.urlAplicacion"
                     target="_blank"
                     rel="noopener noreferrer"
-                    [attr.aria-label]="'Abrir oferta de ' + oferta.titulo + ' en Adzuna'"
+                    [attr.aria-label]="(isCentro() ? 'Ver oferta de ' : 'Abrir oferta de ') + oferta.titulo + ' en Adzuna'"
                   >
-                    Solicitar en Adzuna
+                    {{ isCentro() ? 'Ver en Adzuna' : 'Solicitar en Adzuna' }}
                   </a>
                   <button
                     type="button"
@@ -381,7 +397,7 @@ type ModalidadOption = {
           </div>
         } @else {
           <div class="results-heading">
-            <p class="eyebrow">Ofertas publicadas</p>
+            <p class="eyebrow">Ofertas de prácticas · Publicadas</p>
             <h2>{{ resultsTitle() }}</h2>
           </div>
 
@@ -552,7 +568,7 @@ type ModalidadOption = {
         border: 1px solid var(--line);
         border-radius: var(--radius-md);
         color: var(--ink);
-        background: rgba(255, 255, 255, 0.74);
+        background: var(--canvas-deep);
         font: inherit;
         outline: none;
       }
@@ -588,7 +604,7 @@ type ModalidadOption = {
       .secondary-action {
         border: 1px solid var(--line);
         color: var(--ink);
-        background: rgba(255, 255, 255, 0.54);
+        background: var(--surface-muted);
       }
 
       .primary-action:hover,
@@ -757,6 +773,44 @@ type ModalidadOption = {
         color: var(--muted);
         font-size: 0.92rem;
         line-height: 1.55;
+      }
+
+      .externas-fallback-banner {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.65rem;
+        padding: 0.7rem 0.9rem;
+        border: 1px solid rgba(146, 64, 14, 0.32);
+        border-radius: var(--radius-md);
+        background: var(--warning-soft);
+        color: var(--ink);
+      }
+
+      .externas-fallback-banner p {
+        margin: 0;
+        font-size: 0.92rem;
+        line-height: 1.5;
+      }
+
+      .externas-fallback-banner-icon {
+        flex: 0 0 1.5rem;
+        height: 1.5rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-pill);
+        background: var(--warning);
+        color: #1d1306;
+        font-weight: 900;
+        font-size: 0.9rem;
+      }
+
+      :host-context(.theme-dark) .externas-fallback-banner {
+        border-color: rgba(241, 197, 106, 0.4);
+      }
+
+      :host-context(.theme-dark) .externas-fallback-banner-icon {
+        color: #2d2310;
       }
 
       .offer-card-externa {
@@ -1041,6 +1095,9 @@ export class PracticasPage implements OnInit {
   protected readonly externasTotal = signal<number>(0);
   protected readonly externasPage = signal<number>(1);
   protected readonly externasLoadingMore = signal<boolean>(false);
+  protected readonly externasFallbackComunidad = signal<boolean>(false);
+  protected readonly externasFallbackCity = signal<string>('');
+  protected readonly externasFallbackComunidadName = signal<string>('');
   protected readonly mineExternas = signal<SolicitudExterna[]>([]);
   protected readonly externalActionInFlight = signal<string | null>(null);
   protected readonly externalActionError = signal<string | null>(null);
@@ -1414,8 +1471,8 @@ export class PracticasPage implements OnInit {
     }
     const detalle = estado === 'ACEPTADA'
       ? 'Esta solicitud está marcada como aceptada. Si la anulas, deberás volver a marcarla si la empresa te confirma de nuevo.'
-      : 'Usa esta opción cuando la empresa te comunique que no has sido seleccionado. La solicitud quedará fuera del seguimiento activo.';
-    const title = estado === 'ACEPTADA' ? '¿Anular la aceptación?' : '¿Marcar como no seleccionado?';
+      : 'Usa esta opción cuando la empresa te comunique que la solicitud ha sido denegada. La solicitud quedará fuera del seguimiento activo.';
+    const title = estado === 'ACEPTADA' ? '¿Anular la aceptación?' : '¿Marcar como denegada?';
     return window.confirm(`${title} ${detalle}`);
   }
 
@@ -1508,6 +1565,7 @@ export class PracticasPage implements OnInit {
       this.externasErrorMessage.set(null);
       this.externasStatus.set('loaded');
       this.externasLoadingMore.set(false);
+      this.resetFallbackState();
       return;
     }
 
@@ -1528,10 +1586,21 @@ export class PracticasPage implements OnInit {
     }
 
     this.externasPage.set(1);
+    this.resetFallbackState();
     this.fetchExternalOffers(1, false);
   }
 
-  private fetchExternalOffers(page: number, append: boolean): void {
+  private resetFallbackState(): void {
+    this.externasFallbackComunidad.set(false);
+    this.externasFallbackCity.set('');
+    this.externasFallbackComunidadName.set('');
+  }
+
+  private fetchExternalOffers(
+    page: number,
+    append: boolean,
+    locationLevel?: 'region' | 'national',
+  ): void {
     if (append) {
       this.externasLoadingMore.set(true);
     } else {
@@ -1544,10 +1613,19 @@ export class PracticasPage implements OnInit {
       (option) => option.value === filters.familiaProfesional,
     )?.adzunaCategory;
 
+    const preferredCity = filters.localidad;
+    const level: 'region' | 'national' = locationLevel
+      ?? (append && this.externasFallbackComunidad() ? 'national' : 'region');
+
+    const comunidadName = preferredCity ? LOCALIDAD_TO_COMUNIDAD[preferredCity] ?? '' : '';
+    const effectiveWhere = preferredCity && level === 'region'
+      ? (comunidadName || preferredCity)
+      : '';
+
     this.ofertasExternasService
       .list({
         q: filters.q,
-        where: filters.localidad,
+        where: effectiveWhere,
         category: adzunaCategory ?? undefined,
         page,
         resultsPerPage: PracticasPage.EXTERNAS_PAGE_SIZE,
@@ -1555,9 +1633,27 @@ export class PracticasPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (response: OfertaExternaPage) => {
-          this.ofertasExternas.update((existing) =>
-            append ? [...existing, ...response.results] : response.results,
-          );
+          if (
+            !append
+            && preferredCity
+            && level === 'region'
+            && response.results.length === 0
+          ) {
+            this.fetchExternalOffers(page, false, 'national');
+            return;
+          }
+
+          if (!append) {
+            const fallback = level === 'national' && !!preferredCity;
+            this.externasFallbackComunidad.set(fallback);
+            this.externasFallbackCity.set(fallback ? preferredCity : '');
+            this.externasFallbackComunidadName.set(fallback ? comunidadName : '');
+          }
+
+          this.ofertasExternas.update((existing) => {
+            const all = append ? [...existing, ...response.results] : response.results;
+            return preferredCity ? sortByLocalidadPriority(all, preferredCity) : all;
+          });
           this.externasTotal.set(response.totalResults);
           this.externasPage.set(page);
           if (response.attribution) {
@@ -1699,4 +1795,22 @@ function normalizeText(value: string | null | undefined): string {
     .replace(/[\u0300-\u036f]/g, '')
     .trim()
     .toLowerCase();
+}
+
+function sortByLocalidadPriority(items: OfertaExterna[], preferredCity: string): OfertaExterna[] {
+  const target = normalizeText(preferredCity);
+  if (!target) return items;
+  return [...items].sort((a, b) => {
+    const aMatch = matchesPreferredCity(a, target);
+    const bMatch = matchesPreferredCity(b, target);
+    if (aMatch === bMatch) return 0;
+    return aMatch ? -1 : 1;
+  });
+}
+
+function matchesPreferredCity(oferta: OfertaExterna, normalizedCity: string): boolean {
+  const localidad = normalizeText(oferta.localidad);
+  if (localidad && localidad.includes(normalizedCity)) return true;
+  const region = normalizeText(oferta.region);
+  return region.length > 0 && region.includes(normalizedCity);
 }

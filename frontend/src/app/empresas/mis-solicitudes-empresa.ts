@@ -294,7 +294,7 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         margin-top: 0.4rem;
         border: 1px solid var(--line);
         color: var(--ink);
-        background: rgba(255, 255, 255, 0.62);
+        background: var(--surface-muted);
       }
 
       .back-link:hover,

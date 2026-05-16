@@ -288,7 +288,7 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
         min-height: 0;
         overflow: hidden;
         border-right: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.35);
+        background: var(--surface-muted);
       }
 
       .messages-heading,
@@ -355,7 +355,7 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
         border: 1px solid var(--line);
         border-radius: 0;
         color: var(--ink);
-        background: rgba(255, 255, 255, 0.82);
+        background: var(--canvas-deep);
         font: inherit;
         outline: none;
       }
@@ -420,7 +420,7 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
         border: 1px solid var(--line);
         border-radius: 0;
         color: var(--ink);
-        background: rgba(255, 255, 255, 0.62);
+        background: var(--surface);
         font: inherit;
         text-align: left;
         cursor: pointer;
@@ -444,8 +444,16 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
       .conversation-button.is-active,
       .contact-button:hover:not(:disabled),
       .contact-button:focus-visible:not(:disabled) {
-        background: rgba(15, 118, 110, 0.09);
+        background: var(--accent-soft);
         outline: none;
+      }
+
+      :host-context(.theme-dark) .conversation-button:hover,
+      :host-context(.theme-dark) .conversation-button:focus-visible,
+      :host-context(.theme-dark) .conversation-button.is-active,
+      :host-context(.theme-dark) .contact-button:hover:not(:disabled),
+      :host-context(.theme-dark) .contact-button:focus-visible:not(:disabled) {
+        background: rgba(103, 198, 183, 0.18);
       }
 
       .contact-button:disabled {
@@ -573,7 +581,8 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
         padding: 0.72rem 0.85rem;
         border: 1px solid var(--line);
         border-radius: 0;
-        background: rgba(255, 255, 255, 0.78);
+        color: var(--ink);
+        background: var(--surface);
       }
 
       .message-row.is-own .message-bubble {
@@ -588,6 +597,22 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
       .message-row.is-own .message-time-only {
         color: rgba(247, 251, 248, 0.78);
+      }
+
+      :host-context(.theme-dark) .message-bubble {
+        background: var(--surface-strong);
+        border-color: var(--line-strong);
+      }
+
+      :host-context(.theme-dark) .message-row.is-own .message-bubble {
+        color: #f4f8f6;
+        background: #1f6f63;
+        border-color: rgba(139, 216, 204, 0.32);
+      }
+
+      :host-context(.theme-dark) .message-row.is-own .message-meta time,
+      :host-context(.theme-dark) .message-row.is-own .message-time-only {
+        color: rgba(244, 248, 246, 0.7);
       }
 
       .message-meta {
@@ -616,7 +641,7 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
       .composer {
         border-top: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.42);
+        background: var(--surface-muted);
       }
 
       .composer label {
@@ -641,7 +666,7 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
         border: 1px solid var(--line);
         border-radius: 0;
         color: var(--ink);
-        background: rgba(255, 255, 255, 0.82);
+        background: var(--canvas-deep);
         font: inherit;
         outline: none;
       }
@@ -665,8 +690,9 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
       .composer button:disabled,
       .composer button.is-disabled {
-        color: rgba(25, 36, 47, 0.52);
-        background: rgba(25, 36, 47, 0.12);
+        color: var(--muted);
+        background: var(--surface-strong);
+        border: 1px solid var(--line);
         cursor: not-allowed;
       }
 
@@ -706,7 +732,7 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
         padding: 1rem;
         border: 1px solid var(--line);
         border-radius: 0;
-        background: rgba(255, 255, 255, 0.56);
+        background: var(--surface);
       }
 
       .empty-thread {
@@ -720,8 +746,12 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
         display: grid;
         gap: 0.25rem;
         border-color: rgba(184, 79, 59, 0.28);
-        color: #8f3324;
-        background: rgba(255, 246, 241, 0.9);
+        color: var(--danger);
+        background: var(--danger-soft);
+      }
+
+      :host-context(.theme-dark) .message-alert {
+        border-color: rgba(255, 138, 128, 0.42);
       }
 
       @media (max-width: 860px) {

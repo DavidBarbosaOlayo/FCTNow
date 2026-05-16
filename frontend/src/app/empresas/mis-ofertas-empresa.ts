@@ -167,25 +167,36 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
       .secondary-action {
         border: 1px solid var(--line);
         color: var(--ink);
-        background: rgba(255, 255, 255, 0.62);
+        background: var(--surface-muted);
       }
 
       .secondary-action:hover:not([disabled]),
       .secondary-action:focus-visible:not([disabled]) {
-        border-color: rgba(17, 78, 74, 0.36);
+        border-color: var(--line-strong);
         outline: none;
       }
 
       .danger-action {
         border: 1px solid rgba(179, 38, 30, 0.4);
-        color: #8a3a25;
-        background: rgba(255, 246, 241, 0.92);
+        color: var(--danger);
+        background: var(--danger-soft);
       }
 
       .danger-action:hover:not([disabled]),
       .danger-action:focus-visible:not([disabled]) {
         border-color: rgba(179, 38, 30, 0.65);
+        filter: brightness(0.96);
         outline: none;
+      }
+
+      :host-context(.theme-dark) .danger-action {
+        border-color: rgba(255, 138, 128, 0.42);
+      }
+
+      :host-context(.theme-dark) .danger-action:hover:not([disabled]),
+      :host-context(.theme-dark) .danger-action:focus-visible:not([disabled]) {
+        border-color: rgba(255, 138, 128, 0.62);
+        filter: brightness(1.1);
       }
 
       [disabled] {
@@ -209,7 +220,11 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
 
       .state-panel.alert {
         border-color: rgba(179, 38, 30, 0.28);
-        background: rgba(255, 246, 241, 0.9);
+        background: var(--danger-soft);
+      }
+
+      :host-context(.theme-dark) .state-panel.alert {
+        border-color: rgba(255, 138, 128, 0.4);
       }
 
       .state-panel h2,
@@ -242,7 +257,7 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         padding: 1rem;
         border: 1px solid var(--line);
         border-radius: var(--radius-md);
-        background: rgba(255, 251, 245, 0.72);
+        background: var(--surface);
         box-shadow: var(--shadow-soft);
       }
 

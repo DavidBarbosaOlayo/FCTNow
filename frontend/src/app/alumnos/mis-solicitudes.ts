@@ -124,7 +124,7 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
             <p class="eyebrow">Ofertas externas · Adzuna</p>
             <h2>Mis solicitudes externas</h2>
             <p class="externas-hint">
-              Solicitudes que has marcado manualmente desde ofertas reales de Adzuna. Cuando una
+              Solicitudes que has marcado manualmente desde ofertas de prácticas de Adzuna. Cuando una
               empresa te coja, marca aquí la solicitud como aceptada para que tu tutor pueda
               asignarla.
             </p>
@@ -206,7 +206,7 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
                           [disabled]="externalActionInFlight() === item.id"
                           (click)="anularExterna(item)"
                         >
-                          {{ item.estado === 'ACEPTADA' ? 'Anular aceptación' : 'No seleccionado' }}
+                          {{ item.estado === 'ACEPTADA' ? 'Anular aceptación' : 'Denegada' }}
                         </button>
                       }
                       <a
@@ -217,21 +217,21 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
                       >
                         Ver en Adzuna
                       </a>
+                      @if (item.estado === 'RETIRADA') {
+                        <button
+                          type="button"
+                          class="delete-solicitud"
+                          [disabled]="externalActionInFlight() === item.id"
+                          [attr.aria-label]="'Eliminar registro de ' + item.titulo"
+                          (click)="deleteExterna(item)"
+                        >
+                          <svg aria-hidden="true" viewBox="0 0 24 24">
+                            <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2 .3 7h1.4l-.2-7H10Zm3.5 0-.2 7h1.4l.3-7h-1.5Z" />
+                          </svg>
+                        </button>
+                      }
                     </div>
                   </article>
-                  @if (item.estado === 'RETIRADA') {
-                    <button
-                      type="button"
-                      class="delete-solicitud"
-                      [disabled]="externalActionInFlight() === item.id"
-                      [attr.aria-label]="'Eliminar registro de ' + item.titulo"
-                      (click)="deleteExterna(item)"
-                    >
-                      <svg aria-hidden="true" viewBox="0 0 24 24">
-                        <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2 .3 7h1.4l-.2-7H10Zm3.5 0-.2 7h1.4l.3-7h-1.5Z" />
-                      </svg>
-                    </button>
-                  }
                 </div>
               }
             </div>
@@ -389,17 +389,14 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         white-space: nowrap;
       }
 
-      .estado-pill[data-estado='RETIRADA'] {
-        min-width: 8.6rem;
-      }
-
       .estado-pill[data-estado='ACEPTADA'] {
         background: var(--success-soft);
         color: var(--success);
         border-color: rgba(29, 107, 74, 0.3);
       }
 
-      .estado-pill[data-estado='RECHAZADA'] {
+      .estado-pill[data-estado='RECHAZADA'],
+      .estado-pill[data-estado='RETIRADA'] {
         background: var(--danger-soft);
         color: var(--danger);
         border-color: rgba(179, 38, 30, 0.3);
@@ -481,13 +478,21 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
       .solicitud-card-externa.is-aceptada {
         border-color: rgba(29, 107, 74, 0.34);
         border-left-color: var(--success);
-        background: rgba(227, 246, 236, 0.8);
+        background: var(--success-soft);
       }
 
       .solicitud-card-externa.is-retirada {
         border-color: rgba(179, 38, 30, 0.32);
         border-left-color: var(--danger);
-        background: rgba(255, 246, 241, 0.96);
+        background: var(--danger-soft);
+      }
+
+      :host-context(.theme-dark) .solicitud-card-externa.is-aceptada {
+        border-color: rgba(139, 216, 169, 0.42);
+      }
+
+      :host-context(.theme-dark) .solicitud-card-externa.is-retirada {
+        border-color: rgba(255, 138, 128, 0.4);
       }
 
       .solicitud-card-externa .solicitud-card-heading {
@@ -524,28 +529,36 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
       }
 
       .delete-solicitud {
-        width: 2.75rem;
-        height: 2.75rem;
-        position: absolute;
-        top: 50%;
-        right: -3.35rem;
-        z-index: 1;
-        transform: translateY(-50%);
+        width: 100%;
+        min-height: 2.35rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        padding: 0 0.9rem;
         border: 1px solid rgba(179, 38, 30, 0.34);
         border-radius: var(--radius-md);
-        color: #8f3324;
+        color: var(--danger);
         background: var(--danger-soft);
         cursor: pointer;
+        transition: background-color 140ms ease, border-color 140ms ease;
       }
 
       .delete-solicitud:hover,
       .delete-solicitud:focus-visible {
         border-color: rgba(179, 38, 30, 0.54);
-        background: rgba(255, 226, 218, 0.95);
+        background: var(--danger-soft);
+        filter: brightness(0.96);
         outline: none;
+      }
+
+      :host-context(.theme-dark) .delete-solicitud {
+        border-color: rgba(255, 138, 128, 0.42);
+      }
+
+      :host-context(.theme-dark) .delete-solicitud:hover,
+      :host-context(.theme-dark) .delete-solicitud:focus-visible {
+        border-color: rgba(255, 138, 128, 0.62);
+        filter: brightness(1.1);
       }
 
       .delete-solicitud:disabled {
@@ -566,10 +579,6 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         white-space: nowrap;
       }
 
-      .externa-actions .solicitud-link:only-child {
-        grid-column: 2;
-      }
-
       .solicitud-link.secondary {
         border: 1px solid var(--line-strong);
         color: var(--ink);
@@ -585,15 +594,26 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
 
       .solicitud-link.danger {
         border: 1px solid rgba(179, 38, 30, 0.34);
-        color: #8f3324;
+        color: var(--danger);
         background: var(--danger-soft);
       }
 
       .solicitud-link.danger:hover,
       .solicitud-link.danger:focus-visible {
         border-color: rgba(179, 38, 30, 0.54);
-        background: rgba(255, 226, 218, 0.95);
+        background: var(--danger-soft);
+        filter: brightness(0.96);
         outline: none;
+      }
+
+      :host-context(.theme-dark) .solicitud-link.danger {
+        border-color: rgba(255, 138, 128, 0.42);
+      }
+
+      :host-context(.theme-dark) .solicitud-link.danger:hover,
+      :host-context(.theme-dark) .solicitud-link.danger:focus-visible {
+        border-color: rgba(255, 138, 128, 0.62);
+        filter: brightness(1.1);
       }
 
       @media (max-width: 620px) {
@@ -610,12 +630,6 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
           width: 100%;
         }
 
-        .delete-solicitud {
-          top: 0.75rem;
-          right: -3.1rem;
-          transform: none;
-        }
-
         .solicitud-details {
           grid-template-columns: 1fr;
         }
@@ -623,7 +637,6 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         .solicitud-card-externa .solicitud-details {
           grid-template-columns: 1fr;
         }
-
       }
     `,
   ],
@@ -766,8 +779,8 @@ export class MisSolicitudesPage implements OnInit {
     }
     const detalle = estado === 'ACEPTADA'
       ? 'Esta solicitud está marcada como aceptada. Si la anulas, deberás volver a marcarla desde el listado de prácticas si la empresa te confirma de nuevo.'
-      : 'Usa esta opción cuando la empresa te comunique que no has sido seleccionado. La solicitud desaparecerá de esta lista.';
-    const title = estado === 'ACEPTADA' ? '¿Anular la aceptación?' : '¿Marcar como no seleccionado?';
+      : 'Usa esta opción cuando la empresa te comunique que la solicitud ha sido denegada. La solicitud desaparecerá de esta lista.';
+    const title = estado === 'ACEPTADA' ? '¿Anular la aceptación?' : '¿Marcar como denegada?';
     return window.confirm(`${title} ${detalle}`);
   }
 
@@ -886,7 +899,7 @@ const ESTADO_EXTERNA_LABELS: Record<SolicitudExternaEstado, string> = {
   SOLICITADA: 'Solicitada',
   ACEPTADA: 'Aceptada',
   RECHAZADA: 'Rechazada',
-  RETIRADA: 'No seleccionado',
+  RETIRADA: 'Denegada',
 };
 
 function isUnauthorized(error: unknown): boolean {

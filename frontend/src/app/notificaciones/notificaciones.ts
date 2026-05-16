@@ -8,7 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { Notificacion } from './notificaciones.models';
 import { NotificacionesService } from './notificaciones.service';
 
@@ -16,7 +16,7 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
 
 @Component({
   selector: 'app-notificaciones-page',
-  imports: [RouterLink],
+  imports: [],
   template: `
     <main class="page-shell route-page notificaciones-page">
       @if (status() === 'loading') {
@@ -39,64 +39,67 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
       } @else {
         <section class="notifications-list" aria-label="Notificaciones recientes">
           @for (notificacion of notificaciones(); track notificacion.id) {
-            <div class="notification-row">
-              <article class="notification-card" [class.is-read]="notificacion.leida">
-                <div class="notification-copy">
-                  <p class="eyebrow">{{ tipoLabel(notificacion) }}</p>
-                  <h2>{{ notificacion.titulo }}</h2>
-                  @if (notificacion.mensaje) {
-                    <p>{{ notificacion.mensaje }}</p>
-                  }
-                  <time [attr.datetime]="notificacion.createdAt">
-                    {{ dateLabel(notificacion.createdAt) }}
-                  </time>
-                </div>
+            <article class="notification-card" [class.is-read]="notificacion.leida">
+              <div class="notification-copy">
+                <p class="eyebrow">{{ tipoLabel(notificacion) }}</p>
+                <h2>{{ notificacion.titulo }}</h2>
+                @if (notificacion.mensaje) {
+                  <p>{{ notificacion.mensaje }}</p>
+                }
+                <time [attr.datetime]="notificacion.createdAt">
+                  {{ dateLabel(notificacion.createdAt) }}
+                </time>
+              </div>
 
-                <div class="notification-actions">
-                  @if (notificacion.actionUrl) {
-                    @if (isInternalUrl(notificacion.actionUrl)) {
-                      <a class="primary-action" [routerLink]="notificacion.actionUrl">
-                        {{ notificacion.actionLabel || 'Ir a la oferta' }}
-                      </a>
-                    } @else {
-                      <a
-                        class="primary-action"
-                        [href]="notificacion.actionUrl"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {{ notificacion.actionLabel || 'Ir a la oferta' }}
-                      </a>
-                    }
-                  }
-
-                  @if (!notificacion.leida) {
-                    <button
-                      type="button"
-                      class="secondary-action"
-                      [disabled]="markingRead() === notificacion.id || deletingNotification() === notificacion.id"
-                      (click)="marcarLeida(notificacion)"
+              <div class="notification-actions">
+                @if (notificacion.actionUrl) {
+                  @if (isInternalUrl(notificacion.actionUrl)) {
+                    <a
+                      class="primary-action"
+                      [href]="notificacion.actionUrl"
+                      (click)="handleActionClick($event, notificacion)"
                     >
-                      Marcar como leída
-                    </button>
+                      {{ notificacion.actionLabel || 'Ir a la oferta' }}
+                    </a>
                   } @else {
-                    <span class="read-badge">Leída</span>
+                    <a
+                      class="primary-action"
+                      [href]="notificacion.actionUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      (click)="markReadOnAction(notificacion)"
+                    >
+                      {{ notificacion.actionLabel || 'Ir a la oferta' }}
+                    </a>
                   }
-                </div>
-              </article>
+                }
 
-              <button
-                type="button"
-                class="delete-notification"
-                [disabled]="deletingNotification() === notificacion.id"
-                [attr.aria-label]="'Eliminar notificación ' + notificacion.titulo"
-                (click)="deleteNotification(notificacion)"
-              >
-                <svg aria-hidden="true" viewBox="0 0 24 24">
-                  <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2 .3 7h1.4l-.2-7H10Zm3.5 0-.2 7h1.4l.3-7h-1.5Z" />
-                </svg>
-              </button>
-            </div>
+                @if (!notificacion.leida) {
+                  <button
+                    type="button"
+                    class="secondary-action"
+                    [disabled]="markingRead() === notificacion.id || deletingNotification() === notificacion.id"
+                    (click)="marcarLeida(notificacion)"
+                  >
+                    Marcar como leída
+                  </button>
+                } @else {
+                  <span class="read-badge">Leída</span>
+                }
+
+                <button
+                  type="button"
+                  class="delete-notification"
+                  [disabled]="deletingNotification() === notificacion.id"
+                  [attr.aria-label]="'Eliminar notificación ' + notificacion.titulo"
+                  (click)="deleteNotification(notificacion)"
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2 .3 7h1.4l-.2-7H10Zm3.5 0-.2 7h1.4l.3-7h-1.5Z" />
+                  </svg>
+                </button>
+              </div>
+            </article>
           }
         </section>
       }
@@ -113,12 +116,6 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
       .notifications-list {
         display: grid;
         gap: 0.85rem;
-        overflow: visible;
-      }
-
-      .notification-row {
-        position: relative;
-        min-width: 0;
       }
 
       .notification-card,
@@ -151,7 +148,7 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
         border-color: var(--line-strong);
       }
 
-      .notification-card.is-read {
+      .notification-card.is-read .notification-copy {
         opacity: 0.72;
       }
 
@@ -251,27 +248,23 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
       }
 
       .delete-notification {
-        width: 2.75rem;
-        height: 2.75rem;
-        position: absolute;
-        top: 50%;
-        right: -3.35rem;
-        z-index: 1;
-        transform: translateY(-50%);
+        width: 2.4rem;
+        min-height: 2.4rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         border: 1px solid rgba(179, 38, 30, 0.34);
         border-radius: var(--radius-md);
-        color: #8f3324;
+        color: var(--danger);
         background: var(--danger-soft);
         cursor: pointer;
+        transition: background-color 140ms ease, border-color 140ms ease;
       }
 
       .delete-notification:hover,
       .delete-notification:focus-visible {
         border-color: rgba(179, 38, 30, 0.54);
-        background: rgba(255, 226, 218, 0.95);
+        filter: brightness(0.96);
         outline: none;
       }
 
@@ -286,6 +279,16 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
         fill: currentColor;
       }
 
+      :host-context(.theme-dark) .delete-notification {
+        border-color: rgba(255, 138, 128, 0.42);
+      }
+
+      :host-context(.theme-dark) .delete-notification:hover,
+      :host-context(.theme-dark) .delete-notification:focus-visible {
+        border-color: rgba(255, 138, 128, 0.62);
+        filter: brightness(1.1);
+      }
+
       @media (max-width: 720px) {
         .notification-card {
           grid-template-columns: 1fr;
@@ -293,12 +296,6 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
 
         .notification-actions {
           justify-content: flex-start;
-        }
-
-        .delete-notification {
-          top: 0.75rem;
-          right: -3.1rem;
-          transform: none;
         }
       }
     `,
@@ -308,6 +305,7 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
 export class NotificacionesPage implements OnInit {
   private readonly notificacionesService = inject(NotificacionesService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
 
   protected readonly status = signal<NotificationStatus>('loading');
   protected readonly notificaciones = signal<Notificacion[]>([]);
@@ -383,6 +381,37 @@ export class NotificacionesPage implements OnInit {
 
   protected isInternalUrl(url: string): boolean {
     return url.startsWith('/');
+  }
+
+  protected handleActionClick(event: MouseEvent, notificacion: Notificacion): void {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) {
+      this.markReadOnAction(notificacion);
+      return;
+    }
+    event.preventDefault();
+    this.markReadOnAction(notificacion);
+    if (notificacion.actionUrl) {
+      this.router.navigateByUrl(notificacion.actionUrl);
+    }
+  }
+
+  protected markReadOnAction(notificacion: Notificacion): void {
+    if (notificacion.leida) {
+      return;
+    }
+    this.notificacionesService
+      .marcarLeida(notificacion.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (updated) => {
+          this.notificaciones.update((items) =>
+            items.map((item) => (item.id === updated.id ? updated : item)),
+          );
+        },
+        error: () => {
+          // silently ignore — la navegación es lo importante
+        },
+      });
   }
 
   protected dateLabel(value: string): string {

@@ -31,6 +31,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -408,6 +409,7 @@ public class StudentHomeService {
   }
 
   private List<OfertaExternaResponse> searchRecommendedOffers(AlumnoPreferencias preferencias) {
+    LinkedHashMap<String, OfertaExternaResponse> accumulated = new LinkedHashMap<>();
     for (ExternalSearchCriteria search : searchCriteria(preferencias)) {
       OfertaExternaPageResponse response = adzunaService.search(
           search.query(),
@@ -416,12 +418,16 @@ public class StudentHomeService {
           1,
           HOME_EXTERNAL_RESULTS);
 
-      if (!response.results().isEmpty()) {
-        return response.results();
+      for (OfertaExternaResponse oferta : response.results()) {
+        accumulated.putIfAbsent(oferta.id(), oferta);
+      }
+
+      if (accumulated.size() >= HOME_TOP_RECOMMENDATIONS) {
+        break;
       }
     }
 
-    return List.of();
+    return List.copyOf(accumulated.values());
   }
 
   private List<ExternalSearchCriteria> searchCriteria(AlumnoPreferencias preferencias) {
