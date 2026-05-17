@@ -23,6 +23,12 @@ export type TutorAlumnoAsignacion = {
   oferta: string;
   empresa: string;
   observaciones: string | null;
+  horasTotales?: number;
+  fechaInicio?: string;
+  horasDiariasEstimadas?: number;
+  remunerada?: boolean;
+  importeMensual?: number | null;
+  observacionesRetribucion?: string | null;
 };
 
 export type TutorAlumnoAsignacionPendiente = {
@@ -33,6 +39,7 @@ export type TutorAlumnoAsignacionPendiente = {
   empresa: string;
   localidad: string | null;
   urlAplicacion: string | null;
+  ofertaId: number | null;
 };
 
 export type TutorAlumno = {

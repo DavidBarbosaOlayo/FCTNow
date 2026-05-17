@@ -170,7 +170,15 @@ class TutorAlumnoControllerTest {
     aceptada.changeEstado(SolicitudEstado.ACEPTADA);
     SolicitudFct savedAceptada = solicitudFctRepository.save(aceptada);
 
-    asignacionFctRepository.save(new AsignacionFct(savedAceptada, "Inicia el lunes"));
+    asignacionFctRepository.save(new AsignacionFct(
+        savedAceptada,
+        "Inicia el lunes",
+        400,
+        LocalDate.now(),
+        7,
+        false,
+        null,
+        null));
 
     OfertaFct oferta2 = ofertaFctRepository.save(new OfertaFct(
         empresa,

@@ -9,7 +9,6 @@ import com.fctnow.backend.ofertas.OfertaFctRepository;
 import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
 import com.fctnow.backend.user.UserRole;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -49,14 +48,14 @@ public class SolicitudFctService {
     }
 
     List<Long> ids = solicitudes.stream().map(SolicitudFct::getId).toList();
-    Map<Long, Instant> fechasPorSolicitud = asignacionFctRepository.findBySolicitudIdIn(ids).stream()
+    Map<Long, AsignacionFct> asigPorSolicitud = asignacionFctRepository.findBySolicitudIdIn(ids).stream()
         .collect(Collectors.toMap(
             a -> a.getSolicitud().getId(),
-            AsignacionFct::getFechaAsignacion,
+            a -> a,
             (a, b) -> a));
 
     return solicitudes.stream()
-        .map(s -> SolicitudFctResponse.from(s, fechasPorSolicitud.get(s.getId())))
+        .map(s -> SolicitudFctResponse.from(s, asigPorSolicitud.get(s.getId())))
         .toList();
   }
 

@@ -15,7 +15,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 
 @Entity
 @Table(
@@ -47,15 +49,47 @@ public class AsignacionFctExterna {
   @Column(name = "fecha_asignacion", nullable = false)
   private Instant fechaAsignacion;
 
+  @Column(name = "horas_totales", nullable = false)
+  private int horasTotales;
+
+  @Column(name = "fecha_inicio", nullable = false)
+  private LocalDate fechaInicio;
+
+  @Column(name = "horas_diarias_estimadas", nullable = false)
+  private int horasDiariasEstimadas;
+
+  @Column(nullable = false)
+  private boolean remunerada;
+
+  @Column(name = "importe_mensual", precision = 10, scale = 2)
+  private BigDecimal importeMensual;
+
+  @Column(name = "observaciones_retribucion", length = 2000)
+  private String observacionesRetribucion;
+
   protected AsignacionFctExterna() {
   }
 
-  public AsignacionFctExterna(SolicitudExterna solicitud, String observaciones) {
+  public AsignacionFctExterna(
+      SolicitudExterna solicitud,
+      String observaciones,
+      int horasTotales,
+      LocalDate fechaInicio,
+      int horasDiariasEstimadas,
+      boolean remunerada,
+      BigDecimal importeMensual,
+      String observacionesRetribucion) {
     this.solicitud = solicitud;
     this.alumno = solicitud.getAlumno();
     this.estado = AsignacionEstado.ACTIVA;
     this.observaciones = observaciones;
     this.fechaAsignacion = Instant.now();
+    this.horasTotales = horasTotales;
+    this.fechaInicio = fechaInicio;
+    this.horasDiariasEstimadas = horasDiariasEstimadas;
+    this.remunerada = remunerada;
+    this.importeMensual = importeMensual;
+    this.observacionesRetribucion = observacionesRetribucion;
   }
 
   public Long getId() {
@@ -80,5 +114,29 @@ public class AsignacionFctExterna {
 
   public Instant getFechaAsignacion() {
     return fechaAsignacion;
+  }
+
+  public int getHorasTotales() {
+    return horasTotales;
+  }
+
+  public LocalDate getFechaInicio() {
+    return fechaInicio;
+  }
+
+  public int getHorasDiariasEstimadas() {
+    return horasDiariasEstimadas;
+  }
+
+  public boolean isRemunerada() {
+    return remunerada;
+  }
+
+  public BigDecimal getImporteMensual() {
+    return importeMensual;
+  }
+
+  public String getObservacionesRetribucion() {
+    return observacionesRetribucion;
   }
 }

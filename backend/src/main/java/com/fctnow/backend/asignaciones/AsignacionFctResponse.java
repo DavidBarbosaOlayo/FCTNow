@@ -1,6 +1,8 @@
 package com.fctnow.backend.asignaciones;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 
 public record AsignacionFctResponse(
     Long id,
@@ -10,7 +12,8 @@ public record AsignacionFctResponse(
     Long solicitudId,
     AsignacionAlumno alumno,
     AsignacionOferta oferta,
-    AsignacionEmpresa empresa) {
+    AsignacionEmpresa empresa,
+    AsignacionSeguimiento seguimiento) {
 
   public record AsignacionAlumno(Long id, String displayName, String email) {
   }
@@ -19,6 +22,15 @@ public record AsignacionFctResponse(
   }
 
   public record AsignacionEmpresa(Long id, String nombre) {
+  }
+
+  public record AsignacionSeguimiento(
+      int horasTotales,
+      LocalDate fechaInicio,
+      int horasDiariasEstimadas,
+      boolean remunerada,
+      BigDecimal importeMensual,
+      String observacionesRetribucion) {
   }
 
   static AsignacionFctResponse from(AsignacionFct asignacion) {
@@ -37,6 +49,13 @@ public record AsignacionFctResponse(
             asignacion.getOferta().getTitulo()),
         new AsignacionEmpresa(
             asignacion.getEmpresa().getId(),
-            asignacion.getEmpresa().getNombre()));
+            asignacion.getEmpresa().getNombre()),
+        new AsignacionSeguimiento(
+            asignacion.getHorasTotales(),
+            asignacion.getFechaInicio(),
+            asignacion.getHorasDiariasEstimadas(),
+            asignacion.isRemunerada(),
+            asignacion.getImporteMensual(),
+            asignacion.getObservacionesRetribucion()));
   }
 }

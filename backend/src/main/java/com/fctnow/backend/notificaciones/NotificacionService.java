@@ -144,13 +144,32 @@ public class NotificacionService {
         solicitud.getAlumno(),
         null,
         NotificacionTipo.ASIGNACION_CREADA,
-        "Practica asignada",
-        "El centro ha asignado tu practica en %s para \"%s\".".formatted(
-            solicitud.getOferta().getEmpresa().getNombre(),
-            solicitud.getOferta().getTitulo()),
+        "Asignacion FCT confirmada",
+        ("Tu tutor te ha asignado oficialmente a las practicas en %s para \"%s\". "
+            + "Ya estas asignado/a a esta FCT.").formatted(
+                solicitud.getOferta().getEmpresa().getNombre(),
+                solicitud.getOferta().getTitulo()),
         "/alumno/solicitudes",
         "Ver asignacion",
         solicitud.getOferta());
+  }
+
+  @Transactional
+  public void notifyAsignacionExternaCreada(SolicitudExterna solicitud) {
+    clearPendingAssignmentNotifications(solicitud.getAlumno());
+    String empresa = solicitud.getEmpresaNombre() == null || solicitud.getEmpresaNombre().isBlank()
+        ? "la empresa externa"
+        : solicitud.getEmpresaNombre();
+    save(
+        solicitud.getAlumno(),
+        null,
+        NotificacionTipo.ASIGNACION_CREADA,
+        "Asignacion FCT confirmada",
+        ("Tu tutor te ha asignado oficialmente a las practicas en %s para \"%s\". "
+            + "Ya estas asignado/a a esta FCT.").formatted(empresa, solicitud.getTitulo()),
+        "/alumno/solicitudes",
+        "Ver asignacion",
+        null);
   }
 
   @Transactional

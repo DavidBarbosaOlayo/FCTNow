@@ -1,5 +1,14 @@
 export type AsignacionEstado = 'ACTIVA' | 'FINALIZADA';
 
+export type AsignacionSeguimiento = {
+  horasTotales: number;
+  fechaInicio: string;
+  horasDiariasEstimadas: number;
+  remunerada: boolean;
+  importeMensual: number | null;
+  observacionesRetribucion: string | null;
+};
+
 export type AsignacionFct = {
   id: number;
   estado: AsignacionEstado;
@@ -19,11 +28,18 @@ export type AsignacionFct = {
     id: number;
     nombre: string;
   };
+  seguimiento?: AsignacionSeguimiento;
 };
 
 export type AsignacionCreatePayload = {
   solicitudId: number;
   observaciones?: string;
+  horasTotales?: number;
+  fechaInicio?: string;
+  horasDiariasEstimadas?: number;
+  remunerada?: boolean;
+  importeMensual?: number | null;
+  observacionesRetribucion?: string;
 };
 
 export type AsignacionCandidata = {

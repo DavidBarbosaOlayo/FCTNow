@@ -2,7 +2,9 @@ package com.fctnow.backend.asignaciones.externas;
 
 import com.fctnow.backend.asignaciones.AsignacionEstado;
 import com.fctnow.backend.solicitudes.externas.SolicitudExternaFuente;
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 
 public record AsignacionFctExternaResponse(
     Long id,
@@ -18,7 +20,17 @@ public record AsignacionFctExternaResponse(
     String urlAplicacion,
     AsignacionEstado estado,
     String observaciones,
-    Instant fechaAsignacion) {
+    Instant fechaAsignacion,
+    AsignacionSeguimiento seguimiento) {
+
+  public record AsignacionSeguimiento(
+      int horasTotales,
+      LocalDate fechaInicio,
+      int horasDiariasEstimadas,
+      boolean remunerada,
+      BigDecimal importeMensual,
+      String observacionesRetribucion) {
+  }
 
   public static AsignacionFctExternaResponse from(AsignacionFctExterna asignacion) {
     var solicitud = asignacion.getSolicitud();
@@ -36,6 +48,13 @@ public record AsignacionFctExternaResponse(
         solicitud.getUrlAplicacion(),
         asignacion.getEstado(),
         asignacion.getObservaciones(),
-        asignacion.getFechaAsignacion());
+        asignacion.getFechaAsignacion(),
+        new AsignacionSeguimiento(
+            asignacion.getHorasTotales(),
+            asignacion.getFechaInicio(),
+            asignacion.getHorasDiariasEstimadas(),
+            asignacion.isRemunerada(),
+            asignacion.getImporteMensual(),
+            asignacion.getObservacionesRetribucion()));
   }
 }

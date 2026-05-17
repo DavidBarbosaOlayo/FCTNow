@@ -14,6 +14,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
+import { calcFctProgress } from '../asignaciones/fct-progress';
 import {
   SolicitudExterna,
   SolicitudExternaEstado,
@@ -101,6 +102,50 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
                     </div>
                   }
                 </dl>
+
+                @if (solicitud.asignacion; as asig) {
+                  <section class="asignacion-summary" aria-label="Detalle de la asignación FCT">
+                    <p class="eyebrow">Tu asignación FCT</p>
+                    <dl class="solicitud-details">
+                      <div>
+                        <dt>Horas totales</dt>
+                        <dd>{{ asig.horasTotales }} h</dd>
+                      </div>
+                      <div>
+                        <dt>Fecha de inicio</dt>
+                        <dd>{{ formatFechaInicio(asig.fechaInicio) }}</dd>
+                      </div>
+                      <div>
+                        <dt>Jornada estimada</dt>
+                        <dd>{{ asig.horasDiariasEstimadas }} h/día laborable</dd>
+                      </div>
+                      <div>
+                        <dt>Retribución</dt>
+                        <dd>
+                          @if (asig.remunerada) {
+                            Remunerada@if (asig.importeMensual != null) { · {{ formatImporte(asig.importeMensual) }}/mes }
+                          } @else {
+                            No remunerada
+                          }
+                        </dd>
+                      </div>
+                    </dl>
+                    @if (progressFor(asig); as p) {
+                      <div class="asignacion-progress">
+                        <div class="progress-head">
+                          <strong>{{ p.percent }}% completado</strong>
+                          <span>{{ progressLabel(asig) }}</span>
+                        </div>
+                        <div class="progress-bar">
+                          <span [style.width.%]="p.percent"></span>
+                        </div>
+                        <p class="progress-meta">
+                          Estimación basada en {{ asig.horasDiariasEstimadas }} h/día laborable. No es un cómputo oficial.
+                        </p>
+                      </div>
+                    }
+                  </section>
+                }
 
                 <a
                   class="solicitud-link"
@@ -351,6 +396,52 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0.75rem 1rem;
         margin: 0;
+      }
+
+      .asignacion-summary {
+        margin-top: 0.75rem;
+        padding: 0.75rem 0.9rem;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        background: rgba(247, 233, 196, 0.35);
+        display: grid;
+        gap: 0.6rem;
+      }
+
+      .asignacion-summary .eyebrow {
+        margin: 0;
+      }
+
+      .asignacion-progress {
+        display: grid;
+        gap: 0.3rem;
+      }
+
+      .asignacion-progress .progress-bar {
+        height: 0.4rem;
+        background: rgba(17, 78, 74, 0.12);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .asignacion-progress .progress-bar > span {
+        display: block;
+        height: 100%;
+        background: var(--accent);
+        transition: width 0.3s ease;
+      }
+
+      .asignacion-progress .progress-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-size: 0.85rem;
+      }
+
+      .asignacion-progress .progress-meta {
+        margin: 0;
+        font-size: 0.72rem;
+        color: var(--muted);
       }
 
       .solicitud-details div {
@@ -736,6 +827,43 @@ export class MisSolicitudesPage implements OnInit {
       month: '2-digit',
       year: 'numeric',
     });
+  }
+
+  protected formatFechaInicio(value: string): string {
+    const [y, m, d] = value.split('-').map(Number);
+    if (!y || !m || !d) return value;
+    return new Date(y, m - 1, d).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  }
+
+  protected formatImporte(value: number): string {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'EUR',
+      maximumFractionDigits: 2,
+    }).format(value);
+  }
+
+  protected progressFor(asig: { horasTotales: number; fechaInicio: string; horasDiariasEstimadas: number }) {
+    return calcFctProgress({
+      horasTotales: asig.horasTotales,
+      fechaInicio: asig.fechaInicio,
+      horasDiariasEstimadas: asig.horasDiariasEstimadas,
+    });
+  }
+
+  protected progressLabel(asig: { horasTotales: number; fechaInicio: string; horasDiariasEstimadas: number }): string {
+    const p = this.progressFor(asig);
+    if (p.status === 'pendiente') {
+      return 'Comienza el ' + this.formatFechaInicio(asig.fechaInicio);
+    }
+    if (p.status === 'completada') {
+      return 'Horas estimadas completadas';
+    }
+    return `${p.horasCompletadas} / ${asig.horasTotales} h estimadas`;
   }
 
   protected resultsTitle(): string {

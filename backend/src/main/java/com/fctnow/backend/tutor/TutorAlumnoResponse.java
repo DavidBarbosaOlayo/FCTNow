@@ -1,6 +1,7 @@
 package com.fctnow.backend.tutor;
 
 import com.fctnow.backend.asignaciones.AsignacionEstado;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -43,7 +44,13 @@ public record TutorAlumnoResponse(
       Instant fechaAsignacion,
       String oferta,
       String empresa,
-      String observaciones) {
+      String observaciones,
+      int horasTotales,
+      LocalDate fechaInicio,
+      int horasDiariasEstimadas,
+      boolean remunerada,
+      BigDecimal importeMensual,
+      String observacionesRetribucion) {
   }
 
   public record AsignacionPendiente(
@@ -53,6 +60,7 @@ public record TutorAlumnoResponse(
       String oferta,
       String empresa,
       String localidad,
-      String urlAplicacion) {
+      String urlAplicacion,
+      Long ofertaId) {
   }
 }

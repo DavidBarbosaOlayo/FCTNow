@@ -15,6 +15,7 @@ import { Observable } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { AsignacionesExternasService } from '../asignaciones/asignaciones-externas.service';
 import { AsignacionesService } from '../asignaciones/asignaciones.service';
+import { calcFctProgress } from '../asignaciones/fct-progress';
 import { MensajesCacheService } from '../mensajes/mensajes-cache.service';
 import { MensajesService } from '../mensajes/mensajes.service';
 import {
@@ -469,12 +470,46 @@ type ViewMode = 'list' | 'cards';
                 <dt>Observaciones del alumno</dt>
                 <dd>{{ alumno.preferencias?.observaciones || '—' }}</dd>
               </div>
-              @if (alumno.asignacionActual) {
+              @if (alumno.asignacionActual; as asig) {
                 <div class="detail-full">
                   <dt>Asignación actual</dt>
                   <dd>
-                    {{ alumno.asignacionActual.empresa }} · {{ alumno.asignacionActual.oferta }}
-                    · Desde {{ formatFecha(alumno.asignacionActual.fechaAsignacion) }}
+                    {{ asig.empresa }} · {{ asig.oferta }} · Desde {{ formatFecha(asig.fechaAsignacion) }}
+                  </dd>
+                </div>
+                <div class="detail-full">
+                  <dt>Horas y fecha de inicio</dt>
+                  <dd>
+                    {{ asig.horasTotales }} h totales · Inicio {{ formatFechaInicio(asig.fechaInicio) }}
+                    · Jornada estimada {{ asig.horasDiariasEstimadas }} h/día
+                  </dd>
+                </div>
+                <div class="detail-full">
+                  <dt>Retribución</dt>
+                  <dd>
+                    @if (asig.remunerada) {
+                      Remunerada@if (asig.importeMensual != null) { · {{ formatImporte(asig.importeMensual) }}/mes }
+                      @if (asig.observacionesRetribucion) { · {{ asig.observacionesRetribucion }} }
+                    } @else {
+                      No remunerada
+                    }
+                  </dd>
+                </div>
+                <div class="detail-full">
+                  <dt>Progreso estimado</dt>
+                  <dd>
+                    <div class="asignacion-progress" aria-label="Progreso estimado de FCT">
+                      <div class="progress-head">
+                        <strong>{{ progressFor(asig).percent }}% completado</strong>
+                        <span>{{ progressLabel(asig) }}</span>
+                      </div>
+                      <div class="progress-bar">
+                        <span [style.width.%]="progressFor(asig).percent"></span>
+                      </div>
+                      <p class="progress-meta">
+                        Estimación basada en {{ asig.horasDiariasEstimadas }} h/día laborable. No es un cómputo oficial.
+                      </p>
+                    </div>
                   </dd>
                 </div>
               } @else if (alumno.asignacionPendiente) {
@@ -550,7 +585,7 @@ type ViewMode = 'list' | 'cards';
       @if (selectedAlumno(); as alumno) {
         <section class="modal-backdrop" role="presentation" (click)="closeAssignModal()">
           <article
-            class="confirm-modal"
+            class="confirm-modal assign-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="assign-modal-title"
@@ -562,7 +597,11 @@ type ViewMode = 'list' | 'cards';
               <dl class="confirm-details">
                 <div>
                   <dt>Alumno</dt>
-                  <dd>{{ alumno.displayName }} · {{ alumno.email }}</dd>
+                  <dd>{{ alumno.displayName }}</dd>
+                </div>
+                <div>
+                  <dt>Correo del centro</dt>
+                  <dd>{{ alumno.centroEmail || alumno.email }}</dd>
                 </div>
                 <div>
                   <dt>Oferta</dt>
@@ -576,13 +615,78 @@ type ViewMode = 'list' | 'cards';
                   <dt>Tipo</dt>
                   <dd>{{ pendiente.tipo === 'INTERNA' ? 'Oferta interna' : 'Oferta externa' }}</dd>
                 </div>
-                @if (pendiente.localidad) {
-                  <div>
-                    <dt>Localidad</dt>
-                    <dd>{{ pendiente.localidad }}</dd>
-                  </div>
-                }
+                <div>
+                  <dt>Localidad</dt>
+                  <dd>{{ pendiente.localidad || '—' }}</dd>
+                </div>
               </dl>
+              <form [formGroup]="assignForm" class="assign-form" (ngSubmit)="confirmAssign(alumno)">
+                <div class="assign-grid">
+                  <label class="assign-field">
+                    <span class="assign-label">Horas totales de FCT</span>
+                    <input
+                      type="number"
+                      min="40"
+                      max="1000"
+                      step="1"
+                      formControlName="horasTotales"
+                      autocomplete="off"
+                    />
+                    <small class="assign-hint">Entre 40 y 1000 horas.</small>
+                  </label>
+                  <label class="assign-field">
+                    <span class="assign-label">Fecha real de inicio</span>
+                    <input type="date" formControlName="fechaInicio" />
+                    <small class="assign-hint">Fecha en la que el alumno empieza en la empresa.</small>
+                  </label>
+                  <label class="assign-field">
+                    <span class="assign-label">Jornada estimada (h/día laborable)</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="12"
+                      step="1"
+                      formControlName="horasDiariasEstimadas"
+                    />
+                    <small class="assign-hint">Sirve para estimar el % de FCT completada.</small>
+                  </label>
+                  <label class="assign-toggle assign-field--wide">
+                    <span>Prácticas remuneradas</span>
+                    <input type="checkbox" formControlName="remunerada" />
+                  </label>
+                  @if (assignForm.controls.remunerada.value) {
+                    <label class="assign-field">
+                      <span class="assign-label">Importe mensual (€)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        formControlName="importeMensual"
+                        placeholder="Opcional"
+                      />
+                      <small class="assign-hint">Déjalo vacío si es variable.</small>
+                    </label>
+                    <label class="assign-field">
+                      <span class="assign-label">Observaciones de retribución</span>
+                      <textarea
+                        rows="2"
+                        maxlength="2000"
+                        formControlName="observacionesRetribucion"
+                        placeholder="Beca, dietas, etc. (Opcional)"
+                      ></textarea>
+                    </label>
+                  }
+                  <label class="assign-field assign-field--wide">
+                    <span class="assign-label">Observaciones generales</span>
+                    <textarea
+                      rows="2"
+                      maxlength="2000"
+                      formControlName="observaciones"
+                      placeholder="Opcional"
+                    ></textarea>
+                  </label>
+                </div>
+              </form>
               <p class="modal-note">
                 Al confirmar, este alumno quedará marcado como asignado y no podrá recibir otra
                 empresa mientras exista esta asignación activa.
@@ -591,23 +695,34 @@ type ViewMode = 'list' | 'cards';
             @if (assignStatus() === 'error') {
               <p class="modal-error" role="alert">{{ assignError() }}</p>
             }
-            <div class="modal-actions">
-              <button
-                type="button"
-                class="secondary-button"
-                [disabled]="assignStatus() === 'assigning'"
-                (click)="closeAssignModal()"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                class="primary-button"
-                [disabled]="assignStatus() === 'assigning'"
-                (click)="confirmAssign(alumno)"
-              >
-                {{ assignStatus() === 'assigning' ? 'Asignando...' : 'Confirmar asignación' }}
-              </button>
+            <div class="modal-actions assign-modal-actions">
+              @if (alumno.asignacionPendiente; as pendiente) {
+                <button
+                  type="button"
+                  class="link-button"
+                  (click)="openOferta(pendiente)"
+                >
+                  Ver oferta
+                </button>
+              }
+              <div class="modal-actions-right">
+                <button
+                  type="button"
+                  class="secondary-button"
+                  [disabled]="assignStatus() === 'assigning'"
+                  (click)="closeAssignModal()"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  class="primary-button"
+                  [disabled]="assignStatus() === 'assigning' || assignForm.invalid"
+                  (click)="confirmAssign(alumno)"
+                >
+                  {{ assignStatus() === 'assigning' ? 'Asignando...' : 'Confirmar asignación' }}
+                </button>
+              </div>
             </div>
           </article>
         </section>
@@ -1267,11 +1382,13 @@ type ViewMode = 'list' | 'cards';
       .primary-button,
       .secondary-button {
         min-height: 2.35rem;
+        min-width: 6rem;
         border: 0;
         border-radius: var(--radius-md);
-        padding: 0 0.85rem;
+        padding: 0 1rem;
         font: inherit;
         font-weight: 800;
+        white-space: nowrap;
         cursor: pointer;
       }
 
@@ -1327,12 +1444,64 @@ type ViewMode = 'list' | 'cards';
         gap: 1rem;
       }
 
+      .confirm-modal.assign-modal {
+        width: min(100%, 56rem);
+      }
+
+      .assign-modal .confirm-details {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .assign-modal-actions {
+        justify-content: flex-start;
+        align-items: center;
+      }
+
+      .modal-actions-right {
+        display: flex;
+        gap: 0.65rem;
+        margin-left: auto;
+      }
+
+      .link-button {
+        background: transparent;
+        border: 0;
+        padding: 0;
+        font: inherit;
+        font-weight: 700;
+        color: var(--accent);
+        text-decoration: underline;
+        cursor: pointer;
+      }
+
+      .link-button:hover,
+      .link-button:focus-visible {
+        color: var(--accent-hover);
+        outline: none;
+      }
+
       .confirm-modal.detail-modal {
         width: min(72rem, calc(100vw - 2rem));
         max-height: min(calc(100dvh - 2rem), 52rem);
         padding: 1rem;
         gap: 0.75rem;
       }
+
+      .assign-form{display:contents}
+      .assign-grid{display:grid;gap:.85rem 1rem;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+      .assign-field{display:grid;grid-template-rows:1.2rem 2.4rem 1.05rem;gap:.3rem;font-size:.85rem;color:var(--muted);align-content:start}
+      .assign-field--wide{grid-column:1/-1;grid-template-rows:1.2rem auto auto}
+      .assign-label{font-weight:700;color:var(--ink);line-height:1.2rem}
+      .assign-field>input,.assign-field>textarea{height:2.4rem;padding:.4rem .65rem;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface);color:inherit;font:inherit;box-sizing:border-box}
+      .assign-field>textarea{height:auto;min-height:4.2rem;padding:.5rem .65rem;resize:vertical}
+      .assign-hint{font-size:.72rem;color:var(--muted);line-height:1.05rem;min-height:1.05rem;margin:0}
+      .assign-toggle{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.55rem .8rem;border:1px solid var(--line);border-radius:var(--radius-md);background:rgba(17,78,74,.04);font-weight:700;color:var(--ink)}
+      .assign-toggle input[type='checkbox']{width:1.1rem;height:1.1rem;margin:0}
+      .asignacion-progress { display: grid; gap: 0.25rem; }
+      .asignacion-progress .progress-bar { height: 0.4rem; border-radius: 999px; overflow: hidden; background: rgba(17, 78, 74, 0.12); }
+      .asignacion-progress .progress-bar > span { display: block; height: 100%; background: var(--accent); }
+      .asignacion-progress .progress-head { display: flex; justify-content: space-between; font-size: 0.85rem; }
+      .asignacion-progress .progress-meta { font-size: 0.72rem; color: var(--muted); margin: 0; }
 
       .create-modal {
         width: min(46rem, calc(100vw - 2rem));
@@ -1576,6 +1745,31 @@ export class TutorPage implements OnInit {
   >('TODOS', { nonNullable: true });
   protected readonly familiaFilter = new FormControl<string>('TODAS', { nonNullable: true });
   protected readonly cicloFilter = new FormControl<string>('TODOS', { nonNullable: true });
+  protected readonly assignForm = new FormGroup({
+    horasTotales: new FormControl<number | null>(400, {
+      validators: [Validators.required, Validators.min(40), Validators.max(1000)],
+    }),
+    fechaInicio: new FormControl<string>(todayIso(), {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    horasDiariasEstimadas: new FormControl<number | null>(7, {
+      validators: [Validators.required, Validators.min(1), Validators.max(12)],
+    }),
+    remunerada: new FormControl<boolean>(false, { nonNullable: true }),
+    importeMensual: new FormControl<number | null>(null, {
+      validators: [Validators.min(0)],
+    }),
+    observacionesRetribucion: new FormControl<string>('', {
+      nonNullable: true,
+      validators: [Validators.maxLength(2000)],
+    }),
+    observaciones: new FormControl<string>('', {
+      nonNullable: true,
+      validators: [Validators.maxLength(2000)],
+    }),
+  });
+
   protected readonly createAlumnoForm = new FormGroup({
     displayName: new FormControl<string>('', {
       nonNullable: true,
@@ -1708,11 +1902,58 @@ export class TutorPage implements OnInit {
     });
   }
 
+  protected formatFechaInicio(value: string | null | undefined): string {
+    if (!value) return '';
+    const [y, m, d] = value.split('-').map(Number);
+    if (!y || !m || !d) return value;
+    return new Date(y, m - 1, d).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  }
+
+  protected formatImporte(value: number): string {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'EUR',
+      maximumFractionDigits: 2,
+    }).format(value);
+  }
+
+  protected progressFor(asig: { horasTotales?: number; fechaInicio?: string; horasDiariasEstimadas?: number }) {
+    return calcFctProgress({
+      horasTotales: asig.horasTotales ?? 0,
+      fechaInicio: asig.fechaInicio ?? todayIso(),
+      horasDiariasEstimadas: asig.horasDiariasEstimadas ?? 7,
+    });
+  }
+
+  protected progressLabel(asig: { horasTotales?: number; fechaInicio?: string; horasDiariasEstimadas?: number }): string {
+    const p = this.progressFor(asig);
+    if (p.status === 'pendiente') {
+      return 'Comienza el ' + this.formatFechaInicio(asig.fechaInicio ?? null);
+    }
+    if (p.status === 'completada') {
+      return 'Horas estimadas completadas';
+    }
+    return `${p.horasCompletadas} / ${asig.horasTotales ?? 0} h estimadas`;
+  }
+
   protected openAssignModal(alumno: TutorAlumno): void {
     if (!alumno.asignacionPendiente || alumno.asignacionActual) return;
     this.selectedAlumno.set(alumno);
     this.assignStatus.set('idle');
     this.assignError.set('');
+    this.assignForm.reset({
+      horasTotales: 400,
+      fechaInicio: todayIso(),
+      horasDiariasEstimadas: 7,
+      remunerada: false,
+      importeMensual: null,
+      observacionesRetribucion: '',
+      observaciones: '',
+    });
   }
 
   protected openAlumnoDetail(alumno: TutorAlumno): void {
@@ -1886,6 +2127,16 @@ export class TutorPage implements OnInit {
     this.openCv(alumno, 'download');
   }
 
+  protected openOferta(pendiente: { tipo: 'INTERNA' | 'EXTERNA'; ofertaId: number | null; urlAplicacion: string | null }): void {
+    if (pendiente.tipo === 'INTERNA' && pendiente.ofertaId != null) {
+      this.router.navigate(['/practicas', pendiente.ofertaId]);
+      return;
+    }
+    if (pendiente.tipo === 'EXTERNA' && pendiente.urlAplicacion) {
+      window.open(pendiente.urlAplicacion, '_blank', 'noopener');
+    }
+  }
+
   protected closeAssignModal(): void {
     if (this.assignStatus() === 'assigning') return;
     this.selectedAlumno.set(null);
@@ -1898,12 +2149,31 @@ export class TutorPage implements OnInit {
     if (!pendiente || alumno.asignacionActual || this.assignStatus() === 'assigning') {
       return;
     }
+    if (this.assignForm.invalid) {
+      this.assignForm.markAllAsTouched();
+      return;
+    }
+
+    const raw = this.assignForm.getRawValue();
+    const remunerada = !!raw.remunerada;
+    const observacionesRetribucion = raw.observacionesRetribucion?.trim();
+    const observaciones = raw.observaciones?.trim();
+    const importe = remunerada && raw.importeMensual != null ? Number(raw.importeMensual) : null;
 
     this.assignStatus.set('assigning');
     this.assignError.set('');
+    const commonPayload = {
+      horasTotales: Number(raw.horasTotales),
+      fechaInicio: raw.fechaInicio,
+      horasDiariasEstimadas: Number(raw.horasDiariasEstimadas),
+      remunerada,
+      importeMensual: importe,
+      observacionesRetribucion: remunerada && observacionesRetribucion ? observacionesRetribucion : undefined,
+      observaciones: observaciones ? observaciones : undefined,
+    };
     const request$: Observable<unknown> = pendiente.tipo === 'INTERNA'
-      ? this.asignacionesService.create({ solicitudId: pendiente.solicitudId })
-      : this.asignacionesExternasService.create({ solicitudExternaId: pendiente.solicitudId });
+      ? this.asignacionesService.create({ solicitudId: pendiente.solicitudId, ...commonPayload })
+      : this.asignacionesExternasService.create({ solicitudExternaId: pendiente.solicitudId, ...commonPayload });
 
     request$
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -2143,6 +2413,14 @@ function normalizeOption(value: string | null | undefined): string {
       .replace(/[\u0300-\u036f]/g, '')
       .toLocaleLowerCase('es') ?? ''
   );
+}
+
+function todayIso(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 function compareAlumnosByAssignmentState(a: TutorAlumno, b: TutorAlumno): number {

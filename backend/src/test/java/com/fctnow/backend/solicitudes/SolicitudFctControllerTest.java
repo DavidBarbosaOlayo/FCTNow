@@ -202,7 +202,15 @@ class SolicitudFctControllerTest {
     transactionTemplate.executeWithoutResult(status -> {
       SolicitudFct managed = solicitudFctRepository.findById(solicitudId).orElseThrow();
       managed.changeEstado(SolicitudEstado.ACEPTADA);
-      asignacionFctRepository.save(new AsignacionFct(managed, "Asignada por el centro"));
+      asignacionFctRepository.save(new AsignacionFct(
+          managed,
+          "Asignada por el centro",
+          400,
+          LocalDate.now(),
+          7,
+          false,
+          null,
+          null));
     });
 
     mockMvc.perform(get("/api/solicitudes/me")

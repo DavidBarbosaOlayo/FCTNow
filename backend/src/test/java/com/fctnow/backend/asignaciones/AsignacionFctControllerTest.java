@@ -25,6 +25,7 @@ import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
 import com.fctnow.backend.user.UserRole;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -222,14 +223,79 @@ class AsignacionFctControllerTest {
     mockMvc.perform(post("/api/asignaciones")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"solicitudId\":" + solicitudAceptadaId + ",\"observaciones\":\"  Inicia el lunes  \"}"))
+            .content("{\"solicitudId\":" + solicitudAceptadaId
+                + ",\"observaciones\":\"  Inicia el lunes  \""
+                + ",\"horasTotales\":400"
+                + ",\"fechaInicio\":\"" + LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE) + "\""
+                + ",\"horasDiariasEstimadas\":7"
+                + ",\"remunerada\":true"
+                + ",\"importeMensual\":350.00"
+                + ",\"observacionesRetribucion\":\" Beca mensual \"}"))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.estado").value("ACTIVA"))
         .andExpect(jsonPath("$.solicitudId").value(solicitudAceptadaId.intValue()))
         .andExpect(jsonPath("$.alumno.email").value("alumno-a@example.com"))
         .andExpect(jsonPath("$.oferta.titulo").value("Practicas DAW"))
         .andExpect(jsonPath("$.empresa.nombre").value("Tech Norte Formacion"))
-        .andExpect(jsonPath("$.observaciones").value("Inicia el lunes"));
+        .andExpect(jsonPath("$.observaciones").value("Inicia el lunes"))
+        .andExpect(jsonPath("$.seguimiento.horasTotales").value(400))
+        .andExpect(jsonPath("$.seguimiento.horasDiariasEstimadas").value(7))
+        .andExpect(jsonPath("$.seguimiento.remunerada").value(true))
+        .andExpect(jsonPath("$.seguimiento.importeMensual").value(350.00))
+        .andExpect(jsonPath("$.seguimiento.observacionesRetribucion").value("Beca mensual"));
+  }
+
+  @Test
+  void createRequiresHorasTotales() throws Exception {
+    mockMvc.perform(post("/api/asignaciones")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"solicitudId\":" + solicitudAceptadaId
+                + ",\"fechaInicio\":\"" + LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE) + "\""
+                + ",\"horasDiariasEstimadas\":7"
+                + ",\"remunerada\":false}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void createRejectsHorasTotalesOutOfRange() throws Exception {
+    mockMvc.perform(post("/api/asignaciones")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"solicitudId\":" + solicitudAceptadaId
+                + ",\"horasTotales\":5"
+                + ",\"fechaInicio\":\"" + LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE) + "\""
+                + ",\"horasDiariasEstimadas\":7"
+                + ",\"remunerada\":false}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void createRejectsFechaInicioMuyAntigua() throws Exception {
+    String past = LocalDate.now().minusDays(120).format(DateTimeFormatter.ISO_LOCAL_DATE);
+    mockMvc.perform(post("/api/asignaciones")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"solicitudId\":" + solicitudAceptadaId
+                + ",\"horasTotales\":400"
+                + ",\"fechaInicio\":\"" + past + "\""
+                + ",\"horasDiariasEstimadas\":7"
+                + ",\"remunerada\":false}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void createRejectsImporteSinRemuneracion() throws Exception {
+    mockMvc.perform(post("/api/asignaciones")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"solicitudId\":" + solicitudAceptadaId
+                + ",\"horasTotales\":400"
+                + ",\"fechaInicio\":\"" + LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE) + "\""
+                + ",\"horasDiariasEstimadas\":7"
+                + ",\"remunerada\":false"
+                + ",\"importeMensual\":300.00}"))
+        .andExpect(status().isBadRequest());
   }
 
   @Test
@@ -237,7 +303,7 @@ class AsignacionFctControllerTest {
     mockMvc.perform(post("/api/asignaciones")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"solicitudId\":" + solicitudAceptadaId + "}"))
+            .content(validPayload(solicitudAceptadaId)))
         .andExpect(status().isCreated());
 
     mockMvc.perform(get("/api/notificaciones/me")
@@ -262,7 +328,7 @@ class AsignacionFctControllerTest {
     mockMvc.perform(post("/api/asignaciones")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"solicitudId\":" + solicitudAceptadaId + "}"))
+            .content(validPayload(solicitudAceptadaId)))
         .andExpect(status().isCreated());
 
     mockMvc.perform(get("/api/notificaciones/me")
@@ -281,7 +347,7 @@ class AsignacionFctControllerTest {
     mockMvc.perform(post("/api/asignaciones")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"solicitudId\":" + solicitudAceptadaId + "}"))
+            .content(validPayload(solicitudAceptadaId)))
         .andExpect(status().isCreated());
 
     mockMvc.perform(get("/api/asignaciones")
@@ -296,7 +362,7 @@ class AsignacionFctControllerTest {
     mockMvc.perform(post("/api/asignaciones")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"solicitudId\":" + solicitudPendienteId + "}"))
+            .content(validPayload(solicitudPendienteId)))
         .andExpect(status().isConflict());
   }
 
@@ -305,7 +371,7 @@ class AsignacionFctControllerTest {
     mockMvc.perform(post("/api/asignaciones")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"solicitudId\":" + solicitudRechazadaId + "}"))
+            .content(validPayload(solicitudRechazadaId)))
         .andExpect(status().isConflict());
   }
 
@@ -314,13 +380,13 @@ class AsignacionFctControllerTest {
     mockMvc.perform(post("/api/asignaciones")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"solicitudId\":" + solicitudAceptadaId + "}"))
+            .content(validPayload(solicitudAceptadaId)))
         .andExpect(status().isCreated());
 
     mockMvc.perform(post("/api/asignaciones")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"solicitudId\":" + solicitudAceptadaId + "}"))
+            .content(validPayload(solicitudAceptadaId)))
         .andExpect(status().isConflict());
   }
 
@@ -329,13 +395,13 @@ class AsignacionFctControllerTest {
     mockMvc.perform(post("/api/asignaciones")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"solicitudId\":" + solicitudAceptadaId + "}"))
+            .content(validPayload(solicitudAceptadaId)))
         .andExpect(status().isCreated());
 
     mockMvc.perform(post("/api/asignaciones")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"solicitudId\":" + segundaSolicitudAceptadaMismoAlumnoId + "}"))
+            .content(validPayload(segundaSolicitudAceptadaMismoAlumnoId)))
         .andExpect(status().isConflict());
   }
 
@@ -344,7 +410,7 @@ class AsignacionFctControllerTest {
     mockMvc.perform(post("/api/asignaciones")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"solicitudId\":999999}"))
+            .content(validPayload(999999L)))
         .andExpect(status().isNotFound());
   }
 
@@ -353,7 +419,7 @@ class AsignacionFctControllerTest {
     mockMvc.perform(post("/api/asignaciones")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("alumno-a@example.com"))
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"solicitudId\":" + solicitudAceptadaId + "}"))
+            .content(validPayload(solicitudAceptadaId)))
         .andExpect(status().isForbidden());
   }
 
@@ -362,7 +428,7 @@ class AsignacionFctControllerTest {
     mockMvc.perform(post("/api/asignaciones")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("empresa@example.com"))
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"solicitudId\":" + solicitudAceptadaId + "}"))
+            .content(validPayload(solicitudAceptadaId)))
         .andExpect(status().isForbidden());
   }
 
@@ -389,7 +455,7 @@ class AsignacionFctControllerTest {
     mockMvc.perform(post("/api/asignaciones")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("tutor@example.com"))
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"solicitudId\":" + solicitudAceptadaId + "}"))
+            .content(validPayload(solicitudAceptadaId)))
         .andExpect(status().isCreated());
 
     mockMvc.perform(get("/api/asignaciones/candidatas")
@@ -412,6 +478,14 @@ class AsignacionFctControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("{}"))
         .andExpect(status().isBadRequest());
+  }
+
+  private String validPayload(Long solicitudId) {
+    return "{\"solicitudId\":" + solicitudId
+        + ",\"horasTotales\":400"
+        + ",\"fechaInicio\":\"" + LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE) + "\""
+        + ",\"horasDiariasEstimadas\":7"
+        + ",\"remunerada\":false}";
   }
 
   private String accessToken(String email) throws Exception {

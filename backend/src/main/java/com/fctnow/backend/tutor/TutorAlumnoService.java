@@ -555,7 +555,13 @@ public class TutorAlumnoService {
         a.getFechaAsignacion(),
         a.getOferta().getTitulo(),
         a.getEmpresa().getNombre(),
-        a.getObservaciones());
+        a.getObservaciones(),
+        a.getHorasTotales(),
+        a.getFechaInicio(),
+        a.getHorasDiariasEstimadas(),
+        a.isRemunerada(),
+        a.getImporteMensual(),
+        a.getObservacionesRetribucion());
   }
 
   private AsignacionActual toAsignacionActual(AsignacionFctExterna a) {
@@ -569,7 +575,13 @@ public class TutorAlumnoService {
         a.getFechaAsignacion(),
         s.getTitulo(),
         empresa,
-        a.getObservaciones());
+        a.getObservaciones(),
+        a.getHorasTotales(),
+        a.getFechaInicio(),
+        a.getHorasDiariasEstimadas(),
+        a.isRemunerada(),
+        a.getImporteMensual(),
+        a.getObservacionesRetribucion());
   }
 
   private AsignacionPendiente pickAsignacionPendiente(
@@ -596,7 +608,8 @@ public class TutorAlumnoService {
         s.getOferta().getTitulo(),
         s.getOferta().getEmpresa().getNombre(),
         s.getOferta().getLocalidad(),
-        null);
+        null,
+        s.getOferta().getId());
   }
 
   private AsignacionPendiente toAsignacionPendiente(SolicitudExterna s) {
@@ -610,7 +623,8 @@ public class TutorAlumnoService {
         s.getTitulo(),
         empresa,
         s.getLocalidad(),
-        s.getUrlAplicacion());
+        s.getUrlAplicacion(),
+        null);
   }
 
   private void requireCentroRole(JwtAuthenticationToken authentication) {

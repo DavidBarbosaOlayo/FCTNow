@@ -460,7 +460,14 @@ describe('TutorPage', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(asignacionesService.create).toHaveBeenCalledOnceWith({ solicitudId: 77 });
+    expect(asignacionesService.create).toHaveBeenCalledOnceWith(
+      jasmine.objectContaining({
+        solicitudId: 77,
+        horasTotales: 400,
+        horasDiariasEstimadas: 7,
+        remunerada: false,
+      }),
+    );
   });
 
   it('switches from the default list view to cards view', async () => {

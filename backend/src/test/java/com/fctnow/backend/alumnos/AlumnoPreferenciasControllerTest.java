@@ -9,10 +9,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fctnow.backend.asignaciones.AsignacionFct;
+import com.fctnow.backend.asignaciones.AsignacionFctRepository;
 import com.fctnow.backend.auth.LoginRequest;
+import com.fctnow.backend.empresas.Empresa;
+import com.fctnow.backend.empresas.EmpresaEstado;
+import com.fctnow.backend.empresas.EmpresaRepository;
+import com.fctnow.backend.empresas.IdentificadorFiscalTipo;
+import com.fctnow.backend.ofertas.OfertaEstado;
+import com.fctnow.backend.ofertas.OfertaFct;
+import com.fctnow.backend.ofertas.OfertaFctRepository;
+import com.fctnow.backend.ofertas.OfertaModalidad;
+import com.fctnow.backend.solicitudes.SolicitudEstado;
+import com.fctnow.backend.solicitudes.SolicitudFct;
+import com.fctnow.backend.solicitudes.SolicitudFctRepository;
 import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
 import com.fctnow.backend.user.UserRole;
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,10 +62,26 @@ class AlumnoPreferenciasControllerTest {
   @Autowired
   private AlumnoPreferenciasRepository alumnoPreferenciasRepository;
 
+  @Autowired
+  private EmpresaRepository empresaRepository;
+
+  @Autowired
+  private OfertaFctRepository ofertaFctRepository;
+
+  @Autowired
+  private SolicitudFctRepository solicitudFctRepository;
+
+  @Autowired
+  private AsignacionFctRepository asignacionFctRepository;
+
   @BeforeEach
   void setUp() {
+    asignacionFctRepository.deleteAll();
+    solicitudFctRepository.deleteAll();
+    ofertaFctRepository.deleteAll();
     alumnoPreferenciasRepository.deleteAll();
     userAccountRepository.deleteAll();
+    empresaRepository.deleteAll();
 
     userAccountRepository.save(new UserAccount(
         "alumno@example.com",
@@ -101,6 +131,44 @@ class AlumnoPreferenciasControllerTest {
   @Test
   void preferencesRejectNonAlumnoRole() throws Exception {
     mockMvc.perform(get("/api/alumnos/me/preferencias")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("empresa@example.com")))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void assignmentRequiresAuthentication() throws Exception {
+    mockMvc.perform(get("/api/alumnos/me/asignacion"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void alumnoGetsNoContentWhenNoActiveAssignment() throws Exception {
+    mockMvc.perform(get("/api/alumnos/me/asignacion")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("alumno@example.com")))
+        .andExpect(status().isNoContent());
+  }
+
+  @Test
+  void alumnoGetsActiveAssignment() throws Exception {
+    saveInternalAssignment();
+
+    mockMvc.perform(get("/api/alumnos/me/asignacion")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("alumno@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.origen").value("INTERNA"))
+        .andExpect(jsonPath("$.estado").value("ACTIVA"))
+        .andExpect(jsonPath("$.oferta.titulo").value("Practicas DAW"))
+        .andExpect(jsonPath("$.empresa.nombre").value("Tech Norte Formacion"))
+        .andExpect(jsonPath("$.ubicacion.localidad").value("Valencia"))
+        .andExpect(jsonPath("$.seguimiento.horasTotales").value(400))
+        .andExpect(jsonPath("$.seguimiento.fechaInicio").value("2026-09-15"))
+        .andExpect(jsonPath("$.seguimiento.horasDiariasEstimadas").value(7))
+        .andExpect(jsonPath("$.seguimiento.remunerada").value(false));
+  }
+
+  @Test
+  void assignmentRejectsNonAlumnoRole() throws Exception {
+    mockMvc.perform(get("/api/alumnos/me/asignacion")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken("empresa@example.com")))
         .andExpect(status().isForbidden());
   }
@@ -188,6 +256,51 @@ class AlumnoPreferenciasControllerTest {
         "modalidadPreferida", "HIBRIDA",
         "fechaDisponibilidad", "2026-09-15",
         "observaciones", "Preferencia por equipos de desarrollo web.");
+  }
+
+  private void saveInternalAssignment() {
+    UserAccount alumno = userAccountRepository.findByEmailIgnoreCase("alumno@example.com").orElseThrow();
+    Empresa empresa = empresaRepository.save(new Empresa(
+        "Tech Norte Formacion",
+        IdentificadorFiscalTipo.CIF,
+        "B12345678",
+        "Desarrollo de software",
+        "Empresa colaboradora",
+        "Calle Mayor 12",
+        "Valencia",
+        "Valencia",
+        "46001",
+        "fct@technorte.example",
+        "960000000",
+        "Laura Garcia",
+        EmpresaEstado.ACTIVA));
+    OfertaFct oferta = ofertaFctRepository.save(new OfertaFct(
+        empresa,
+        "Practicas DAW",
+        "Descripcion de la oferta.",
+        "Informatica y comunicaciones",
+        "Desarrollo de Aplicaciones Web",
+        "Valencia",
+        "Valencia",
+        OfertaModalidad.PRESENCIAL,
+        LocalDate.of(2026, 9, 15),
+        LocalDate.of(2026, 12, 15),
+        3,
+        null,
+        "Tareas variadas.",
+        OfertaEstado.PUBLICADA));
+    SolicitudFct solicitud = new SolicitudFct(alumno, oferta);
+    solicitud.changeEstado(SolicitudEstado.ACEPTADA);
+    solicitud = solicitudFctRepository.save(solicitud);
+    asignacionFctRepository.save(new AsignacionFct(
+        solicitud,
+        "Asignacion confirmada",
+        400,
+        LocalDate.of(2026, 9, 15),
+        7,
+        false,
+        null,
+        null));
   }
 
   private MockMultipartHttpServletRequestBuilder multipartPut(String url) {
