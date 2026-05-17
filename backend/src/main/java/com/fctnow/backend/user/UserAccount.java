@@ -42,6 +42,21 @@ public class UserAccount {
   @Column(name = "centro_email", length = 254)
   private String centroEmail;
 
+  @Column(name = "foto_file_name", length = 255)
+  private String fotoFileName;
+
+  @Column(name = "foto_content_type", length = 100)
+  private String fotoContentType;
+
+  @Column(name = "foto_size")
+  private Long fotoSize;
+
+  @Column(name = "foto_content")
+  private byte[] fotoContent;
+
+  @Column(name = "foto_updated_at")
+  private Instant fotoUpdatedAt;
+
   @ElementCollection(fetch = FetchType.EAGER)
   @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
   @Enumerated(EnumType.STRING)
@@ -94,6 +109,14 @@ public class UserAccount {
     this.centroEmail = centroEmail;
   }
 
+  public void updateFoto(String fileName, String contentType, byte[] content) {
+    this.fotoFileName = fileName;
+    this.fotoContentType = contentType;
+    this.fotoContent = content;
+    this.fotoSize = content == null ? null : (long) content.length;
+    this.fotoUpdatedAt = Instant.now();
+  }
+
   public Long getId() {
     return id;
   }
@@ -128,5 +151,25 @@ public class UserAccount {
 
   public Instant getCreatedAt() {
     return createdAt;
+  }
+
+  public String getFotoFileName() {
+    return fotoFileName;
+  }
+
+  public String getFotoContentType() {
+    return fotoContentType;
+  }
+
+  public Long getFotoSize() {
+    return fotoSize;
+  }
+
+  public byte[] getFotoContent() {
+    return fotoContent;
+  }
+
+  public Instant getFotoUpdatedAt() {
+    return fotoUpdatedAt;
   }
 }

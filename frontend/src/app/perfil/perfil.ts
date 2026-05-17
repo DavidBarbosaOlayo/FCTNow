@@ -11,11 +11,13 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
+import { PreferenciasCacheService } from '../alumnos/preferencias-cache.service';
 import { PreferenciasAlumnoPage } from '../alumnos/preferencias';
 import { AuthenticatedUser, UserRole } from '../auth/auth.models';
 import { AuthService } from '../auth/auth.service';
 import { AlumnoPreferenciasService } from '../alumnos/preferencias.service';
 import { EmpresaPerfilPage } from '../empresas/empresa-perfil';
+import { UserProfilePhotoService } from './user-profile-photo.service';
 
 type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
 
@@ -123,6 +125,22 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
             <section class="profile-role-section" aria-label="Perfil de empresa">
               <app-empresa-perfil-page [embedded]="true" />
             </section>
+            <button type="button" class="logout-action" (click)="logout()">
+              Cerrar sesión
+            </button>
+          </div>
+        } @else if (isStaff(user)) {
+          <div class="profile-role-row">
+            <input
+              type="file"
+              class="staff-photo-input"
+              accept="image/jpeg,image/png,image/webp"
+              hidden
+              (change)="onStaffPhotoSelected($event)"
+            />
+            @if (photoUploadError(); as msg) {
+              <p class="photo-error" role="alert">{{ msg }}</p>
+            }
             <button type="button" class="logout-action" (click)="logout()">
               Cerrar sesión
             </button>
@@ -344,6 +362,12 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
         padding-top: 0.25rem;
       }
 
+      .photo-error {
+        margin: 0;
+        color: var(--danger);
+        font-size: 0.9rem;
+      }
+
       .logout-action {
         min-height: 2.5rem;
         padding: 0 0.95rem;
@@ -488,6 +512,8 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
 export class PerfilPage implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly preferenciasService = inject(AlumnoPreferenciasService);
+  private readonly preferenciasCache = inject(PreferenciasCacheService);
+  private readonly userPhotoService = inject(UserProfilePhotoService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly router = inject(Router);
@@ -497,6 +523,8 @@ export class PerfilPage implements OnInit {
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly profilePhotoDataUrl = signal<string | null>(null);
   protected readonly alumnoPreferencesEditing = signal(false);
+  protected readonly photoUploadError = signal<string | null>(null);
+  protected readonly photoUploading = signal(false);
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) {
@@ -509,9 +537,17 @@ export class PerfilPage implements OnInit {
       return;
     }
 
-    this.status.set('loading');
     this.errorMessage.set(null);
 
+    const cachedUser = this.authService.currentUser();
+    if (cachedUser) {
+      this.user.set(cachedUser);
+      this.status.set('loaded');
+      this.loadAlumnoPhoto(cachedUser);
+      return;
+    }
+
+    this.status.set('loading');
     this.authService
       .loadAuthenticatedUser()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -553,16 +589,56 @@ export class PerfilPage implements OnInit {
   }
 
   protected canEditPhoto(user: AuthenticatedUser): boolean {
-    return user.roles.includes('ALUMNO') && this.alumnoPreferencesEditing();
+    if (user.roles.includes('ALUMNO')) {
+      return this.alumnoPreferencesEditing();
+    }
+    return this.isStaff(user);
+  }
+
+  protected isStaff(user: AuthenticatedUser | null): boolean {
+    if (!user) return false;
+    return user.roles.includes('TUTOR_CENTRO') || user.roles.includes('COORDINADOR');
   }
 
   protected openPhotoPicker(): void {
     if (!isPlatformBrowser(this.platformId)) {
       return;
     }
+    const user = this.user();
+    if (user && this.isStaff(user)) {
+      document
+        .querySelector<HTMLInputElement>('input[type="file"].staff-photo-input')
+        ?.click();
+      return;
+    }
     document
       .querySelector<HTMLInputElement>('app-preferencias-alumno-page input[type="file"].visually-hidden-file')
       ?.click();
+  }
+
+  protected onStaffPhotoSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.item(0) ?? null;
+    input.value = '';
+    if (!file || this.photoUploading()) {
+      return;
+    }
+
+    this.photoUploading.set(true);
+    this.photoUploadError.set(null);
+    this.userPhotoService
+      .uploadPhoto(file)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.profilePhotoDataUrl.set(response.photoDataUrl);
+          this.photoUploading.set(false);
+        },
+        error: (error: unknown) => {
+          this.photoUploadError.set(photoUploadErrorMessage(error));
+          this.photoUploading.set(false);
+        },
+      });
   }
 
   protected logout(): void {
@@ -574,22 +650,44 @@ export class PerfilPage implements OnInit {
   }
 
   private loadAlumnoPhoto(user: AuthenticatedUser): void {
-    if (!user.roles.includes('ALUMNO')) {
-      this.profilePhotoDataUrl.set(null);
+    if (user.roles.includes('ALUMNO')) {
+      const cached = this.preferenciasCache.get();
+      if (cached) {
+        this.profilePhotoDataUrl.set(cached.photoDataUrl);
+        return;
+      }
+
+      this.preferenciasService
+        .getMine()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (preferences) => {
+            this.preferenciasCache.set(preferences);
+            this.profilePhotoDataUrl.set(preferences.photoDataUrl);
+          },
+          error: () => {
+            this.profilePhotoDataUrl.set(null);
+          },
+        });
       return;
     }
 
-    this.preferenciasService
-      .getMine()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (preferences) => {
-          this.profilePhotoDataUrl.set(preferences.photoDataUrl);
-        },
-        error: () => {
-          this.profilePhotoDataUrl.set(null);
-        },
-      });
+    if (this.isStaff(user)) {
+      this.userPhotoService
+        .getMine()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (response) => {
+            this.profilePhotoDataUrl.set(response.photoDataUrl);
+          },
+          error: () => {
+            this.profilePhotoDataUrl.set(null);
+          },
+        });
+      return;
+    }
+
+    this.profilePhotoDataUrl.set(null);
   }
 }
 
@@ -603,6 +701,23 @@ const ROLE_LABELS: Record<UserRole, string> = {
 
 function isUnauthorized(error: unknown): boolean {
   return error instanceof HttpErrorResponse && error.status === 401;
+}
+
+function photoUploadErrorMessage(error: unknown): string {
+  if (error instanceof HttpErrorResponse) {
+    if (error.status === 0) {
+      return 'No se pudo contactar con el servidor.';
+    }
+    if (error.status === 400) {
+      return typeof error.error?.message === 'string'
+        ? error.error.message
+        : 'La foto no es válida.';
+    }
+    if (error.status === 401 || error.status === 403) {
+      return 'Tu sesión no permite actualizar la foto.';
+    }
+  }
+  return 'No se pudo actualizar la foto. Inténtalo de nuevo.';
 }
 
 function profileErrorMessage(error: unknown): string {

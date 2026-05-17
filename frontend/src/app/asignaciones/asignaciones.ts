@@ -13,6 +13,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { AsignacionesCacheService } from './asignaciones-cache.service';
 import {
   AsignacionExternaCandidata,
   AsignacionFctExterna,
@@ -487,6 +488,7 @@ const ESTADO_LABEL: Record<AsignacionEstado, string> = {
 export class AsignacionesPage implements OnInit {
   private readonly asignacionesService = inject(AsignacionesService);
   private readonly externasService = inject(AsignacionesExternasService);
+  private readonly cache = inject(AsignacionesCacheService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly fb = inject(FormBuilder);
@@ -619,7 +621,7 @@ export class AsignacionesPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => this.empresaFilterValue.set(value ?? ''));
 
-    this.loadAll();
+    this.loadAll(false);
   }
 
   protected estadoLabel(estado: AsignacionEstado): string {
@@ -678,7 +680,8 @@ export class AsignacionesPage implements OnInit {
     this.saveStatus.set('idle');
     this.createMessage.set('Asignacion creada correctamente.');
     this.form.reset({ candidataKey: null, observaciones: '' });
-    this.loadAll();
+    this.cache.invalidate();
+    this.loadAll(true);
   }
 
   private handleCreateError(err: unknown): void {
@@ -686,7 +689,21 @@ export class AsignacionesPage implements OnInit {
     this.createMessage.set(this.describeError(err));
   }
 
-  private loadAll(): void {
+  private loadAll(forceRefresh = false): void {
+    if (!forceRefresh) {
+      const cached = this.cache.get();
+      if (cached) {
+        this.internas.set(cached.internas);
+        this.externas.set(cached.externas);
+        this.candidatasInternas.set(cached.candidatasInternas);
+        this.candidatasExternas.set(cached.candidatasExternas);
+        this.candidatasStatus.set('loaded');
+        this.errorMessage.set('');
+        this.status.set('loaded');
+        return;
+      }
+    }
+
     this.status.set('loading');
     this.candidatasStatus.set('loading');
     this.errorMessage.set('');
@@ -696,6 +713,12 @@ export class AsignacionesPage implements OnInit {
     const onDone = () => {
       pending -= 1;
       if (pending === 0 && !failed) {
+        this.cache.set({
+          internas: this.internas(),
+          externas: this.externas(),
+          candidatasInternas: this.candidatasInternas(),
+          candidatasExternas: this.candidatasExternas(),
+        });
         this.status.set(this.asignaciones().length === 0 ? 'empty' : 'loaded');
         if (this.status() === 'empty') this.status.set('loaded');
       }

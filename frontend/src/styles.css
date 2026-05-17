@@ -939,7 +939,7 @@ app-root .route-panel {
   padding: 1.5rem;
 }
 
-app-root .route-panel p,
+app-root .route-panel p:not(.eyebrow),
 app-root .route-list {
   margin: 1rem 0 0;
   color: var(--muted);

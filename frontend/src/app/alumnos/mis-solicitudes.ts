@@ -22,6 +22,7 @@ import { PracticasCacheService } from '../practicas/practicas-cache.service';
 import { SolicitudesExternasService } from '../practicas/solicitudes-externas.service';
 import { SolicitudEstado, SolicitudFct } from '../practicas/solicitudes.models';
 import { SolicitudesService } from '../practicas/solicitudes.service';
+import { MisSolicitudesCacheService } from './mis-solicitudes-cache.service';
 
 type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated';
 
@@ -647,6 +648,7 @@ export class MisSolicitudesPage implements OnInit {
   private readonly solicitudesService = inject(SolicitudesService);
   private readonly solicitudesExternasService = inject(SolicitudesExternasService);
   private readonly practicasCache = inject(PracticasCacheService);
+  private readonly misSolicitudesCache = inject(MisSolicitudesCacheService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
 
@@ -673,32 +675,46 @@ export class MisSolicitudesPage implements OnInit {
       return;
     }
 
-    this.status.set('loading');
     this.errorMessage.set(null);
-    this.externasStatus.set('loading');
     this.externasErrorMessage.set(null);
 
-    this.solicitudesService
-      .mine()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (solicitudes) => {
-          this.solicitudes.set(solicitudes);
-          this.status.set(solicitudes.length === 0 ? 'empty' : 'loaded');
-        },
-        error: (error: unknown) => {
-          this.solicitudes.set([]);
+    const cachedInternas = this.misSolicitudesCache.get();
+    if (cachedInternas) {
+      this.solicitudes.set(cachedInternas);
+      this.status.set(cachedInternas.length === 0 ? 'empty' : 'loaded');
+    } else {
+      this.status.set('loading');
+      this.solicitudesService
+        .mine()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (solicitudes) => {
+            this.misSolicitudesCache.set(solicitudes);
+            this.solicitudes.set(solicitudes);
+            this.status.set(solicitudes.length === 0 ? 'empty' : 'loaded');
+          },
+          error: (error: unknown) => {
+            this.solicitudes.set([]);
 
-          if (isUnauthorized(error)) {
-            this.status.set('not-authenticated');
-            return;
-          }
+            if (isUnauthorized(error)) {
+              this.status.set('not-authenticated');
+              return;
+            }
 
-          this.errorMessage.set(listErrorMessage(error));
-          this.status.set('error');
-        },
-      });
-    this.loadExternas();
+            this.errorMessage.set(listErrorMessage(error));
+            this.status.set('error');
+          },
+        });
+    }
+
+    const cachedExternas = this.practicasCache.getMineExternas();
+    if (cachedExternas) {
+      this.solicitudesExternas.set(cachedExternas);
+      this.externasStatus.set(cachedExternas.length === 0 ? 'empty' : 'loaded');
+    } else {
+      this.externasStatus.set('loading');
+      this.loadExternas();
+    }
   }
 
   protected estadoLabel(estado: SolicitudEstado): string {

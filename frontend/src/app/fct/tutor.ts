@@ -15,12 +15,15 @@ import { Observable } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { AsignacionesExternasService } from '../asignaciones/asignaciones-externas.service';
 import { AsignacionesService } from '../asignaciones/asignaciones.service';
+import { MensajesCacheService } from '../mensajes/mensajes-cache.service';
+import { MensajesService } from '../mensajes/mensajes.service';
 import {
   TutorAlumno,
   TutorAlumnoCreateRequest,
   TutorAlumnoImportResult,
 } from './tutor-alumnos.models';
 import { TutorAlumnosService } from './tutor-alumnos.service';
+import { TutorCacheService } from './tutor-cache.service';
 
 type LoadStatus = 'loading' | 'loaded' | 'error';
 type AssignStatus = 'idle' | 'assigning' | 'error' | 'success';
@@ -512,10 +515,24 @@ type ViewMode = 'list' | 'cards';
             @if (cvActionStatus() === 'error') {
               <p class="modal-error" role="alert">{{ cvActionError() }}</p>
             }
+            @if (chatError(); as msg) {
+              <p class="modal-error" role="alert">{{ msg }}</p>
+            }
 
             <div class="modal-actions">
               <button type="button" class="secondary-button" (click)="closeAlumnoDetail()">
                 Cerrar
+              </button>
+              <button
+                type="button"
+                class="primary-button chat-action"
+                [disabled]="openingChatForAlumnoId() !== null"
+                (click)="openAlumnoChat(alumno)"
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24" class="chat-icon">
+                  <path d="M2 21l1.65-4.95A9 9 0 1 1 7 19.46L2 21Zm15-7a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm-5 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm-5 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"/>
+                </svg>
+                {{ openingChatForAlumnoId() === alumno.id ? 'Abriendo...' : 'Enviar mensaje' }}
               </button>
             </div>
           </article>
@@ -1360,6 +1377,18 @@ type ViewMode = 'list' | 'cards';
         gap: 0.65rem;
       }
 
+      .chat-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+      }
+
+      .chat-icon {
+        width: 1.05rem;
+        height: 1.05rem;
+        fill: currentColor;
+      }
+
       @media (max-width: 980px) {
         .actions-panel {
           grid-template-columns: 1fr;
@@ -1430,8 +1459,11 @@ type ViewMode = 'list' | 'cards';
 })
 export class TutorPage implements OnInit {
   private readonly tutorService = inject(TutorAlumnosService);
+  private readonly cache = inject(TutorCacheService);
   private readonly asignacionesService = inject(AsignacionesService);
   private readonly asignacionesExternasService = inject(AsignacionesExternasService);
+  private readonly mensajesService = inject(MensajesService);
+  private readonly mensajesCache = inject(MensajesCacheService);
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
@@ -1457,6 +1489,8 @@ export class TutorPage implements OnInit {
   protected readonly importError = signal<string>('');
   protected readonly importResult = signal<TutorAlumnoImportResult | null>(null);
   protected readonly viewMode = signal<ViewMode>('list');
+  protected readonly openingChatForAlumnoId = signal<number | null>(null);
+  protected readonly chatError = signal<string>('');
 
   protected readonly searchFilter = new FormControl<string>('', { nonNullable: true });
   protected readonly estadoFilter = new FormControl<
@@ -1607,13 +1641,49 @@ export class TutorPage implements OnInit {
     this.selectedDetailAlumno.set(alumno);
     this.cvActionStatus.set('idle');
     this.cvActionError.set('');
+    this.chatError.set('');
   }
 
   protected closeAlumnoDetail(): void {
     if (this.cvActionStatus() === 'loading') return;
+    if (this.openingChatForAlumnoId() !== null) return;
     this.selectedDetailAlumno.set(null);
     this.cvActionStatus.set('idle');
     this.cvActionError.set('');
+    this.chatError.set('');
+  }
+
+  protected openAlumnoChat(alumno: TutorAlumno): void {
+    if (this.openingChatForAlumnoId() !== null) return;
+    this.openingChatForAlumnoId.set(alumno.id);
+    this.chatError.set('');
+
+    this.mensajesService
+      .crearConversacion({ contactoId: alumno.id })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (conversacion) => {
+          this.openingChatForAlumnoId.set(null);
+          this.mensajesCache.invalidate();
+          this.selectedDetailAlumno.set(null);
+          this.router.navigate(['/mensajes'], {
+            queryParams: { conversacionId: conversacion.id },
+          });
+        },
+        error: (err: unknown) => {
+          this.openingChatForAlumnoId.set(null);
+          this.chatError.set(this.describeChatError(err));
+        },
+      });
+  }
+
+  private describeChatError(err: unknown): string {
+    if (err instanceof HttpErrorResponse) {
+      if (err.status === 403) return 'No puedes iniciar un chat con este alumno.';
+      if (err.status === 404) return 'El alumno ya no existe.';
+      if (err.status === 0) return 'No se pudo contactar con el servidor.';
+    }
+    return 'No se pudo abrir el chat. Inténtalo de nuevo.';
   }
 
   protected openCreateAlumnoModal(): void {
@@ -1663,7 +1733,8 @@ export class TutorPage implements OnInit {
           this.alumnos.update((current) => [...current, alumno]);
           this.createAlumnoStatus.set('success');
           this.isCreateAlumnoModalOpen.set(false);
-          this.load();
+          this.cache.invalidate();
+          this.load(true);
         },
         error: (err: unknown) => {
           this.createAlumnoStatus.set('error');
@@ -1702,7 +1773,8 @@ export class TutorPage implements OnInit {
           this.importResult.set(result);
           this.importStatus.set('success');
           input.value = '';
-          this.load();
+          this.cache.invalidate();
+          this.load(true);
         },
         error: (err: unknown) => {
           this.importStatus.set('error');
@@ -1761,7 +1833,8 @@ export class TutorPage implements OnInit {
         next: () => {
           this.assignStatus.set('success');
           this.selectedAlumno.set(null);
-          this.load();
+          this.cache.invalidate();
+          this.load(true);
         },
         error: (err: unknown) => {
           this.assignStatus.set('error');
@@ -1770,7 +1843,18 @@ export class TutorPage implements OnInit {
       });
   }
 
-  private load(): void {
+  private load(forceRefresh = false): void {
+    if (!forceRefresh) {
+      const cached = this.cache.get();
+      if (cached) {
+        this.alumnos.set(cached);
+        this.errorMessage.set('');
+        this.status.set('loaded');
+        this.consumePendingAssignParam();
+        return;
+      }
+    }
+
     this.status.set('loading');
     this.errorMessage.set('');
     this.tutorService
@@ -1778,6 +1862,7 @@ export class TutorPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (data) => {
+          this.cache.set(data);
           this.alumnos.set(data);
           this.status.set('loaded');
           this.consumePendingAssignParam();
