@@ -1,0 +1,9 @@
+spring:
+  flyway:
+    locations:
+      - classpath:db/migration
+      - classpath:db/seed/prod
+    placeholders:
+      bootstrapTutorEmail: ${FCTNOW_BOOTSTRAP_TUTOR_EMAIL:}
+      bootstrapTutorPasswordHash: ${FCTNOW_BOOTSTRAP_TUTOR_PASSWORD_HASH:}
+      bootstrapTutorDisplayName: ${FCTNOW_BOOTSTRAP_TUTOR_DISPLAY_NAME:Tutor Centro}
