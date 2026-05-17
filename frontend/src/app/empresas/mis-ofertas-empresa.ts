@@ -13,6 +13,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { OfertaEstado, OfertaFct, OfertaModalidad } from '../practicas/ofertas.models';
 import { EmpresaOfertasService } from './empresa-ofertas.service';
+import { MisOfertasEmpresaCacheService } from './mis-ofertas-empresa-cache.service';
 
 type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated';
 
@@ -338,6 +339,7 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
 })
 export class MisOfertasEmpresaPage implements OnInit {
   private readonly empresaOfertasService = inject(EmpresaOfertasService);
+  private readonly cache = inject(MisOfertasEmpresaCacheService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
 
@@ -386,7 +388,8 @@ export class MisOfertasEmpresaPage implements OnInit {
         next: () => {
           this.actionMessage.set('Oferta eliminada');
           this.updatingId.set(null);
-          this.loadOfertas();
+          this.cache.invalidate();
+          this.loadOfertas(true);
         },
         error: (error: unknown) => {
           this.actionMessage.set(actionErrorMessage(error));
@@ -435,6 +438,9 @@ export class MisOfertasEmpresaPage implements OnInit {
           this.ofertas.update((current) =>
             current.map((item) => (item.id === updated.id ? updated : item)),
           );
+          this.cache.update((items) =>
+            items.map((item) => (item.id === updated.id ? updated : item)),
+          );
           this.actionMessage.set(success);
           this.updatingId.set(null);
         },
@@ -445,7 +451,17 @@ export class MisOfertasEmpresaPage implements OnInit {
       });
   }
 
-  private loadOfertas(): void {
+  private loadOfertas(forceRefresh = false): void {
+    if (!forceRefresh) {
+      const cached = this.cache.get();
+      if (cached) {
+        this.ofertas.set(cached);
+        this.errorMessage.set(null);
+        this.status.set(cached.length === 0 ? 'empty' : 'loaded');
+        return;
+      }
+    }
+
     this.status.set('loading');
     this.errorMessage.set(null);
 
@@ -454,6 +470,7 @@ export class MisOfertasEmpresaPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (ofertas) => {
+          this.cache.set(ofertas);
           this.ofertas.set(ofertas);
           this.status.set(ofertas.length === 0 ? 'empty' : 'loaded');
         },

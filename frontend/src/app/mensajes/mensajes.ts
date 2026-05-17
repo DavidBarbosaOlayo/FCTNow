@@ -13,6 +13,8 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { MensajesCacheService } from './mensajes-cache.service';
 import { ContactoMensaje, Conversacion, Mensaje } from './mensajes.models';
 import { MensajesService } from './mensajes.service';
 
@@ -781,6 +783,8 @@ type ContactStatus = 'idle' | 'loading' | 'loaded' | 'error';
 })
 export class MensajesPage implements OnInit {
   private readonly mensajesService = inject(MensajesService);
+  private readonly cache = inject(MensajesCacheService);
+  private readonly activatedRoute = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private scrollTaskQueued = false;
 
@@ -881,6 +885,7 @@ export class MensajesPage implements OnInit {
           this.creatingConversation.set(null);
           this.creatingChat.set(false);
           this.conversaciones.update((items) => upsertConversation(items, conversacion));
+          this.cache.updateConversaciones((items) => upsertConversation(items, conversacion));
           this.selectConversation(conversacion);
         },
         error: (error: unknown) => {
@@ -941,6 +946,10 @@ export class MensajesPage implements OnInit {
           this.messageControl.markAsUntouched();
           this.mensajes.update((items) => [...items, mensaje]);
           this.conversaciones.update((items) => moveConversationToTop(items, conversacion.id, mensaje));
+          this.cache.appendMensaje(conversacion.id, mensaje);
+          this.cache.updateConversaciones((items) =>
+            moveConversationToTop(items, conversacion.id, mensaje),
+          );
           this.scheduleThreadScrollToBottom();
         },
         error: (error: unknown) => {
@@ -985,18 +994,26 @@ export class MensajesPage implements OnInit {
   }
 
   private loadConversaciones(): void {
-    this.status.set('loading');
     this.errorMessage.set(null);
+
+    const cached = this.cache.getConversaciones();
+    if (cached) {
+      this.conversaciones.set(cached);
+      this.status.set('loaded');
+      this.applyInitialSelection(cached);
+      return;
+    }
+
+    this.status.set('loading');
     this.mensajesService
       .listConversaciones()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (items) => {
+          this.cache.setConversaciones(items);
           this.conversaciones.set(items);
           this.status.set('loaded');
-          if (items.length > 0 && this.selectedConversationId() === null) {
-            this.selectConversation(items[0]);
-          }
+          this.applyInitialSelection(items);
         },
         error: (error: unknown) => {
           this.conversaciones.set([]);
@@ -1006,14 +1023,47 @@ export class MensajesPage implements OnInit {
       });
   }
 
+  private applyInitialSelection(items: Conversacion[]): void {
+    if (items.length === 0) return;
+    if (this.selectedConversationId() !== null) return;
+
+    const requested = this.requestedConversacionId();
+    if (requested !== null) {
+      const match = items.find((item) => item.id === requested);
+      if (match) {
+        this.selectConversation(match);
+        return;
+      }
+    }
+
+    this.selectConversation(items[0]);
+  }
+
+  private requestedConversacionId(): number | null {
+    const raw = this.activatedRoute.snapshot.queryParamMap.get('conversacionId');
+    if (raw === null) return null;
+    const parsed = Number.parseInt(raw, 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
   private loadMensajes(conversacionId: number): void {
-    this.messageStatus.set('loading');
     this.threadErrorMessage.set(null);
+
+    const cached = this.cache.getMensajes(conversacionId);
+    if (cached) {
+      this.mensajes.set(cached);
+      this.messageStatus.set('idle');
+      this.scheduleThreadScrollToBottom();
+      return;
+    }
+
+    this.messageStatus.set('loading');
     this.mensajesService
       .listMensajes(conversacionId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (items) => {
+          this.cache.setMensajes(conversacionId, items);
           this.mensajes.set(items);
           this.messageStatus.set('idle');
           this.scheduleThreadScrollToBottom();

@@ -14,6 +14,7 @@ import { RouterLink } from '@angular/router';
 import { SolicitudEstado } from '../practicas/solicitudes.models';
 import { EmpresaSolicitud } from './empresa-solicitudes.models';
 import { EmpresaSolicitudesService } from './empresa-solicitudes.service';
+import { MisSolicitudesEmpresaCacheService } from './mis-solicitudes-empresa-cache.service';
 
 type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated';
 
@@ -324,6 +325,7 @@ type ListStatus = 'loading' | 'loaded' | 'empty' | 'error' | 'not-authenticated'
 })
 export class MisSolicitudesEmpresaPage implements OnInit {
   private readonly empresaSolicitudesService = inject(EmpresaSolicitudesService);
+  private readonly cache = inject(MisSolicitudesEmpresaCacheService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
 
@@ -394,6 +396,9 @@ export class MisSolicitudesEmpresaPage implements OnInit {
           this.solicitudes.update((current) =>
             current.map((item) => (item.id === updated.id ? updated : item)),
           );
+          this.cache.update((items) =>
+            items.map((item) => (item.id === updated.id ? updated : item)),
+          );
           this.actionMessage.set(success);
           this.updatingId.set(null);
         },
@@ -404,7 +409,17 @@ export class MisSolicitudesEmpresaPage implements OnInit {
       });
   }
 
-  private loadSolicitudes(): void {
+  private loadSolicitudes(forceRefresh = false): void {
+    if (!forceRefresh) {
+      const cached = this.cache.get();
+      if (cached) {
+        this.solicitudes.set(cached);
+        this.errorMessage.set(null);
+        this.status.set(cached.length === 0 ? 'empty' : 'loaded');
+        return;
+      }
+    }
+
     this.status.set('loading');
     this.errorMessage.set(null);
 
@@ -413,6 +428,7 @@ export class MisSolicitudesEmpresaPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (solicitudes) => {
+          this.cache.set(solicitudes);
           this.solicitudes.set(solicitudes);
           this.status.set(solicitudes.length === 0 ? 'empty' : 'loaded');
         },

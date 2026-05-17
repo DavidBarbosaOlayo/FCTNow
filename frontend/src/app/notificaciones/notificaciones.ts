@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
+import { NotificacionesCacheService } from './notificaciones-cache.service';
 import { Notificacion } from './notificaciones.models';
 import { NotificacionesService } from './notificaciones.service';
 
@@ -304,6 +305,7 @@ type NotificationStatus = 'loading' | 'loaded' | 'error';
 })
 export class NotificacionesPage implements OnInit {
   private readonly notificacionesService = inject(NotificacionesService);
+  private readonly cache = inject(NotificacionesCacheService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
 
@@ -331,6 +333,9 @@ export class NotificacionesPage implements OnInit {
           this.notificaciones.update((items) =>
             items.map((item) => (item.id === updated.id ? updated : item)),
           );
+          this.cache.update((items) =>
+            items.map((item) => (item.id === updated.id ? updated : item)),
+          );
         },
         error: (error: unknown) => {
           this.markingRead.set(null);
@@ -352,6 +357,7 @@ export class NotificacionesPage implements OnInit {
         next: () => {
           this.deletingNotification.set(null);
           this.notificaciones.update((items) => items.filter((item) => item.id !== notificacion.id));
+          this.cache.update((items) => items.filter((item) => item.id !== notificacion.id));
         },
         error: (error: unknown) => {
           this.deletingNotification.set(null);
@@ -407,6 +413,9 @@ export class NotificacionesPage implements OnInit {
           this.notificaciones.update((items) =>
             items.map((item) => (item.id === updated.id ? updated : item)),
           );
+          this.cache.update((items) =>
+            items.map((item) => (item.id === updated.id ? updated : item)),
+          );
         },
         error: () => {
           // silently ignore — la navegación es lo importante
@@ -425,7 +434,17 @@ export class NotificacionesPage implements OnInit {
     }).format(date);
   }
 
-  private load(): void {
+  private load(forceRefresh = false): void {
+    if (!forceRefresh) {
+      const cached = this.cache.get();
+      if (cached) {
+        this.notificaciones.set(cached);
+        this.errorMessage.set(null);
+        this.status.set('loaded');
+        return;
+      }
+    }
+
     this.status.set('loading');
     this.errorMessage.set(null);
     this.notificacionesService
@@ -433,6 +452,7 @@ export class NotificacionesPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (items) => {
+          this.cache.set(items);
           this.notificaciones.set(items);
           this.status.set('loaded');
         },

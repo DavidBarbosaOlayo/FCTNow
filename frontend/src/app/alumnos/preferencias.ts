@@ -23,6 +23,7 @@ import { OfertaModalidad } from '../practicas/ofertas.models';
 import { CicloFormativoOption, GRADO_LABELS, GradoFp, getCiclosByFamilia } from '../practicas/ciclos-formativos';
 import { PracticasCacheService } from '../practicas/practicas-cache.service';
 import { FAMILIAS_PROFESIONALES, LOCALIDADES_ES } from '../practicas/practicas-options';
+import { PreferenciasCacheService } from './preferencias-cache.service';
 import { AlumnoPreferencias, AlumnoPreferenciasRequest } from './preferencias.models';
 import { AlumnoPreferenciasService } from './preferencias.service';
 
@@ -517,10 +518,6 @@ type UploadStatus = 'idle' | 'uploading' | 'saved' | 'error';
         border-right: 0;
       }
 
-      .profile-view-grid div:nth-last-child(-n+2):not(.full-row) {
-        border-bottom: 0;
-      }
-
       .profile-view-grid .full-row {
         grid-column: 1 / -1;
         border-right: 0;
@@ -699,6 +696,7 @@ export class PreferenciasAlumnoPage implements OnInit {
   private readonly preferenciasService = inject(AlumnoPreferenciasService);
   private readonly homeCache = inject(HomeCacheService);
   private readonly practicasCache = inject(PracticasCacheService);
+  private readonly cache = inject(PreferenciasCacheService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
 
@@ -795,11 +793,21 @@ export class PreferenciasAlumnoPage implements OnInit {
       return;
     }
 
+    const cached = this.cache.get();
+    if (cached) {
+      this.preferences.set(cached);
+      this.patchFormFromPreferences();
+      this.photoChange.emit(cached.photoDataUrl);
+      this.status.set('loaded');
+      return;
+    }
+
     this.preferenciasService
       .getMine()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (preferences) => {
+          this.cache.set(preferences);
           this.preferences.set(preferences);
           this.patchFormFromPreferences();
           this.photoChange.emit(preferences.photoDataUrl);
@@ -831,6 +839,7 @@ export class PreferenciasAlumnoPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (preferences) => {
+          this.cache.set(preferences);
           this.preferences.set(preferences);
           this.patchFormFromPreferences();
           this.photoChange.emit(preferences.photoDataUrl);
@@ -956,6 +965,7 @@ export class PreferenciasAlumnoPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (preferences) => {
+          this.cache.set(preferences);
           this.preferences.set(preferences);
           this.selectedFile.set(null);
           this.uploadStatus.set('saved');
@@ -981,6 +991,7 @@ export class PreferenciasAlumnoPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (preferences) => {
+          this.cache.set(preferences);
           this.preferences.set(preferences);
           this.selectedPhoto.set(null);
           this.photoUploadStatus.set('saved');

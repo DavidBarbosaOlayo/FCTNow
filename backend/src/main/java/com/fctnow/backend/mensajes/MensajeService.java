@@ -79,12 +79,15 @@ public class MensajeService {
         .sorted(Comparator.comparing(UserAccount::getDisplayName, String.CASE_INSENSITIVE_ORDER))
         .map(contacto -> {
           AlumnoPreferencias preferencias = preferenciasPorAlumno.get(contacto.getId());
+          String photo = preferencias != null
+              ? AlumnoPreferenciasResponse.photoDataUrl(preferencias)
+              : userPhotoDataUrl(contacto);
           return new ContactoMensajeResponse(
               contacto.getId(),
               contacto.getDisplayName(),
               preferencias == null ? null : preferencias.getFamiliaProfesional(),
               preferencias == null ? null : preferencias.getCicloFormativo(),
-              AlumnoPreferenciasResponse.photoDataUrl(preferencias));
+              photo);
         })
         .toList();
   }
@@ -238,7 +241,27 @@ public class MensajeService {
         .forEach(preferencias -> photoDataUrls.put(
             preferencias.getAlumno().getId(),
             AlumnoPreferenciasResponse.photoDataUrl(preferencias)));
+
+    userAccountRepository.findAllById(userIds).forEach(user -> {
+      if (photoDataUrls.get(user.getId()) != null) {
+        return;
+      }
+      String dataUrl = userPhotoDataUrl(user);
+      if (dataUrl != null) {
+        photoDataUrls.put(user.getId(), dataUrl);
+      }
+    });
     return photoDataUrls;
+  }
+
+  private String userPhotoDataUrl(UserAccount user) {
+    if (user.getFotoContent() == null || user.getFotoContentType() == null) {
+      return null;
+    }
+    return String.format(
+        "data:%s;base64,%s",
+        user.getFotoContentType(),
+        java.util.Base64.getEncoder().encodeToString(user.getFotoContent()));
   }
 
   private String photoDataUrl(Long userId) {
