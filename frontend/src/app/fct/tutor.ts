@@ -196,7 +196,11 @@ type ViewMode = 'list' | 'cards';
           aria-label="Listado detallado de alumnos"
         >
           @for (a of filteredAlumnos(); track a.id) {
-            <article class="alumno-row" [class.is-assigned]="!!a.asignacionActual">
+            <article
+              class="alumno-row"
+              [class.is-assigned]="!!a.asignacionActual"
+              [class.is-pending]="!a.asignacionActual && !!a.asignacionPendiente"
+            >
               <div class="row-main">
                 <button
                   type="button"
@@ -287,7 +291,11 @@ type ViewMode = 'list' | 'cards';
       } @else {
         <section class="alumno-grid" aria-label="Listado detallado de alumnos">
           @for (a of filteredAlumnos(); track a.id) {
-            <article class="alumno-card" [class.is-assigned]="!!a.asignacionActual">
+            <article
+              class="alumno-card"
+              [class.is-assigned]="!!a.asignacionActual"
+              [class.is-pending]="!a.asignacionActual && !!a.asignacionPendiente"
+            >
               <header class="alumno-card-heading">
                 <button
                   type="button"
@@ -937,6 +945,8 @@ type ViewMode = 'list' | 'cards';
         border: 1px solid rgba(17, 78, 74, 0.15);
         display: grid;
         gap: 0.65rem;
+        min-width: 0;
+        overflow: hidden;
       }
 
       .alumno-row.is-assigned {
@@ -944,14 +954,24 @@ type ViewMode = 'list' | 'cards';
         border-color: rgba(29, 107, 74, 0.35);
       }
 
+      .alumno-row.is-pending {
+        background: var(--warning-soft);
+        border-color: rgba(138, 90, 0, 0.32);
+      }
+
       :host-context(.theme-dark) .alumno-row.is-assigned {
         border-color: rgba(139, 216, 169, 0.42);
+      }
+
+      :host-context(.theme-dark) .alumno-row.is-pending {
+        border-color: rgba(241, 197, 106, 0.42);
       }
 
       .row-main {
         display: flex;
         gap: 0.6rem;
         align-items: center;
+        min-width: 0;
       }
 
       .student-cell h3,
@@ -962,8 +982,13 @@ type ViewMode = 'list' | 'cards';
 
       .status-cell {
         flex: 0 0 8.5rem;
+        min-width: 0;
         display: flex;
         justify-content: center !important;
+      }
+
+      .status-cell .estado-pill {
+        flex-shrink: 1;
       }
 
       .row-details {
@@ -999,9 +1024,12 @@ type ViewMode = 'list' | 'cards';
         grid-template-columns: repeat(4, 2rem);
         justify-content: end;
         gap: 0.3rem;
+        max-width: 100%;
+        min-width: 0;
       }
 
       .row-counters span {
+        min-width: 0;
         min-height: 2rem;
         display: inline-flex;
         align-items: center;
@@ -1010,6 +1038,8 @@ type ViewMode = 'list' | 'cards';
         background: rgba(17, 78, 74, 0.06);
         font-weight: 900;
         font-size: 0.88rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .row-counters span:nth-child(2) {
@@ -1065,6 +1095,8 @@ type ViewMode = 'list' | 'cards';
         display: grid;
         gap: 0.85rem;
         align-content: start;
+        min-width: 0;
+        overflow: hidden;
       }
 
       .alumno-card.is-assigned {
@@ -1078,11 +1110,34 @@ type ViewMode = 'list' | 'cards';
         box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
       }
 
+      .alumno-card.is-pending {
+        background: var(--warning-soft);
+        border-color: rgba(138, 90, 0, 0.36);
+        box-shadow: 0 12px 28px rgba(138, 90, 0, 0.1);
+      }
+
+      :host-context(.theme-dark) .alumno-card.is-pending {
+        border-color: rgba(241, 197, 106, 0.42);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+      }
+
       .alumno-card-heading {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
         gap: 0.75rem;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .alumno-card-heading .card-student-cell {
+        flex: 1 1 0;
+        min-width: 0;
+      }
+
+      .alumno-card-heading .estado-pill {
+        flex: 0 1 auto;
+        max-width: min(8.5rem, 42%);
       }
 
       .alumno-details {
@@ -1104,15 +1159,22 @@ type ViewMode = 'list' | 'cards';
       .alumno-details dd {
         margin: 0.15rem 0 0;
         font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .alumno-solicitudes {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 4.75rem), 1fr));
         gap: 0.4rem;
+        max-width: 100%;
+        min-width: 0;
       }
 
       .counter {
+        width: 100%;
+        min-width: 0;
         padding: 0.45rem 0.35rem;
         border-radius: var(--radius-md);
         background: rgba(17, 78, 74, 0.06);
@@ -1122,13 +1184,16 @@ type ViewMode = 'list' | 'cards';
         align-items: center;
         text-align: center;
         gap: 0.15rem;
-        min-width: 0;
+        overflow: hidden;
       }
 
       .counter-value {
+        max-width: 100%;
         font-weight: 800;
         font-size: 1.05rem;
         line-height: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .counter-label {
@@ -1162,22 +1227,35 @@ type ViewMode = 'list' | 'cards';
         border-radius: var(--radius-md);
         display: grid;
         gap: 0.2rem;
+        min-width: 0;
+        overflow: hidden;
       }
 
       .asignacion-pendiente {
         padding: 0.8rem 0.9rem;
         border-radius: var(--radius-md);
-        background: rgba(255, 244, 230, 0.8);
-        border: 1px solid rgba(87, 96, 106, 0.28);
+        background: var(--surface);
+        border: 1px solid var(--line);
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 0.85rem;
+        min-width: 0;
+        overflow: hidden;
+        flex-wrap: wrap;
+      }
+
+      .asignacion-pendiente > div {
+        flex: 1 1 12rem;
+        min-width: 0;
       }
 
       .asignacion-line {
         margin: 0;
         font-weight: 700;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .muted {

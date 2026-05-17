@@ -199,6 +199,7 @@ app-root .card-student-cell {
 }
 
 app-root .student-copy {
+  width: 100%;
   min-width: 0;
 }
 
@@ -233,12 +234,17 @@ app-root .alumno-email {
   margin: 0.15rem 0 0;
   color: var(--muted);
   font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 app-root .estado-pill {
   align-self: start;
   display: inline-flex;
   align-items: center;
+  max-width: 100%;
+  min-width: 0;
   padding: 0 0.55rem;
   min-height: 1.4rem;
   border-radius: var(--radius-sm);
@@ -247,6 +253,10 @@ app-root .estado-pill {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border: 1px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 app-root .estado-pill[data-estado='ACTIVA'] {

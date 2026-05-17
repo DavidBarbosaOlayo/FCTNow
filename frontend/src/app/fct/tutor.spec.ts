@@ -422,6 +422,26 @@ describe('TutorPage', () => {
     expect(cards[2].textContent).toContain('Ana Garcia');
   });
 
+  it('marks pending alumnos in list and cards views', async () => {
+    await configure();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const pendingRow = Array.from(compiled.querySelectorAll<HTMLElement>('.alumno-row')).find((row) =>
+      row.textContent?.includes('Marta Lopez'),
+    );
+    expect(pendingRow?.classList.contains('is-pending')).toBeTrue();
+
+    const cardsButton = Array.from(compiled.querySelectorAll<HTMLButtonElement>('.view-toggle button'))
+      .find((button) => button.textContent?.includes('Cards'))!;
+    cardsButton.click();
+    fixture.detectChanges();
+
+    const pendingCard = Array.from(compiled.querySelectorAll<HTMLElement>('.alumno-card')).find((card) =>
+      card.textContent?.includes('Marta Lopez'),
+    );
+    expect(pendingCard?.classList.contains('is-pending')).toBeTrue();
+  });
+
   it('opens a confirmation modal and creates an internal assignment from the card', async () => {
     await configure();
     const compiled = fixture.nativeElement as HTMLElement;
