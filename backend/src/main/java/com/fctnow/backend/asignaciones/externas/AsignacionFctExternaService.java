@@ -2,7 +2,9 @@ package com.fctnow.backend.asignaciones.externas;
 
 import com.fctnow.backend.asignaciones.AsignacionEstado;
 import com.fctnow.backend.asignaciones.AsignacionFctRepository;
+import com.fctnow.backend.asignaciones.AsignacionFctService;
 import com.fctnow.backend.notificaciones.NotificacionService;
+import java.math.BigDecimal;
 import com.fctnow.backend.solicitudes.externas.SolicitudExterna;
 import com.fctnow.backend.solicitudes.externas.SolicitudExternaEstado;
 import com.fctnow.backend.solicitudes.externas.SolicitudExternaRepository;
@@ -90,9 +92,18 @@ public class AsignacionFctExternaService {
           "El alumno ya tiene una asignacion activa");
     }
 
-    AsignacionFctExterna asignacion =
-        repository.save(new AsignacionFctExterna(solicitud, normaliseObservaciones(request.observaciones())));
-    notificacionService.clearPendingAssignmentNotifications(solicitud.getAlumno());
+    AsignacionFctService.validateFechaInicio(request.fechaInicio());
+    BigDecimal importe = AsignacionFctService.normaliseImporte(request.importeMensual(), request.remunerada());
+    AsignacionFctExterna asignacion = repository.save(new AsignacionFctExterna(
+        solicitud,
+        normaliseObservaciones(request.observaciones()),
+        request.horasTotales(),
+        request.fechaInicio(),
+        request.horasDiariasEstimadas(),
+        request.remunerada(),
+        importe,
+        normaliseObservaciones(request.observacionesRetribucion())));
+    notificacionService.notifyAsignacionExternaCreada(solicitud);
     return AsignacionFctExternaResponse.from(asignacion);
   }
 

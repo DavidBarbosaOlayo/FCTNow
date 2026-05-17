@@ -13,13 +13,17 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { PreferenciasCacheService } from '../alumnos/preferencias-cache.service';
 import { PreferenciasAlumnoPage } from '../alumnos/preferencias';
+import { AlumnoAsignacionActual } from '../alumnos/asignacion-actual.models';
+import { AlumnoAsignacionActualService } from '../alumnos/asignacion-actual.service';
 import { AuthenticatedUser, UserRole } from '../auth/auth.models';
 import { AuthService } from '../auth/auth.service';
 import { AlumnoPreferenciasService } from '../alumnos/preferencias.service';
 import { EmpresaPerfilPage } from '../empresas/empresa-perfil';
+import { calcFctProgress } from '../asignaciones/fct-progress';
 import { UserProfilePhotoService } from './user-profile-photo.service';
 
 type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
+type AssignmentStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
 @Component({
   selector: 'app-perfil-page',
@@ -109,6 +113,88 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
         @if (user.roles.includes('ALUMNO')) {
           <div class="profile-role-row" [class.is-editing]="alumnoPreferencesEditing()">
             <section class="profile-role-section" aria-label="Datos editables del alumno">
+              @if (assignmentStatus() === 'loading') {
+                <section class="student-assignment-panel" aria-live="polite">
+                  <p class="eyebrow">Practicas actuales</p>
+                  <h3>Comprobando si tienes una asignacion activa</h3>
+                </section>
+              } @else if (assignmentStatus() === 'error') {
+                <section class="student-assignment-panel alert" role="alert">
+                  <p class="eyebrow">Practicas actuales</p>
+                  <h3>No se pudo cargar tu asignacion</h3>
+                  <p>{{ assignmentErrorMessage() }}</p>
+                </section>
+              } @else if (alumnoAssignment(); as asignacion) {
+                <section class="student-assignment-panel" aria-label="Practicas actuales del alumno">
+                  <div class="assignment-heading">
+                    <div>
+                      <p class="eyebrow">Practicas actuales</p>
+                      <h3>{{ asignacion.empresa.nombre }}</h3>
+                      <p>{{ asignacion.oferta.titulo }}</p>
+                    </div>
+                    <span class="estado-pill" [attr.data-estado]="asignacion.estado">
+                      {{ assignmentEstadoLabel(asignacion.estado) }}
+                    </span>
+                  </div>
+
+                  <div class="progress-block">
+                    <div class="progress-copy">
+                      <strong>{{ progressFor(asignacion).percent }}%</strong>
+                      <span>{{ progressLabel(asignacion) }}</span>
+                    </div>
+                    <div class="progress-track" aria-hidden="true">
+                      <span [style.width.%]="progressFor(asignacion).percent"></span>
+                    </div>
+                  </div>
+
+                  <dl class="assignment-details" aria-label="Detalle de practicas">
+                    <div>
+                      <dt>Inicio</dt>
+                      <dd>{{ formatFechaInicio(asignacion.seguimiento.fechaInicio) }}</dd>
+                    </div>
+                    <div>
+                      <dt>Horas totales</dt>
+                      <dd>{{ asignacion.seguimiento.horasTotales }} h</dd>
+                    </div>
+                    <div>
+                      <dt>Jornada estimada</dt>
+                      <dd>{{ asignacion.seguimiento.horasDiariasEstimadas }} h/dia</dd>
+                    </div>
+                    <div>
+                      <dt>Ubicacion</dt>
+                      <dd>{{ locationLabel(asignacion) }}</dd>
+                    </div>
+                    <div>
+                      <dt>Retribucion</dt>
+                      <dd>{{ compensationLabel(asignacion) }}</dd>
+                    </div>
+                    <div>
+                      <dt>Asignada</dt>
+                      <dd>{{ formatFecha(asignacion.fechaAsignacion) }}</dd>
+                    </div>
+                  </dl>
+
+                  @if (asignacion.observaciones) {
+                    <p class="assignment-note">{{ asignacion.observaciones }}</p>
+                  }
+                  @if (asignacion.seguimiento.observacionesRetribucion) {
+                    <p class="assignment-note">
+                      {{ asignacion.seguimiento.observacionesRetribucion }}
+                    </p>
+                  }
+                  @if (asignacion.urlAplicacion) {
+                    <a
+                      class="assignment-link"
+                      [href]="asignacion.urlAplicacion"
+                      [attr.target]="asignacion.origen === 'EXTERNA' ? '_blank' : null"
+                      [attr.rel]="asignacion.origen === 'EXTERNA' ? 'noopener' : null"
+                    >
+                      Ver oferta
+                    </a>
+                  }
+                </section>
+              }
+
               <app-preferencias-alumno-page
                 [embedded]="true"
                 [showPhoto]="false"
@@ -450,6 +536,146 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
         min-height: 0;
       }
 
+      .student-assignment-panel {
+        display: grid;
+        gap: 0.85rem;
+        padding: 1rem;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        background: var(--surface);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .student-assignment-panel.alert {
+        border-color: rgba(179, 38, 30, 0.28);
+        background: var(--danger-soft);
+      }
+
+      .student-assignment-panel h3 {
+        margin: 0;
+        font-size: 1.15rem;
+      }
+
+      .student-assignment-panel p {
+        margin: 0;
+      }
+
+      .assignment-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        gap: 1rem;
+      }
+
+      .assignment-heading p:not(.eyebrow) {
+        margin-top: 0.25rem;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      .estado-pill {
+        min-height: 1.8rem;
+        display: inline-flex;
+        align-items: center;
+        padding: 0 0.7rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.76rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+      }
+
+      .estado-pill[data-estado='ACTIVA'] {
+        color: var(--success);
+        background: rgba(29, 107, 74, 0.18);
+      }
+
+      .estado-pill[data-estado='FINALIZADA'] {
+        color: var(--accent-hover);
+        background: rgba(17, 78, 74, 0.18);
+      }
+
+      .progress-block {
+        display: grid;
+        gap: 0.45rem;
+      }
+
+      .progress-copy {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 0.5rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .progress-copy strong {
+        color: var(--ink);
+      }
+
+      .progress-track {
+        height: 0.55rem;
+        overflow: hidden;
+        border-radius: var(--radius-pill);
+        background: var(--canvas-deep);
+      }
+
+      .progress-track span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--accent);
+      }
+
+      .assignment-details {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.55rem;
+        margin: 0;
+      }
+
+      .assignment-details div {
+        min-width: 0;
+        padding: 0.65rem 0.7rem;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        background: var(--canvas-deep);
+      }
+
+      .assignment-details dt {
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .assignment-details dd {
+        margin: 0.2rem 0 0;
+        font-weight: 800;
+        line-height: 1.35;
+      }
+
+      .assignment-note {
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .assignment-link {
+        justify-self: start;
+        min-height: 2.35rem;
+        display: inline-flex;
+        align-items: center;
+        padding: 0 0.8rem;
+        border: 1px solid rgba(17, 78, 74, 0.28);
+        border-radius: var(--radius-md);
+        color: var(--accent);
+        background: var(--accent-soft);
+        font-weight: 800;
+        text-decoration: none;
+      }
+
       .back-link {
         justify-self: start;
         min-height: 2.4rem;
@@ -482,6 +708,10 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
         .profile-details {
           grid-template-columns: 1fr;
         }
+
+        .assignment-details {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
       }
 
       @media (max-width: 620px) {
@@ -504,6 +734,14 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
         .profile-role-row {
           grid-template-columns: 1fr;
         }
+
+        .assignment-heading {
+          display: grid;
+        }
+
+        .assignment-details {
+          grid-template-columns: 1fr;
+        }
       }
     `,
   ],
@@ -512,6 +750,7 @@ type ProfileStatus = 'loading' | 'loaded' | 'error' | 'not-authenticated';
 export class PerfilPage implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly preferenciasService = inject(AlumnoPreferenciasService);
+  private readonly alumnoAsignacionService = inject(AlumnoAsignacionActualService);
   private readonly preferenciasCache = inject(PreferenciasCacheService);
   private readonly userPhotoService = inject(UserProfilePhotoService);
   private readonly destroyRef = inject(DestroyRef);
@@ -525,6 +764,9 @@ export class PerfilPage implements OnInit {
   protected readonly alumnoPreferencesEditing = signal(false);
   protected readonly photoUploadError = signal<string | null>(null);
   protected readonly photoUploading = signal(false);
+  protected readonly assignmentStatus = signal<AssignmentStatus>('idle');
+  protected readonly assignmentErrorMessage = signal<string | null>(null);
+  protected readonly alumnoAssignment = signal<AlumnoAsignacionActual | null>(null);
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) {
@@ -544,6 +786,7 @@ export class PerfilPage implements OnInit {
       this.user.set(cachedUser);
       this.status.set('loaded');
       this.loadAlumnoPhoto(cachedUser);
+      this.loadAlumnoAssignment(cachedUser);
       return;
     }
 
@@ -556,6 +799,7 @@ export class PerfilPage implements OnInit {
           this.user.set(user);
           this.status.set('loaded');
           this.loadAlumnoPhoto(user);
+          this.loadAlumnoAssignment(user);
         },
         error: (error: unknown) => {
           this.user.set(null);
@@ -577,6 +821,72 @@ export class PerfilPage implements OnInit {
 
   protected rolesText(roles: UserRole[]): string {
     return roles.map((role) => this.roleLabel(role)).join(', ');
+  }
+
+  protected assignmentEstadoLabel(estado: 'ACTIVA' | 'FINALIZADA'): string {
+    return estado === 'ACTIVA' ? 'En curso' : 'Finalizada';
+  }
+
+  protected progressFor(asignacion: AlumnoAsignacionActual) {
+    return calcFctProgress(asignacion.seguimiento);
+  }
+
+  protected progressLabel(asignacion: AlumnoAsignacionActual): string {
+    const progress = this.progressFor(asignacion);
+    if (progress.status === 'pendiente') {
+      return 'Comienza el ' + this.formatFechaInicio(asignacion.seguimiento.fechaInicio);
+    }
+    if (progress.status === 'completada') {
+      return 'Horas estimadas completadas';
+    }
+    return `${progress.horasCompletadas} / ${asignacion.seguimiento.horasTotales} h estimadas`;
+  }
+
+  protected formatFecha(value: string | null | undefined): string {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  }
+
+  protected formatFechaInicio(value: string | null | undefined): string {
+    if (!value) return '';
+    const [y, m, d] = value.split('-').map(Number);
+    if (!y || !m || !d) return value;
+    return new Date(y, m - 1, d).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  }
+
+  protected locationLabel(asignacion: AlumnoAsignacionActual): string {
+    const { localidad, region } = asignacion.ubicacion;
+    if (localidad && region) return `${localidad}, ${region}`;
+    return localidad || region || 'Ubicacion no disponible';
+  }
+
+  protected compensationLabel(asignacion: AlumnoAsignacionActual): string {
+    const seguimiento = asignacion.seguimiento;
+    if (!seguimiento.remunerada) {
+      return 'No remuneradas';
+    }
+    if (seguimiento.importeMensual == null) {
+      return 'Remuneradas';
+    }
+    return `${this.formatImporte(seguimiento.importeMensual)} / mes`;
+  }
+
+  protected formatImporte(value: number): string {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'EUR',
+      maximumFractionDigits: 2,
+    }).format(value);
   }
 
   protected initials(name: string): string {
@@ -645,8 +955,35 @@ export class PerfilPage implements OnInit {
     this.authService.logout();
     this.user.set(null);
     this.profilePhotoDataUrl.set(null);
+    this.alumnoAssignment.set(null);
+    this.assignmentStatus.set('idle');
     this.status.set('not-authenticated');
     this.router.navigateByUrl('/login');
+  }
+
+  private loadAlumnoAssignment(user: AuthenticatedUser): void {
+    if (!user.roles.includes('ALUMNO')) {
+      this.alumnoAssignment.set(null);
+      this.assignmentStatus.set('idle');
+      return;
+    }
+
+    this.assignmentStatus.set('loading');
+    this.assignmentErrorMessage.set(null);
+    this.alumnoAsignacionService
+      .getMine()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (assignment) => {
+          this.alumnoAssignment.set(assignment);
+          this.assignmentStatus.set('loaded');
+        },
+        error: (error: unknown) => {
+          this.alumnoAssignment.set(null);
+          this.assignmentErrorMessage.set(assignmentErrorMessage(error));
+          this.assignmentStatus.set('error');
+        },
+      });
   }
 
   private loadAlumnoPhoto(user: AuthenticatedUser): void {
@@ -718,6 +1055,18 @@ function photoUploadErrorMessage(error: unknown): string {
     }
   }
   return 'No se pudo actualizar la foto. Inténtalo de nuevo.';
+}
+
+function assignmentErrorMessage(error: unknown): string {
+  if (error instanceof HttpErrorResponse) {
+    if (error.status === 0) {
+      return 'No se pudo contactar con el servidor.';
+    }
+    if (error.status === 401 || error.status === 403) {
+      return 'Tu sesion no permite consultar la asignacion de practicas.';
+    }
+  }
+  return 'No se pudo completar la carga de tus practicas actuales.';
 }
 
 function profileErrorMessage(error: unknown): string {

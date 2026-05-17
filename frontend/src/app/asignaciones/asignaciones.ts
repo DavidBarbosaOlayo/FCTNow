@@ -128,6 +128,59 @@ const ESTADO_LABEL: Record<AsignacionEstado, string> = {
                 </select>
               </div>
               <div class="form-row">
+                <label for="horasTotales">Horas totales</label>
+                <input
+                  id="horasTotales"
+                  type="number"
+                  min="40"
+                  max="1000"
+                  step="1"
+                  formControlName="horasTotales"
+                />
+              </div>
+              <div class="form-row">
+                <label for="fechaInicio">Fecha real de inicio</label>
+                <input id="fechaInicio" type="date" formControlName="fechaInicio" />
+              </div>
+              <div class="form-row">
+                <label for="horasDiariasEstimadas">Jornada estimada (h/día laborable)</label>
+                <input
+                  id="horasDiariasEstimadas"
+                  type="number"
+                  min="1"
+                  max="12"
+                  step="1"
+                  formControlName="horasDiariasEstimadas"
+                />
+              </div>
+              <div class="form-row inline">
+                <label for="remunerada">
+                  <input id="remunerada" type="checkbox" formControlName="remunerada" />
+                  Prácticas remuneradas
+                </label>
+              </div>
+              @if (form.controls.remunerada.value) {
+                <div class="form-row">
+                  <label for="importeMensual">Importe mensual (€, opcional)</label>
+                  <input
+                    id="importeMensual"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    formControlName="importeMensual"
+                  />
+                </div>
+                <div class="form-row">
+                  <label for="observacionesRetribucion">Observaciones de retribución</label>
+                  <textarea
+                    id="observacionesRetribucion"
+                    rows="2"
+                    maxlength="2000"
+                    formControlName="observacionesRetribucion"
+                  ></textarea>
+                </div>
+              }
+              <div class="form-row">
                 <label for="observaciones">Observaciones (opcional)</label>
                 <textarea
                   id="observaciones"
@@ -507,6 +560,19 @@ export class AsignacionesPage implements OnInit {
   protected readonly form = this.fb.group({
     candidataKey: this.fb.control<string | null>(null, { validators: [Validators.required] }),
     observaciones: this.fb.control<string>('', { nonNullable: true }),
+    horasTotales: this.fb.control<number | null>(400, {
+      validators: [Validators.required, Validators.min(40), Validators.max(1000)],
+    }),
+    fechaInicio: this.fb.control<string>(todayIso(), {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    horasDiariasEstimadas: this.fb.control<number | null>(7, {
+      validators: [Validators.required, Validators.min(1), Validators.max(12)],
+    }),
+    remunerada: this.fb.control<boolean>(false, { nonNullable: true }),
+    importeMensual: this.fb.control<number | null>(null, { validators: [Validators.min(0)] }),
+    observacionesRetribucion: this.fb.control<string>('', { nonNullable: true }),
   });
 
   protected readonly estadoFilter = this.fb.control<EstadoFilter>('TODAS', { nonNullable: true });
@@ -650,14 +716,29 @@ export class AsignacionesPage implements OnInit {
       this.createMessage.set('La solicitud seleccionada ya no esta disponible.');
       return;
     }
-    const observaciones = (this.form.value.observaciones ?? '').trim() || undefined;
+    const raw = this.form.getRawValue();
+    const observaciones = (raw.observaciones ?? '').trim() || undefined;
+    const remunerada = !!raw.remunerada;
+    const importeMensual = remunerada && raw.importeMensual != null ? Number(raw.importeMensual) : null;
+    const observacionesRetribucion = remunerada
+      ? ((raw.observacionesRetribucion ?? '').trim() || undefined)
+      : undefined;
+    const common = {
+      observaciones,
+      horasTotales: Number(raw.horasTotales),
+      fechaInicio: raw.fechaInicio,
+      horasDiariasEstimadas: Number(raw.horasDiariasEstimadas),
+      remunerada,
+      importeMensual,
+      observacionesRetribucion,
+    };
 
     this.saveStatus.set('saving');
     this.createMessage.set('');
 
     if (candidata.origen === 'INTERNA' && candidata.solicitudInternaId !== null) {
       this.asignacionesService
-        .create({ solicitudId: candidata.solicitudInternaId, observaciones })
+        .create({ solicitudId: candidata.solicitudInternaId, ...common })
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: () => this.handleCreateSuccess(),
@@ -665,7 +746,7 @@ export class AsignacionesPage implements OnInit {
         });
     } else if (candidata.origen === 'EXTERNA' && candidata.solicitudExternaId !== null) {
       this.externasService
-        .create({ solicitudExternaId: candidata.solicitudExternaId, observaciones })
+        .create({ solicitudExternaId: candidata.solicitudExternaId, ...common })
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: () => this.handleCreateSuccess(),
@@ -679,7 +760,16 @@ export class AsignacionesPage implements OnInit {
   private handleCreateSuccess(): void {
     this.saveStatus.set('idle');
     this.createMessage.set('Asignacion creada correctamente.');
-    this.form.reset({ candidataKey: null, observaciones: '' });
+    this.form.reset({
+      candidataKey: null,
+      observaciones: '',
+      horasTotales: 400,
+      fechaInicio: todayIso(),
+      horasDiariasEstimadas: 7,
+      remunerada: false,
+      importeMensual: null,
+      observacionesRetribucion: '',
+    });
     this.cache.invalidate();
     this.loadAll(true);
   }
@@ -795,4 +885,12 @@ export class AsignacionesPage implements OnInit {
     }
     return 'Error desconocido al cargar datos.';
   }
+}
+
+function todayIso(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }

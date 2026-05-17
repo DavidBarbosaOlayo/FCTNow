@@ -14,6 +14,8 @@ import com.fctnow.backend.solicitudes.externas.SolicitudExternaRepository;
 import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
 import com.fctnow.backend.user.UserRole;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -106,7 +108,12 @@ class AsignacionFctExternaControllerTest {
     Long solicitudId = createAndAccept(alumnoToken, "ext-9", "Becario backend");
 
     String tutorToken = loginAs("tutor@example.com");
-    String body = "{\"solicitudExternaId\":" + solicitudId + ",\"observaciones\":\"FCT confirmada\"}";
+    String body = "{\"solicitudExternaId\":" + solicitudId
+        + ",\"observaciones\":\"FCT confirmada\""
+        + ",\"horasTotales\":400"
+        + ",\"fechaInicio\":\"" + LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE) + "\""
+        + ",\"horasDiariasEstimadas\":7"
+        + ",\"remunerada\":false}";
 
     mockMvc.perform(post("/api/asignaciones/externas")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + tutorToken)
@@ -115,7 +122,10 @@ class AsignacionFctExternaControllerTest {
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.solicitudExternaId").value(solicitudId))
         .andExpect(jsonPath("$.estado").value("ACTIVA"))
-        .andExpect(jsonPath("$.titulo").value("Becario backend"));
+        .andExpect(jsonPath("$.titulo").value("Becario backend"))
+        .andExpect(jsonPath("$.seguimiento.horasTotales").value(400))
+        .andExpect(jsonPath("$.seguimiento.horasDiariasEstimadas").value(7))
+        .andExpect(jsonPath("$.seguimiento.remunerada").value(false));
 
     mockMvc.perform(get("/api/notificaciones/me")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + tutorToken))
@@ -132,7 +142,7 @@ class AsignacionFctExternaControllerTest {
     mockMvc.perform(post("/api/asignaciones/externas")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + tutorToken)
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"solicitudExternaId\":" + segundaSolicitudId + "}"))
+            .content(validExternaPayload(segundaSolicitudId)))
         .andExpect(status().isConflict());
 
     mockMvc.perform(get("/api/asignaciones/externas/candidatas")
@@ -153,7 +163,7 @@ class AsignacionFctExternaControllerTest {
     mockMvc.perform(post("/api/asignaciones/externas")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + tutorToken)
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"solicitudExternaId\":" + solicitudId + "}"))
+            .content(validExternaPayload(solicitudId)))
         .andExpect(status().isCreated());
 
     mockMvc.perform(patch("/api/alumno/solicitudes-externas/{id}/estado", solicitudId)
@@ -176,13 +186,21 @@ class AsignacionFctExternaControllerTest {
     Long id = objectMapper.readTree(createResponse).get("id").asLong();
 
     String tutorToken = loginAs("tutor@example.com");
-    String body = "{\"solicitudExternaId\":" + id + "}";
+    String body = validExternaPayload(id);
 
     mockMvc.perform(post("/api/asignaciones/externas")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + tutorToken)
             .contentType(MediaType.APPLICATION_JSON)
             .content(body))
         .andExpect(status().isConflict());
+  }
+
+  private String validExternaPayload(Long solicitudId) {
+    return "{\"solicitudExternaId\":" + solicitudId
+        + ",\"horasTotales\":400"
+        + ",\"fechaInicio\":\"" + LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE) + "\""
+        + ",\"horasDiariasEstimadas\":7"
+        + ",\"remunerada\":false}";
   }
 
   private Long createAndAccept(String alumnoToken, String idExterno, String titulo) throws Exception {

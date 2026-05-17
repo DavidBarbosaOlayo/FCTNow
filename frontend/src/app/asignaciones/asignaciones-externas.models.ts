@@ -1,4 +1,4 @@
-import { AsignacionEstado } from './asignaciones.models';
+import { AsignacionEstado, AsignacionSeguimiento } from './asignaciones.models';
 import { SolicitudExternaFuente } from '../practicas/solicitudes-externas.models';
 
 export type AsignacionFctExterna = {
@@ -16,6 +16,7 @@ export type AsignacionFctExterna = {
   estado: AsignacionEstado;
   observaciones: string | null;
   fechaAsignacion: string;
+  seguimiento?: AsignacionSeguimiento;
 };
 
 export type AsignacionExternaCandidata = {
@@ -35,4 +36,10 @@ export type AsignacionExternaCandidata = {
 export type AsignacionExternaCreatePayload = {
   solicitudExternaId: number;
   observaciones?: string;
+  horasTotales?: number;
+  fechaInicio?: string;
+  horasDiariasEstimadas?: number;
+  remunerada?: boolean;
+  importeMensual?: number | null;
+  observacionesRetribucion?: string;
 };

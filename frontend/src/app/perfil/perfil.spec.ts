@@ -3,6 +3,8 @@ import { Component, EventEmitter, Input, Output, PLATFORM_ID, provideZonelessCha
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
+import { AlumnoAsignacionActual } from '../alumnos/asignacion-actual.models';
+import { AlumnoAsignacionActualService } from '../alumnos/asignacion-actual.service';
 import { PreferenciasAlumnoPage } from '../alumnos/preferencias';
 import { AuthenticatedUser, UserRole } from '../auth/auth.models';
 import { AuthService } from '../auth/auth.service';
@@ -34,6 +36,7 @@ describe('PerfilPage', () => {
   let fixture: ComponentFixture<PerfilPage>;
   let authService: jasmine.SpyObj<AuthService>;
   let preferenciasService: jasmine.SpyObj<AlumnoPreferenciasService>;
+  let asignacionService: jasmine.SpyObj<AlumnoAsignacionActualService>;
   let navigateSpy: jasmine.Spy;
 
   const samplePreferences: AlumnoPreferencias = {
@@ -55,6 +58,35 @@ describe('PerfilPage', () => {
     photoUpdatedAt: '2026-05-08T12:00:00Z',
   };
 
+  const sampleAssignment: AlumnoAsignacionActual = {
+    id: 14,
+    origen: 'INTERNA',
+    estado: 'ACTIVA',
+    fechaAsignacion: '2026-05-09T12:00:00Z',
+    observaciones: 'Incorporacion confirmada por tutoria.',
+    oferta: {
+      id: 4,
+      titulo: 'Practicas DAW',
+    },
+    empresa: {
+      id: 3,
+      nombre: 'Tech Norte Formacion',
+    },
+    ubicacion: {
+      localidad: 'Valencia',
+      region: 'Valencia',
+    },
+    urlAplicacion: '/practicas/4',
+    seguimiento: {
+      horasTotales: 400,
+      fechaInicio: '2026-05-04',
+      horasDiariasEstimadas: 7,
+      remunerada: true,
+      importeMensual: 350,
+      observacionesRetribucion: 'Beca mensual.',
+    },
+  };
+
   function buildUser(roles: UserRole[]): AuthenticatedUser {
     return {
       id: 8,
@@ -67,10 +99,12 @@ describe('PerfilPage', () => {
   async function configure({
     accessToken = 'jwt-token',
     result = of(buildUser(['ALUMNO', 'ADMIN'])),
+    assignmentResult = of(sampleAssignment),
     platformId = 'browser',
   }: {
     accessToken?: string | null;
     result?: Observable<AuthenticatedUser>;
+    assignmentResult?: Observable<AlumnoAsignacionActual | null>;
     platformId?: string;
   } = {}): Promise<void> {
     authService = jasmine.createSpyObj<AuthService>('AuthService', [
@@ -85,6 +119,11 @@ describe('PerfilPage', () => {
       ['getMine'],
     );
     preferenciasService.getMine.and.returnValue(of(samplePreferences));
+    asignacionService = jasmine.createSpyObj<AlumnoAsignacionActualService>(
+      'AlumnoAsignacionActualService',
+      ['getMine'],
+    );
+    asignacionService.getMine.and.returnValue(assignmentResult);
 
     TestBed.configureTestingModule({
       imports: [PerfilPage],
@@ -93,6 +132,7 @@ describe('PerfilPage', () => {
         provideRouter([]),
         { provide: AuthService, useValue: authService },
         { provide: AlumnoPreferenciasService, useValue: preferenciasService },
+        { provide: AlumnoAsignacionActualService, useValue: asignacionService },
         { provide: PLATFORM_ID, useValue: platformId },
       ],
     });
@@ -124,6 +164,38 @@ describe('PerfilPage', () => {
     expect(compiled.querySelector<HTMLImageElement>('.profile-avatar img')?.src).toContain(
       samplePreferences.photoDataUrl,
     );
+  });
+
+  it('should render the current FCT assignment for an ALUMNO user', async () => {
+    await configure({ result: of(buildUser(['ALUMNO'])) });
+
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(asignacionService.getMine).toHaveBeenCalled();
+    expect(compiled.textContent).toContain('Practicas actuales');
+    expect(compiled.textContent).toContain('Tech Norte Formacion');
+    expect(compiled.textContent).toContain('Practicas DAW');
+    expect(compiled.textContent).toContain('400 h');
+    expect(compiled.textContent).toContain('350');
+    expect(compiled.querySelector<HTMLAnchorElement>('.assignment-link')?.getAttribute('href')).toBe(
+      '/practicas/4',
+    );
+  });
+
+  it('should omit the assignment panel when the ALUMNO user has no active assignment', async () => {
+    await configure({
+      result: of(buildUser(['ALUMNO'])),
+      assignmentResult: of(null),
+    });
+
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(asignacionService.getMine).toHaveBeenCalled();
+    expect(compiled.querySelector('.student-assignment-panel')).toBeNull();
   });
 
   it('should render the not authenticated state when there is no session', async () => {

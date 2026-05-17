@@ -8,6 +8,8 @@ import com.fctnow.backend.notificaciones.NotificacionService;
 import com.fctnow.backend.user.UserAccount;
 import com.fctnow.backend.user.UserAccountRepository;
 import com.fctnow.backend.user.UserRole;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -22,6 +24,8 @@ public class AsignacionFctService {
 
   private static final Set<UserRole> ROLES_PERMITIDOS =
       EnumSet.of(UserRole.TUTOR_CENTRO, UserRole.COORDINADOR);
+  private static final int MAX_FECHA_INICIO_DAYS_IN_PAST = 30;
+  private static final int MAX_FECHA_INICIO_DAYS_IN_FUTURE = 365;
 
   private final AsignacionFctRepository asignacionFctRepository;
   private final AsignacionFctExternaRepository asignacionFctExternaRepository;
@@ -89,10 +93,48 @@ public class AsignacionFctService {
           "El alumno ya tiene una asignacion activa");
     }
 
+    validateFechaInicio(request.fechaInicio());
+    BigDecimal importe = normaliseImporte(request.importeMensual(), request.remunerada());
     String observaciones = normaliseObservaciones(request.observaciones());
-    AsignacionFct asignacion = asignacionFctRepository.save(new AsignacionFct(solicitud, observaciones));
+    String observacionesRetribucion = normaliseObservaciones(request.observacionesRetribucion());
+
+    AsignacionFct asignacion = asignacionFctRepository.save(new AsignacionFct(
+        solicitud,
+        observaciones,
+        request.horasTotales(),
+        request.fechaInicio(),
+        request.horasDiariasEstimadas(),
+        request.remunerada(),
+        importe,
+        observacionesRetribucion));
     notificacionService.notifyAsignacionCreada(solicitud);
     return AsignacionFctResponse.from(asignacion);
+  }
+
+  public static void validateFechaInicio(LocalDate fechaInicio) {
+    LocalDate today = LocalDate.now();
+    if (fechaInicio.isBefore(today.minusDays(MAX_FECHA_INICIO_DAYS_IN_PAST))) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "La fecha de inicio no puede ser anterior a " + MAX_FECHA_INICIO_DAYS_IN_PAST + " dias");
+    }
+    if (fechaInicio.isAfter(today.plusDays(MAX_FECHA_INICIO_DAYS_IN_FUTURE))) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "La fecha de inicio no puede ser posterior a un ano");
+    }
+  }
+
+  public static BigDecimal normaliseImporte(BigDecimal importe, boolean remunerada) {
+    if (importe == null) {
+      return null;
+    }
+    if (!remunerada) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "No se puede indicar importe si la practica no es remunerada");
+    }
+    return importe;
   }
 
   private String normaliseObservaciones(String observaciones) {

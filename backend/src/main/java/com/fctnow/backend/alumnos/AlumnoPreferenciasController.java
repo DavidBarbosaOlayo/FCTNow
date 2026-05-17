@@ -23,9 +23,13 @@ import org.springframework.web.multipart.MultipartFile;
 public class AlumnoPreferenciasController {
 
   private final AlumnoPreferenciasService alumnoPreferenciasService;
+  private final AlumnoAsignacionService alumnoAsignacionService;
 
-  public AlumnoPreferenciasController(AlumnoPreferenciasService alumnoPreferenciasService) {
+  public AlumnoPreferenciasController(
+      AlumnoPreferenciasService alumnoPreferenciasService,
+      AlumnoAsignacionService alumnoAsignacionService) {
     this.alumnoPreferenciasService = alumnoPreferenciasService;
+    this.alumnoAsignacionService = alumnoAsignacionService;
   }
 
   @GetMapping("/preferencias")
@@ -33,6 +37,15 @@ public class AlumnoPreferenciasController {
   @SecurityRequirement(name = "bearerAuth")
   public AlumnoPreferenciasResponse mine(JwtAuthenticationToken authentication) {
     return alumnoPreferenciasService.findMine(authentication);
+  }
+
+  @GetMapping("/asignacion")
+  @Operation(summary = "Get the authenticated student's active FCT assignment")
+  @SecurityRequirement(name = "bearerAuth")
+  public ResponseEntity<AlumnoAsignacionResponse> asignacion(JwtAuthenticationToken authentication) {
+    return alumnoAsignacionService.findActual(authentication)
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.noContent().build());
   }
 
   @PutMapping("/preferencias")
