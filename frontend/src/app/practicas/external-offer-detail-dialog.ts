@@ -153,25 +153,27 @@ import {
                 </div>
               }
             </div>
-          } @else if (canAnular()) {
-            <button
-              type="button"
-              class="action-link tracking"
-              [class.is-aceptada]="solicitud?.estado === 'ACEPTADA'"
-              [disabled]="actionInFlight"
-              (click)="anular.emit()"
-            >
-              <span class="state">{{ estadoLabel(solicitud!.estado) }} · {{ anularActionLabel(solicitud!.estado) }}</span>
-            </button>
-          } @else {
-            <button
-              type="button"
-              class="action-link tracking idle"
-              [disabled]="actionInFlight"
-              (click)="solicit.emit()"
-            >
-              Marcar como solicitada
-            </button>
+          } @else if (isAlumno) {
+            @if (canAnular()) {
+              <button
+                type="button"
+                class="action-link tracking"
+                [class.is-aceptada]="solicitud?.estado === 'ACEPTADA'"
+                [disabled]="actionInFlight"
+                (click)="anular.emit()"
+              >
+                <span class="state">{{ estadoLabel(solicitud!.estado) }} · {{ anularActionLabel(solicitud!.estado) }}</span>
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="action-link tracking idle"
+                [disabled]="actionInFlight"
+                (click)="solicit.emit()"
+              >
+                Marcar como solicitada
+              </button>
+            }
           }
           <button type="button" class="action-link secondary" (click)="closed.emit()">Cerrar</button>
         </div>
@@ -464,6 +466,7 @@ export class ExternalOfferDetailDialog {
   @Input() solicitud: SolicitudExterna | null = null;
   @Input() actionInFlight = false;
   @Input() isCentro = false;
+  @Input() isAlumno = false;
   @Input() matches: TutorAlumno[] = [];
   @Input() recommendationInFlight: string | null = null;
   @Input() recommendationMessage: string | null = null;

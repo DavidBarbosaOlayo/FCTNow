@@ -220,37 +220,48 @@ type ModalidadOption = {
                             </div>
                           }
                         </div>
-                      } @else if (solicitudFor(oferta); as solicitud) {
-                        @if (solicitud.estado === 'SOLICITADA') {
-                          <button
-                            type="button"
-                            class="tracking-toggle is-estado-solicitada"
-                            [disabled]="isExternalActionInFlight(oferta)"
-                            aria-label="Solicitada — marcar como denegada"
-                            (click)="anularSolicitud(oferta)"
-                          >
-                            <span class="state">Solicitada</span>
-                            <span class="hover">Denegada</span>
-                          </button>
-                          <button
-                            type="button"
-                            class="tracking-label is-primary"
-                            [disabled]="isExternalActionInFlight(oferta)"
-                            (click)="markAsAceptada(oferta)"
-                          >
-                            Marcar aceptada
-                          </button>
-                        } @else if (solicitud.estado === 'ACEPTADA') {
-                          <button
-                            type="button"
-                            class="tracking-toggle is-estado-aceptada"
-                            [disabled]="isExternalActionInFlight(oferta)"
-                            aria-label="Aceptada — pulsa para anular asignación"
-                            (click)="anularSolicitud(oferta)"
-                          >
-                            <span class="state">Aceptada</span>
-                            <span class="hover">Anular Asignación</span>
-                          </button>
+                      } @else if (isAlumno()) {
+                        @if (solicitudFor(oferta); as solicitud) {
+                          @if (solicitud.estado === 'SOLICITADA') {
+                            <button
+                              type="button"
+                              class="tracking-toggle is-estado-solicitada"
+                              [disabled]="isExternalActionInFlight(oferta)"
+                              aria-label="Solicitada — marcar como denegada"
+                              (click)="anularSolicitud(oferta)"
+                            >
+                              <span class="state">Solicitada</span>
+                              <span class="hover">Denegada</span>
+                            </button>
+                            <button
+                              type="button"
+                              class="tracking-label is-primary"
+                              [disabled]="isExternalActionInFlight(oferta)"
+                              (click)="markAsAceptada(oferta)"
+                            >
+                              Marcar aceptada
+                            </button>
+                          } @else if (solicitud.estado === 'ACEPTADA') {
+                            <button
+                              type="button"
+                              class="tracking-toggle is-estado-aceptada"
+                              [disabled]="isExternalActionInFlight(oferta)"
+                              aria-label="Aceptada — pulsa para anular asignación"
+                              (click)="anularSolicitud(oferta)"
+                            >
+                              <span class="state">Aceptada</span>
+                              <span class="hover">Anular Asignación</span>
+                            </button>
+                          } @else {
+                            <button
+                              type="button"
+                              class="tracking-label"
+                              [disabled]="isExternalActionInFlight(oferta)"
+                              (click)="markAsSolicitada(oferta)"
+                            >
+                              Marcar como solicitada
+                            </button>
+                          }
                         } @else {
                           <button
                             type="button"
@@ -261,15 +272,6 @@ type ModalidadOption = {
                             Marcar como solicitada
                           </button>
                         }
-                      } @else {
-                        <button
-                          type="button"
-                          class="tracking-label"
-                          [disabled]="isExternalActionInFlight(oferta)"
-                          (click)="markAsSolicitada(oferta)"
-                        >
-                          Marcar como solicitada
-                        </button>
                       }
                     </div>
                   </div>
@@ -508,6 +510,7 @@ type ModalidadOption = {
           [solicitud]="solicitudFor(detail)"
           [actionInFlight]="isExternalActionInFlight(detail)"
           [isCentro]="isCentro()"
+          [isAlumno]="isAlumno()"
           [matches]="matchesForExternal(detail)"
           [recommendationInFlight]="recommendationInFlight()"
           [recommendationMessage]="recommendationMessage()"
@@ -1075,6 +1078,10 @@ export class PracticasPage implements OnInit {
   protected readonly isCentro = computed(() => {
     const roles = this.authService.currentUser()?.roles ?? [];
     return roles.includes('TUTOR_CENTRO') || roles.includes('COORDINADOR');
+  });
+  protected readonly isAlumno = computed(() => {
+    const roles = this.authService.currentUser()?.roles ?? [];
+    return roles.includes('ALUMNO');
   });
   protected readonly tutorAlumnos = signal<TutorAlumno[]>([]);
   protected readonly recommendOpenFor = signal<string | null>(null);
